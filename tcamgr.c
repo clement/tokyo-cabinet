@@ -1,6 +1,6 @@
 /*************************************************************************************************
  * The command line utility of the abstract database API
- *                                                      Copyright (C) 2006-2008 Mikio Hirabayashi
+ *                                                      Copyright (C) 2006-2009 Mikio Hirabayashi
  * This file is part of Tokyo Cabinet.
  * Tokyo Cabinet is free software; you can redistribute it and/or modify it under the terms of
  * the GNU Lesser General Public License as published by the Free Software Foundation; either
@@ -590,7 +590,7 @@ static int procmisc(const char *name, const char *func, const TCLIST *args, bool
 /* perform version command */
 static int procversion(void){
   printf("Tokyo Cabinet version %s (%d:%s)\n", tcversion, _TC_LIBVER, _TC_FORMATVER);
-  printf("Copyright (C) 2006-2008 Mikio Hirabayashi\n");
+  printf("Copyright (C) 2006-2009 Mikio Hirabayashi\n");
   return 0;
 }
 

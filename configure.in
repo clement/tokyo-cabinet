@@ -7,11 +7,11 @@
 #================================================================
 
 # Package name
-AC_INIT(tokyocabinet, 1.3.26)
+AC_INIT(tokyocabinet, 1.3.27)
 
 # Package information
 MYLIBVER=7
-MYLIBREV=3
+MYLIBREV=4
 MYFORMATVER="1.0"
 
 # Targets

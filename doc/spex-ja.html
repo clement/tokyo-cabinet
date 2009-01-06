@@ -23,8 +23,8 @@
 
 <h1>Tokyo Cabinet第1版基本仕様書</h1>
 
-<div class="note">Copyright (C) 2006-2008 Mikio Hirabayashi</div>
-<div class="note">Last Update: Tue, 25 Nov 2008 17:55:58 +0900</div>
+<div class="note">Copyright (C) 2006-2009 Mikio Hirabayashi</div>
+<div class="note">Last Update: Sat, 03 Jan 2009 21:41:33 +0900</div>
 <div class="navi">[<a href="spex-en.html" hreflang="en">English</a>/<span class="void">Japanese</span>] [<a href="index.ja.html">HOME</a>]</div>
 
 <hr />
@@ -187,7 +187,7 @@
 /usr/local/include/tcfdb.h
 /usr/local/include/tcadb.h
 /usr/local/lib/libtokyocabinet.a
-/usr/local/lib/libtokyocabinet.so.7.3.0
+/usr/local/lib/libtokyocabinet.so.7.4.0
 /usr/local/lib/libtokyocabinet.so.7
 /usr/local/lib/libtokyocabinet.so
 /usr/local/lib/pkgconfig/tokyocabinet.pc
@@ -5434,7 +5434,7 @@ int main(int argc, char **argv){
 <dd>`<var>name</var>' specifies the name of the function.</dd>
 <dd>`<var>args</var>' specifies a list object containing arguments.</dd>
 <dd>If successful, the return value is a list object of the result.  `NULL' is returned on failure.</dd>
-<dd>All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns values.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
+<dd>All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
 <h3>コード例</h3>

@@ -1,6 +1,6 @@
 /*************************************************************************************************
  * The utility API of Tokyo Cabinet
- *                                                      Copyright (C) 2006-2008 Mikio Hirabayashi
+ *                                                      Copyright (C) 2006-2009 Mikio Hirabayashi
  * This file is part of Tokyo Cabinet.
  * Tokyo Cabinet is free software; you can redistribute it and/or modify it under the terms of
  * the GNU Lesser General Public License as published by the Free Software Foundation; either
@@ -3060,8 +3060,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.3.26"
-#define _TC_LIBVER     703
+#define _TC_VERSION    "1.3.27"
+#define _TC_LIBVER     704
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

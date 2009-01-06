@@ -1,6 +1,6 @@
 /*************************************************************************************************
  * The abstract database API of Tokyo Cabinet
- *                                                      Copyright (C) 2006-2008 Mikio Hirabayashi
+ *                                                      Copyright (C) 2006-2009 Mikio Hirabayashi
  * This file is part of Tokyo Cabinet.
  * Tokyo Cabinet is free software; you can redistribute it and/or modify it under the terms of
  * the GNU Lesser General Public License as published by the Free Software Foundation; either
@@ -943,6 +943,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         int vsiz;
         char *vbuf = tcmdbget(adb->mdb, kbuf, ksiz, &vsiz);
         if(vbuf){
+          tclistpush(rv, kbuf, ksiz);
           tclistpush(rv, vbuf, vsiz);
           tcfree(vbuf);
         }
@@ -977,6 +978,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         int vsiz;
         char *vbuf = tcndbget(adb->ndb, kbuf, ksiz, &vsiz);
         if(vbuf){
+          tclistpush(rv, kbuf, ksiz);
           tclistpush(rv, vbuf, vsiz);
           tcfree(vbuf);
         }
@@ -1028,6 +1030,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         int vsiz;
         char *vbuf = tchdbget(adb->hdb, kbuf, ksiz, &vsiz);
         if(vbuf){
+          tclistpush(rv, kbuf, ksiz);
           tclistpush(rv, vbuf, vsiz);
           tcfree(vbuf);
         } else if(tchdbecode(adb->hdb) != TCENOREC){
@@ -1086,6 +1089,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         if(vals){
           int vnum = tclistnum(vals);
           for(int j = 0; j < vnum; j++){
+            tclistpush(rv, kbuf, ksiz);
             int vsiz;
             const char *vbuf = tclistval(vals, j, &vsiz);
             tclistpush(rv, vbuf, vsiz);
@@ -1146,6 +1150,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         int vsiz;
         char *vbuf = tcfdbget2(adb->fdb, kbuf, ksiz, &vsiz);
         if(vbuf){
+          tclistpush(rv, kbuf, ksiz);
           tclistpush(rv, vbuf, vsiz);
           tcfree(vbuf);
         } else if(tcfdbecode(adb->fdb) != TCENOREC){

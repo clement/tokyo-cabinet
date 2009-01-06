@@ -1,0 +1,29 @@
+#! /bin/sh
+
+#================================================================
+# yearchange
+# Replace year expressions
+#================================================================
+
+
+# set variables
+year=`date '+%Y'`
+regex='(\.h|\.c|\.cc|\.cpp|\.cxx|\.java|\.pl|\.pm|\.pod|\.rb|\.rd|\.lua)$'
+
+
+# replace year expressions
+find . -type f | egrep "$regex" |
+while read file
+do
+  echo "$file"
+  sed "s/\\(20[0-9][0-9]\\)-\\(20[0-9][0-9]\\)/\\1-$year/g" "$file" > "$file.tmp"
+  mv -f "$file.tmp" "$file"
+done
+
+
+# exit normally
+exit 0
+
+
+
+# END OF FILE
