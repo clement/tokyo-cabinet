@@ -525,7 +525,7 @@ int tcbdbaddint(TCBDB *bdb, const void *kbuf, int ksiz, int num);
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
    `num' specifies the additional value.
-   If successful, the return value is the summation value, else, it is `NAN'.
+   If successful, the return value is the summation value, else, it is Not-a-Number.
    If the corresponding record exists, the value is treated as a real number and is added to.  If
    no record corresponds, a new record of the additional value is stored. */
 double tcbdbadddouble(TCBDB *bdb, const void *kbuf, int ksiz, double num);
@@ -832,6 +832,12 @@ void tcbdbsetdbgfd(TCBDB *bdb, int fd);
 int tcbdbdbgfd(TCBDB *bdb);
 
 
+/* Check whether mutual exclusion control is set to a B+ tree database object.
+   `bdb' specifies the B+ tree database object.
+   If mutual exclusion control is set, it is true, else it is false. */
+bool tcbdbhasmutex(TCBDB *bdb);
+
+
 /* Synchronize updating contents on memory of a B+ tree database object.
    `bdb' specifies the B+ tree database object connected as a writer.
    `phys' specifies whether to synchronize physically.
@@ -906,15 +912,15 @@ uint32_t tcbdbfbpmax(TCBDB *bdb);
 
 /* Get the inode number of the database file of a B+ tree database object.
    `bdb' specifies the B+ tree database object.
-   The return value is the inode number of the database file or 0 the object does not connect to
-   any database file. */
+   The return value is the inode number of the database file or 0 if the object does not connect
+   to any database file. */
 uint64_t tcbdbinode(TCBDB *bdb);
 
 
 /* Get the modification time of the database file of a B+ tree database object.
    `bdb' specifies the B+ tree database object.
-   The return value is the inode number of the database file or 0 the object does not connect to
-   any database file. */
+   The return value is the inode number of the database file or 0 if the object does not connect
+   to any database file. */
 time_t tcbdbmtime(TCBDB *bdb);
 
 

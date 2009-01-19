@@ -18,7 +18,7 @@
 #include <tchdb.h>
 #include "myconf.h"
 
-#define RECBUFSIZ      32                // buffer for records
+#define RECBUFSIZ      48                // buffer for records
 
 typedef struct {                         // type of structure for write thread
   TCHDB *hdb;
@@ -100,7 +100,7 @@ int main(int argc, char **argv){
   g_progname = argv[0];
   g_dbgfd = -1;
   const char *ebuf = getenv("TCDBGFD");
-  if(ebuf) g_dbgfd = tcatoi(ebuf);
+  if(ebuf) g_dbgfd = tcatoix(ebuf);
   srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
@@ -242,10 +242,10 @@ static int runwrite(int argc, char **argv){
         opts |= HDBTEXCODEC;
       } else if(!strcmp(argv[i], "-rc")){
         if(++i >= argc) usage();
-        rcnum = tcatoi(argv[i]);
+        rcnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
-        xmsiz = tcatoi(argv[i]);
+        xmsiz = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -274,12 +274,12 @@ static int runwrite(int argc, char **argv){
     }
   }
   if(!path || !tstr || !rstr) usage();
-  int tnum = tcatoi(tstr);
-  int rnum = tcatoi(rstr);
+  int tnum = tcatoix(tstr);
+  int rnum = tcatoix(rstr);
   if(tnum < 1 || rnum < 1) usage();
-  int bnum = bstr ? tcatoi(bstr) : -1;
-  int apow = astr ? tcatoi(astr) : -1;
-  int fpow = fstr ? tcatoi(fstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
+  int apow = astr ? tcatoix(astr) : -1;
+  int fpow = fstr ? tcatoix(fstr) : -1;
   int rv = procwrite(path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, omode, as, rnd);
   return rv;
 }
@@ -298,10 +298,10 @@ static int runread(int argc, char **argv){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-rc")){
         if(++i >= argc) usage();
-        rcnum = tcatoi(argv[i]);
+        rcnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
-        xmsiz = tcatoi(argv[i]);
+        xmsiz = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -322,7 +322,7 @@ static int runread(int argc, char **argv){
     }
   }
   if(!path || !tstr) usage();
-  int tnum = tcatoi(tstr);
+  int tnum = tcatoix(tstr);
   if(tnum < 1) usage();
   int rv = procread(path, tnum, rcnum, xmsiz, omode, wb, rnd);
   return rv;
@@ -341,10 +341,10 @@ static int runremove(int argc, char **argv){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-rc")){
         if(++i >= argc) usage();
-        rcnum = tcatoi(argv[i]);
+        rcnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
-        xmsiz = tcatoi(argv[i]);
+        xmsiz = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -363,7 +363,7 @@ static int runremove(int argc, char **argv){
     }
   }
   if(!path || !tstr) usage();
-  int tnum = tcatoi(tstr);
+  int tnum = tcatoix(tstr);
   if(tnum < 1) usage();
   int rv = procremove(path, tnum, rcnum, xmsiz, omode, rnd);
   return rv;
@@ -410,8 +410,8 @@ static int runwicked(int argc, char **argv){
     }
   }
   if(!path || !tstr || !rstr) usage();
-  int tnum = tcatoi(tstr);
-  int rnum = tcatoi(rstr);
+  int tnum = tcatoix(tstr);
+  int rnum = tcatoix(rstr);
   if(tnum < 1 || rnum < 1) usage();
   int rv = procwicked(path, tnum, rnum, opts, omode, nc);
   return rv;
@@ -446,10 +446,10 @@ static int runtypical(int argc, char **argv){
         opts |= HDBTEXCODEC;
       } else if(!strcmp(argv[i], "-rc")){
         if(++i >= argc) usage();
-        rcnum = tcatoi(argv[i]);
+        rcnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
-        xmsiz = tcatoi(argv[i]);
+        xmsiz = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -458,7 +458,7 @@ static int runtypical(int argc, char **argv){
         nc = true;
       } else if(!strcmp(argv[i], "-rr")){
         if(++i >= argc) usage();
-        rratio = tcatoi(argv[i]);
+        rratio = tcatoix(argv[i]);
       } else {
         usage();
       }
@@ -479,12 +479,12 @@ static int runtypical(int argc, char **argv){
     }
   }
   if(!path || !tstr || !rstr) usage();
-  int tnum = tcatoi(tstr);
-  int rnum = tcatoi(rstr);
+  int tnum = tcatoix(tstr);
+  int rnum = tcatoix(rstr);
   if(tnum < 1 || rnum < 1) usage();
-  int bnum = bstr ? tcatoi(bstr) : -1;
-  int apow = astr ? tcatoi(astr) : -1;
-  int fpow = fstr ? tcatoi(fstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
+  int apow = astr ? tcatoix(astr) : -1;
+  int fpow = fstr ? tcatoix(fstr) : -1;
   int rv = proctypical(path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, omode, nc, rratio);
   return rv;
 }

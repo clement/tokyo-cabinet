@@ -18,7 +18,7 @@
 #include <tcfdb.h>
 #include "myconf.h"
 
-#define RECBUFSIZ      32                // buffer for records
+#define RECBUFSIZ      48                // buffer for records
 #define EXHEADSIZ      256               // expected header size
 
 
@@ -57,7 +57,7 @@ int main(int argc, char **argv){
   g_progname = argv[0];
   g_dbgfd = -1;
   const char *ebuf = getenv("TCDBGFD");
-  if(ebuf) g_dbgfd = tcatoi(ebuf);
+  if(ebuf) g_dbgfd = tcatoix(ebuf);
   srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
@@ -192,10 +192,10 @@ static int runwrite(int argc, char **argv){
     }
   }
   if(!path || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
-  int width = wstr ? tcatoi(wstr) : -1;
-  int64_t limsiz = lstr ? strtoll(lstr, NULL, 10) : -1;
+  int width = wstr ? tcatoix(wstr) : -1;
+  int64_t limsiz = lstr ? tcatoix(lstr) : -1;
   int rv = procwrite(path, rnum, width, limsiz, mt, omode, rnd);
   return rv;
 }
@@ -288,7 +288,7 @@ static int runrcat(int argc, char **argv){
         omode |= FDBOLCKNB;
       } else if(!strcmp(argv[i], "-pn")){
         if(++i >= argc) usage();
-        pnum = tcatoi(argv[i]);
+        pnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-dai")){
         dai = true;
       } else if(!strcmp(argv[i], "-dad")){
@@ -311,10 +311,10 @@ static int runrcat(int argc, char **argv){
     }
   }
   if(!path || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
-  int width = wstr ? tcatoi(wstr) : -1;
-  int64_t limsiz = lstr ? strtoll(lstr, NULL, 10) : -1;
+  int width = wstr ? tcatoix(wstr) : -1;
+  int64_t limsiz = lstr ? tcatoix(lstr) : -1;
   int rv = procrcat(path, rnum, width, limsiz, mt, omode, pnum, dai, dad, rl);
   return rv;
 }
@@ -346,7 +346,7 @@ static int runmisc(int argc, char **argv){
     }
   }
   if(!path || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procmisc(path, rnum, mt, omode);
   return rv;
@@ -379,7 +379,7 @@ static int runwicked(int argc, char **argv){
     }
   }
   if(!path || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procwicked(path, rnum, mt, omode);
   return rv;
@@ -569,7 +569,7 @@ static int procrcat(const char *path, int rnum, int width, int64_t limsiz,
         break;
       }
     } else if(dad){
-      if(isnan(tcfdbadddouble(fdb, tcfdbkeytoid(kbuf, ksiz), myrand(3)))){
+      if(isnan(tcfdbadddouble(fdb, tcfdbkeytoid(kbuf, ksiz), myrand(30) / 10.0))){
         eprint(fdb, "tcfdbadddouble");
         err = true;
         break;

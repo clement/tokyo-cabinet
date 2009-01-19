@@ -18,7 +18,7 @@
 #include <tcadb.h>
 #include "myconf.h"
 
-#define RECBUFSIZ      32                // buffer for records
+#define RECBUFSIZ      48                // buffer for records
 
 
 /* global variables */
@@ -151,7 +151,7 @@ static int runwrite(int argc, char **argv){
     }
   }
   if(!name || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procwrite(name, rnum);
   return rv;
@@ -210,7 +210,7 @@ static int runrcat(int argc, char **argv){
     }
   }
   if(!name || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procrcat(name, rnum);
   return rv;
@@ -233,7 +233,7 @@ static int runmisc(int argc, char **argv){
     }
   }
   if(!name || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procmisc(name, rnum);
   return rv;
@@ -256,7 +256,7 @@ static int runwicked(int argc, char **argv){
     }
   }
   if(!name || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procwicked(name, rnum);
   return rv;
@@ -282,8 +282,8 @@ static int runcompare(int argc, char **argv){
     }
   }
   if(!name || !tstr || !rstr) usage();
-  int tnum = tcatoi(tstr);
-  int rnum = tcatoi(rstr);
+  int tnum = tcatoix(tstr);
+  int rnum = tcatoix(rstr);
   if(tnum < 1 || rnum < 1) usage();
   int rv = proccompare(name, tnum, rnum);
   return rv;

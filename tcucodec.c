@@ -275,7 +275,7 @@ static int runmime(int argc, char **argv){
         bd = true;
       } else if(!strcmp(argv[i], "-part")){
         if(++i >= argc) usage();
-        part = tcatoi(argv[i]);
+        part = tcatoix(argv[i]);
       } else {
         usage();
       }
@@ -577,7 +577,7 @@ static int runhash(int argc, char **argv){
         crc = true;
       } else if(!strcmp(argv[i], "-ch")){
         if(++i >= argc) usage();
-        ch = tcatoi(argv[i]);
+        ch = tcatoix(argv[i]);
       } else {
         usage();
       }
@@ -618,7 +618,7 @@ static int rundate(int argc, char **argv){
         str = argv[i];
       } else if(!strcmp(argv[i], "-jl")){
         if(++i >= argc) usage();
-        jl = tcatoi(argv[i]);
+        jl = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-wf")){
         wf = true;
       } else if(!strcmp(argv[i], "-rf")){
@@ -1047,6 +1047,7 @@ static int procconf(int mode){
     break;
   default:
     printf("myconf(version): %s\n", tcversion);
+    printf("myconf(sysname): %s\n", TCSYSNAME);
     printf("myconf(libver): %d\n", _TC_LIBVER);
     printf("myconf(formatver): %s\n", _TC_FORMATVER);
     printf("myconf(prefix): %s\n", _TC_PREFIX);

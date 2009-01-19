@@ -1,4 +1,4 @@
-.TH "TCUTIL" 3 "2008-11-25" "Man Page" "Tokyo Cabinet"
+.TH "TCUTIL" 3 "2009-01-07" "Man Page" "Tokyo Cabinet"
 
 .SH NAME
 tcutil \- the utility API
@@ -337,6 +337,22 @@ The function `tclistnew2' is used in order to create a list object with expectin
 \fBTCLIST *tclistnew2(int \fIanum\fB);\fR
 .RS
 `\fIanum\fR' specifies the number of elements expected to be stored in the list.
+.RE
+.RS
+The return value is the new list object.
+.RE
+.RE
+.PP
+The function `tclistnew3' is used in order to create a list object with initial string elements.
+.PP
+.RS
+.br
+\fBTCLIST *tclistnew3(const char *\fIstr\fB, ...);\fR
+.RS
+`\fIstr\fR' specifies the string of the first element.
+.RE
+.RS
+The other arguments are other elements.  They should be trailed by a `NULL' argument.
 .RE
 .RS
 The return value is the new list object.
@@ -801,6 +817,25 @@ The function `tcmapnew2' is used in order to create a map object with specifying
 .RE
 .RS
 The return value is the new map object.
+.RE
+.RE
+.PP
+The function `tcmapnew3' is used in order to create a map object with initial string elements.
+.PP
+.RS
+.br
+\fBTCMAP *tcmapnew3(const char *\fIstr\fB, ...);\fR
+.RS
+`\fIstr\fR' specifies the string of the first element.
+.RE
+.RS
+The other arguments are other elements.  They should be trailed by a `NULL' argument.
+.RE
+.RS
+The return value is the new map object.
+.RE
+.RS
+The key and the value of each record are situated one after the other.
 .RE
 .RE
 .PP
@@ -3394,7 +3429,7 @@ The function `tcstrjoin' is used in order to create a string by joining all elem
 .PP
 .RS
 .br
-\fBchar *tcstrjoin(TCLIST *\fIlist\fB, char \fIdelim\fB);\fR
+\fBchar *tcstrjoin(const TCLIST *\fIlist\fB, char \fIdelim\fB);\fR
 .RS
 `\fIlist\fR' specifies a list object.
 .RE
@@ -3409,11 +3444,27 @@ Because the region of the return value is allocated with the `malloc' call, it s
 .RE
 .RE
 .PP
-The function `tcatoi' is used in order to convert a string with a metric prefix to an integer.
+The function `tcatoi' is used in order to convert a string to an integer.
 .PP
 .RS
 .br
-\fBint64_t tcatoi(const char *str);\fR
+\fBint64_t tcatoi(const char *\fIstr\fB);\fR
+.RS
+`\fIstr\fR' specifies a string.
+.RE
+.RS
+The return value is the integer.  If the string does not contain numeric expression, 0 is returned.
+.RE
+.RS
+This function is equivalent to `atoll' except that it does not depend on the locale.
+.RE
+.RE
+.PP
+The function `tcatoix' is used in order to convert a string with a metric prefix to an integer.
+.PP
+.RS
+.br
+\fBint64_t tcatoix(const char *\fIstr\fB);\fR
 .RS
 `\fIstr\fR' specifies a string which can be trailed by a binary metric prefix.  "K", "M", "G", "T", "P", and "E" are supported.  They are case\-insensitive.
 .RE

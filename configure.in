@@ -7,26 +7,26 @@
 #================================================================
 
 # Package name
-AC_INIT(tokyocabinet, 1.3.27)
+AC_INIT(tokyocabinet, 1.4.0)
 
 # Package information
 MYLIBVER=7
-MYLIBREV=4
+MYLIBREV=5
 MYFORMATVER="1.0"
 
 # Targets
-MYHEADERFILES="tcutil.h tchdb.h tcbdb.h tcfdb.h tcadb.h"
+MYHEADERFILES="tcutil.h tchdb.h tcbdb.h tcfdb.h tctdb.h tcadb.h"
 MYLIBRARYFILES="libtokyocabinet.a"
-MYLIBOBJFILES="tcutil.o tchdb.o tcbdb.o tcfdb.o tcadb.o myconf.o md5.o"
+MYLIBOBJFILES="tcutil.o tchdb.o tcbdb.o tcfdb.o tctdb.o tcadb.o myconf.o md5.o"
 MYCOMMANDFILES="tcutest tcumttest tcucodec tchtest tchmttest tchmgr"
 MYCOMMANDFILES="$MYCOMMANDFILES tcbtest tcbmttest tcbmgr tcftest tcfmttest tcfmgr"
-MYCOMMANDFILES="$MYCOMMANDFILES tcatest tcamgr"
+MYCOMMANDFILES="$MYCOMMANDFILES tcttest tctmttest tctmgr tcatest tcamgr"
 MYCGIFILES="tcawmgr.cgi"
 MYMAN1FILES="tcutest.1 tcumttest.1 tcucodec.1 tchtest.1 tchmttest.1 tchmgr.1"
 MYMAN1FILES="$MYMAN1FILES tcbtest.1 tcbmttest.1 tcbmgr.1 tcftest.1 tcfmttest.1 tcfmgr.1"
-MYMAN1FILES="$MYMAN1FILES tcatest.1 tcamgr.1"
+MYMAN1FILES="$MYMAN1FILES tcttest.1 tctmttest.1 tctmgr.1 tcatest.1 tcamgr.1"
 MYMAN3FILES="tokyocabinet.3 tcutil.3 tcxstr.3 tclist.3 tcmap.3 tctree.3 tcmdb.3 tcmpool.3"
-MYMAN3FILES="$MYMAN3FILES tchdb.3 tcbdb.3 tcfdb.3 tcadb.3"
+MYMAN3FILES="$MYMAN3FILES tchdb.3 tcbdb.3 tcfdb.3 tctdb.3 tcadb.3"
 MYDOCUMENTFILES="COPYING ChangeLog THANKS doc"
 MYPCFILES="tokyocabinet.pc"
 

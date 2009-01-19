@@ -24,7 +24,7 @@
 <h1>Fundamental Specifications of Tokyo Cabinet Version 1</h1>
 
 <div class="note">Copyright (C) 2006-2009 Mikio Hirabayashi</div>
-<div class="note">Last Update: Sat, 03 Jan 2009 21:41:33 +0900</div>
+<div class="note">Last Update: Wed, 07 Jan 2009 01:03:53 +0900</div>
 <div class="navi">[<span class="void">English</span>/<a href="spex-ja.html" hreflang="ja">Japanese</a>] [<a href="index.html">HOME</a>]</div>
 
 <hr />
@@ -39,6 +39,7 @@
 <li><a href="#tchdbapi">The Hash Database API</a></li>
 <li><a href="#tcbdbapi">The B+ Tree Database API</a></li>
 <li><a href="#tcfdbapi">The Fixed-length Database API</a></li>
+<li><a href="#tctdbapi">The Table Database API</a></li>
 <li><a href="#tcadbapi">The Abstract Database API</a></li>
 <li><a href="#license">License</a></li>
 </ol>
@@ -55,6 +56,8 @@
 
 <p>As for database of fixed-length array, records are stored with unique natural numbers.  It is impossible to store two or more records with a key overlaps.  Moreover, the length of each record is limited by the specified length.  Provided operations are the same as ones of hash database.</p>
 
+<p>Table database is also provided as a variant of hash database.  Each record is identified by the primary key and has a set of named columns.  Although there is no concept of data schema, it is possible to search for records with complex conditions efficiently by using indexes of arbitrary columns.</p>
+
 <p>Tokyo Cabinet is written in the C language, and provided as API of C, Perl, Ruby, Java, and Lua.  Tokyo Cabinet is available on platforms which have API conforming to C99 and POSIX.  Tokyo Cabinet is a free software licensed under the GNU Lesser General Public License.</p>
 
 <hr />
@@ -63,7 +66,7 @@
 
 <p>Tokyo Cabinet is the successor of QDBM and improves time and space efficiency.  This section describes the features of Tokyo Cabinet.</p>
 
-<h3>The Dinosaur Wing of the DBM fork</h3>
+<h3>The Dinosaur Wing of the DBM Forks</h3>
 
 <p>Tokyo Cabinet is developed as the successor of GDBM and QDBM on the following purposes.  They are achieved and Tokyo Cabinet replaces conventional DBM products.</p>
 
@@ -108,6 +111,14 @@
 
 <p>The size of the database is proportional to the range of keys and the limit size of each value.  That is, the smaller the range of keys is or the smaller the length of each value is, the higher the space efficiency is.  For example, if the maximum key is 1000000 and the limit size of the value is 100 bytes, the size of the database will be about 100MB.  Because regions around referred records are only loaded on the RAM, you can increase the size of the database to the size of the virtual memory.</p>
 
+<h3>Flexible Implementation of Table Database</h3>
+
+<p>Table database does not express simple key/value structure but expresses a structure like a table of relational database.  Each record is identified by the primary key and has a set of multiple columns named with arbitrary strings.  For example, a stuff in your company can be expressed by a record identified by the primary key of the employee ID number and structured by columns of his name, division, salary, and so on.  Unlike relational database, table database does not need to define any data schema and can contain records of various structures different from each other.</p>
+
+<p>Table database supports query functions with not only the primary key but also with conditions about arbitrary columns.  Each column condition is composed of the name of a column and a condition expression.  Operators of full matching, forward matching, regular expression matching, and so on are provided for the string type.  Operators of full matching, range matching and so on are provided for the number type.  A query can contain multiple conditions.  The order of the result set can be specified as the ascending or descending order of strings or numbers.</p>
+
+<p>You can create indexes for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indexes have types for strings or numbers.  The query optimizer uses indexes in suitable way according to each query.  Indexes are implemented as different files of B+ tree database.</p>
+
 <h3>Practical Functionality</h3>
 
 <p>Hash database and B+ tree database feature transaction mechanisms.  It is possible to commit a series of operations between the beginning and the end of the transaction in a lump, or to abort the transaction and perform rollback to the state before the transaction.  Two isolation levels are supported; serializable and read uncommitted.  Durability is secured by write ahead logging and shadow paging.</p>
@@ -122,7 +133,7 @@
 
 <p>The utility API is also provided.  Such fundamental data structure as list and map are included.  And, some useful features; memory pool, string processing, encoding, are also included.</p>
 
-<p>Five kinds of API; the utility API, the hash database API, the B+ tree database API, the fixed-length database API, and the abstract database API, are provided for the C language.  Command line interfaces are also provided corresponding to each API.  They are useful for prototyping, test, and debugging.  Except for C, Tokyo Cabinet provides APIs for Perl, Ruby, Java, and Lua.  The Perl API has methods calling the hash database API, the B+ tree database API, and the fixed-length database API with XS language.  The Ruby API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Ruby.  The Java API has native methods calling the hash database API, the B+ tree database API, and the fixed-length database API with Java Native Interface.  The Lua API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Lua.  APIs for other languages will hopefully be provided by third party.</p>
+<p>Six kinds of API; the utility API, the hash database API, the B+ tree database API, the fixed-length database API, the table database API, and the abstract database API, are provided for the C language.  Command line interfaces are also provided corresponding to each API.  They are useful for prototyping, test, and debugging.  Except for C, Tokyo Cabinet provides APIs for Perl, Ruby, Java, and Lua.  The Perl API has methods calling the hash database API, the B+ tree database API, and the fixed-length database API with XS language.  The Ruby API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Ruby.  The Java API has native methods calling the hash database API, the B+ tree database API, and the fixed-length database API with Java Native Interface.  The Lua API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Lua.  APIs for other languages will hopefully be provided by third party.</p>
 
 <p>In cases that multiple processes access a database at the same time or some processes access a database on a remote host, the remote service is useful.  The remote service is composed of a database server and its access library.  Applications can access the database server by using the remote database API.  The server implements HTTP and the memcached protocol partly so that client programs on almost all platforms can access the server easily.</p>
 
@@ -182,10 +193,11 @@
 /usr/local/include/tchdb.h
 /usr/local/include/tcbdb.h
 /usr/local/include/tcfdb.h
+/usr/local/include/tctdb.h
 /usr/local/include/tcadb.h
 /usr/local/lib/libtokyocabinet.a
-/usr/local/lib/libtokyocabinet.so.7.4.0
-/usr/local/lib/libtokyocabinet.so.7
+/usr/local/lib/libtokyocabinet.so.x.y.z
+/usr/local/lib/libtokyocabinet.so.x
 /usr/local/lib/libtokyocabinet.so
 /usr/local/lib/pkgconfig/tokyocabinet.pc
 /usr/local/bin/tcutest
@@ -200,6 +212,9 @@
 /usr/local/bin/tcftest
 /usr/local/bin/tcfmttest
 /usr/local/bin/tcfmgr
+/usr/local/bin/tcttest
+/usr/local/bin/tctmttest
+/usr/local/bin/tctmgr
 /usr/local/bin/tcamgr
 /usr/local/bin/tcatest
 /usr/local/libexec/tcawmgr.cgi
@@ -446,6 +461,15 @@
 <dl class="api">
 <dt><code>TCLIST *tclistnew2(int <var>anum</var>);</code></dt>
 <dd>`<var>anum</var>' specifies the number of elements expected to be stored in the list.</dd>
+<dd>The return value is the new list object.</dd>
+</dl>
+
+<p>The function `tclistnew3' is used in order to create a list object with initial string elements.</p>
+
+<dl class="api">
+<dt><code>TCLIST *tclistnew3(const char *<var>str</var>, ...);</code></dt>
+<dd>`<var>str</var>' specifies the string of the first element.</dd>
+<dd>The other arguments are other elements.  They should be trailed by a `NULL' argument.</dd>
 <dd>The return value is the new list object.</dd>
 </dl>
 
@@ -701,6 +725,16 @@
 <dt><code>TCMAP *tcmapnew2(uint32_t <var>bnum</var>);</code></dt>
 <dd>`<var>bnum</var>' specifies the number of the buckets.</dd>
 <dd>The return value is the new map object.</dd>
+</dl>
+
+<p>The function `tcmapnew3' is used in order to create a map object with initial string elements.</p>
+
+<dl class="api">
+<dt><code>TCMAP *tcmapnew3(const char *<var>str</var>, ...);</code></dt>
+<dd>`<var>str</var>' specifies the string of the first element.</dd>
+<dd>The other arguments are other elements.  They should be trailed by a `NULL' argument.</dd>
+<dd>The return value is the new map object.</dd>
+<dd>The key and the value of each record are situated one after the other.</dd>
 </dl>
 
 <p>The function `tcmapdup' is used in order to copy a map object.</p>
@@ -2110,17 +2144,26 @@
 <p>The function `tcstrjoin' is used in order to create a string by joining all elements of a list object.</p>
 
 <dl class="api">
-<dt><code>char *tcstrjoin(TCLIST *<var>list</var>, char <var>delim</var>);</code></dt>
+<dt><code>char *tcstrjoin(const TCLIST *<var>list</var>, char <var>delim</var>);</code></dt>
 <dd>`<var>list</var>' specifies a list object.</dd>
 <dd>`<var>delim</var>' specifies a delimiting character.</dd>
 <dd>The return value is the result string.</dd>
 <dd>Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.</dd>
 </dl>
 
-<p>The function `tcatoi' is used in order to convert a string with a metric prefix to an integer.</p>
+<p>The function `tcatoi' is used in order to convert a string to an integer.</p>
 
 <dl class="api">
-<dt><code>int64_t tcatoi(const char *str);</code></dt>
+<dt><code>int64_t tcatoi(const char *<var>str</var>);</code></dt>
+<dd>`<var>str</var>' specifies a string.</dd>
+<dd>The return value is the integer.  If the string does not contain numeric expression, 0 is returned.</dd>
+<dd>This function is equivalent to `atoll' except that it does not depend on the locale.</dd>
+</dl>
+
+<p>The function `tcatoix' is used in order to convert a string with a metric prefix to an integer.</p>
+
+<dl class="api">
+<dt><code>int64_t tcatoix(const char *<var>str</var>);</code></dt>
 <dd>`<var>str</var>' specifies a string which can be trailed by a binary metric prefix.  "K", "M", "G", "T", "P", and "E" are supported.  They are case-insensitive.</dd>
 <dd>The return value is the integer.  If the string does not contain numeric expression, 0 is returned.  If the integer overflows the domain, `INT64_MAX' or `INT64_MIN' is returned according to the sign.</dd>
 </dl>
@@ -2695,7 +2738,7 @@
 <dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>Example</h3>
+<h3>Example Code</h3>
 
 <p>The following code is an example using extensible string, array list, and hash map.</p>
 
@@ -3264,7 +3307,7 @@ int main(int argc, char **argv){
 <dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
 <dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
 <dd>`<var>num</var>' specifies the additional value.</dd>
-<dd>If successful, the return value is the summation value, else, it is `NAN'.</dd>
+<dd>If successful, the return value is the summation value, else, it is Not-a-Number.</dd>
 <dd>If the corresponding record exists, the value is treated as a real number and is added to.  If no record corresponds, a new record of the additional value is stored.</dd>
 </dl>
 
@@ -3370,7 +3413,6 @@ int main(int argc, char **argv){
 #include &lt;stdint.h&gt;
 
 int main(int argc, char **argv){
-
   TCHDB *hdb;
   int ecode;
   char *key, *value;
@@ -3439,7 +3481,7 @@ int main(int argc, char **argv){
 <dd>Retrieve all records of the database above.</dd>
 <dt><code>tchtest remove [-mt] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>Remove all records of the database above.</dd>
-<dt><code>tchtest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tchtest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Store records with partway duplicated keys using concatenate mode.</dd>
 <dt><code>tchtest misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
 <dd>Perform miscellaneous test of various operations.</dd>
@@ -3467,6 +3509,7 @@ int main(int argc, char **argv){
 <li><code>-dai</code> : use the function `tchdbaddint' instead of `tchdbputcat'.</li>
 <li><code>-dad</code> : use the function `tchdbadddouble' instead of `tchdbputcat'.</li>
 <li><code>-rl</code> : set the length of values at random.</li>
+<li><code>-ru</code> : select update operations at random.</li>
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
@@ -3983,7 +4026,7 @@ int main(int argc, char **argv){
 <dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
 <dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
 <dd>`<var>num</var>' specifies the additional value.</dd>
-<dd>If successful, the return value is the summation value, else, it is `NAN'.</dd>
+<dd>If successful, the return value is the summation value, else, it is Not-a-Number.</dd>
 <dd>If the corresponding record exists, the value is treated as a real number and is added to.  If no record corresponds, a new record of the additional value is stored.</dd>
 </dl>
 
@@ -4260,7 +4303,6 @@ int main(int argc, char **argv){
 #include &lt;stdint.h&gt;
 
 int main(int argc, char **argv){
-
   TCBDB *bdb;
   BDBCUR *cur;
   int ecode;
@@ -4333,7 +4375,7 @@ int main(int argc, char **argv){
 <dd>Retrieve all records of the database above.</dd>
 <dt><code>tcbtest remove [-mt] [-cd|-ci|-cj] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>Remove all records of the database above.</dd>
-<dt><code>tcbtest rcat [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dt><code>tcbtest rcat [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>Store records with partway duplicated keys using concatenate mode.</dd>
 <dt><code>tcbtest queue [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>Perform queueing and dequeueing.</dd>
@@ -4368,6 +4410,7 @@ int main(int argc, char **argv){
 <li><code>-dai</code> : use the function `tcbdbaddint' instead of `tcbdbputcat'.</li>
 <li><code>-dad</code> : use the function `tcbdbadddouble' instead of `tcbdbputcat'.</li>
 <li><code>-rl</code> : set the length of values at random.</li>
+<li><code>-ru</code> : select update operations at random.</li>
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
@@ -4879,7 +4922,7 @@ int main(int argc, char **argv){
 <dd>`<var>fdb</var>' specifies the fixed-length database object connected as a writer.</dd>
 <dd>`<var>id</var>' specifies the ID number.  It should be more than 0.  If it is `FDBIDMIN', the minimum ID number of existing records is specified.  If it is `FDBIDPREV', the number less by one than the minimum ID number of existing records is specified.  If it is `FDBIDMAX', the maximum ID number of existing records is specified.  If it is `FDBIDNEXT', the number greater by one than the maximum ID number of existing records is specified.</dd>
 <dd>`<var>num</var>' specifies the additional value.</dd>
-<dd>If successful, the return value is the summation value, else, it is `NAN'.</dd>
+<dd>If successful, the return value is the summation value, else, it is Not-a-Number.</dd>
 <dd>If the corresponding record exists, the value is treated as a real number and is added to.  If no record corresponds, a new record of the additional value is stored.</dd>
 </dl>
 
@@ -4955,7 +4998,6 @@ int main(int argc, char **argv){
 #include &lt;stdint.h&gt;
 
 int main(int argc, char **argv){
-
   TCFDB *fdb;
   int ecode;
   char *key, *value;
@@ -5117,6 +5159,769 @@ int main(int argc, char **argv){
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
+
+<hr />
+
+<h2 id="tctdbapi">The Table Database API</h2>
+
+<p>Table database is a file containing records composed of the primary keys and arbitrary columns and is handled with the table database API.  See `<code>tctdb.h</code>' for entire specification.</p>
+
+<h3>Description</h3>
+
+<p>To use the table database API, include `<code>tcutil.h</code>', `<code>tctdb.h</code>', and related standard header files.  Usually, write the following description near the front of a source file.</p>
+
+<dl>
+<dt><code>#include &lt;tcutil.h&gt;</code></dt>
+<dt><code>#include &lt;tctdb.h&gt;</code></dt>
+<dt><code>#include &lt;stdlib.h&gt;</code></dt>
+<dt><code>#include &lt;stdbool.h&gt;</code></dt>
+<dt><code>#include &lt;stdint.h&gt;</code></dt>
+</dl>
+
+<p>Objects whose type is pointer to `<code>TCTDB</code>' are used to handle table databases.  A table database object is created with the function `<code>tctdbnew</code>' and is deleted with the function `<code>tctdbdel</code>'.  To avoid memory leak, it is important to delete every object when it is no longer in use.</p>
+
+<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the table database object to it.  The function `<code>tctdbopen</code>' is used to open a database file and the function `<code>tctdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
+
+<h3>API</h3>
+
+<p>The function `tctdberrmsg' is used in order to get the message string corresponding to an error code.</p>
+
+<dl class="api">
+<dt><code>const char *tctdberrmsg(int <var>ecode</var>);</code></dt>
+<dd>`<var>ecode</var>' specifies the error code.</dd>
+<dd>The return value is the message string of the error code.</dd>
+</dl>
+
+<p>The function `tctdbnew' is used in order to create a table database object.</p>
+
+<dl class="api">
+<dt><code>TCTDB *tctdbnew(void);</code></dt>
+<dd>The return value is the new table database object.</dd>
+</dl>
+
+<p>The function `tctdbdel' is used in order to delete a table database object.</p>
+
+<dl class="api">
+<dt><code>void tctdbdel(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>If the database is not closed, it is closed implicitly.  Note that the deleted object and its derivatives can not be used anymore.</dd>
+</dl>
+
+<p>The function `tctdbecode' is used in order to get the last happened error code of a table database object.</p>
+
+<dl class="api">
+<dt><code>int tctdbecode(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>The return value is the last happened error code.</dd>
+<dd>The following error code is defined: `TCESUCCESS' for success, `TCETHREAD' for threading error, `TCEINVALID' for invalid operation, `TCENOFILE' for file not found, `TCENOPERM' for no permission, `TCEMETA' for invalid meta data, `TCERHEAD' for invalid record header, `TCEOPEN' for open error, `TCECLOSE' for close error, `TCETRUNC' for trunc error, `TCESYNC' for sync error, `TCESTAT' for stat error, `TCESEEK' for seek error, `TCEREAD' for read error, `TCEWRITE' for write error, `TCEMMAP' for mmap error, `TCELOCK' for lock error, `TCEUNLINK' for unlink error, `TCERENAME' for rename error, `TCEMKDIR' for mkdir error, `TCERMDIR' for rmdir error, `TCEKEEP' for existing record, `TCENOREC' for no record found, and `TCEMISC' for miscellaneous error.</dd>
+</dl>
+
+<p>The function `tctdbsetmutex' is used in order to set mutual exclusion control of a table database object for threading.</p>
+
+<dl class="api">
+<dt><code>bool tctdbsetmutex(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Note that the mutual exclusion control is needed if the object is shared by plural threads and this function should should be called before the database is opened.</dd>
+</dl>
+
+<p>The function `tctdbtune' is used in order to set the tuning parameters of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbtune(TCTDB *<var>tdb</var>, int64_t <var>bnum</var>, int8_t <var>apow</var>, int8_t <var>fpow</var>, uint8_t <var>opts</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
+<dd>`<var>bnum</var>' specifies the number of elements of the bucket array.  If it is not more than 0, the default value is specified.  The default value is 131071.  Suggested size of the bucket array is about from 0.5 to 4 times of the number of all records to be stored.</dd>
+<dd>`<var>apow</var>' specifies the size of record alignment by power of 2.  If it is negative, the default value is specified.  The default value is 4 standing for 2^4=16.</dd>
+<dd>`<var>fpow</var>' specifies the maximum number of elements of the free block pool by power of 2.  If it is negative, the default value is specified.  The default value is 10 standing for 2^10=1024.</dd>
+<dd>`<var>opts</var>' specifies options by bitwise or: `TDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64-bit bucket array, `TDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `TDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `TDBTTCBS' specifies that each record is compressed with TCBS encoding.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Note that the tuning parameters should be set before the database is opened.</dd>
+</dl>
+
+<p>The function `tctdbsetxmsiz' is used in order to set the size of the extra mapped memory of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbsetxmsiz(TCTDB *<var>tdb</var>, int64_t <var>xmsiz</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
+<dd>`<var>xmsiz</var>' specifies the size of the extra mapped memory.  If it is not more than 0, the extra mapped memory is disabled.  The default size is 67108864.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Note that the mapping parameters should be set before the database is opened.</dd>
+</dl>
+
+<p>The function `tctdbopen' is used in order to open a database file and connect a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbopen(TCTDB *<var>tdb</var>, const char *<var>path</var>, int <var>omode</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
+<dd>`<var>path</var>' specifies the path of the database file.</dd>
+<dd>`<var>omode</var>' specifies the connection mode: `TDBOWRITER' as a writer, `TDBOREADER' as a reader.  If the mode is `TDBOWRITER', the following may be added by bitwise or: `TDBOCREAT', which means it creates a new database if not exist, `TDBOTRUNC', which means it creates a new database regardless if one exists, `TDBOTSYNC', which means every transaction synchronizes updated contents with the device.  Both of `TDBOREADER' and `TDBOWRITER' can be added to by bitwise or: `TDBONOLCK', which means it opens the database file without file locking, or `TDBOLCKNB', which means locking is performed without blocking.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+</dl>
+
+<p>The function `tctdbclose' is used in order to close a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbclose(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update of a database is assured to be written when the database is closed.  If a writer opens a database but does not close it appropriately, the database will be broken.</dd>
+</dl>
+
+<p>The function `tctdbput' is used in order to store a record into a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbput(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, TCMAP *<var>cols</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>cols</var>' specifies a map object containing columns.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If a record with the same key exists in the database, it is overwritten.</dd>
+</dl>
+
+<p>The function `tctdbput2' is used in order to store a string record into a table database object with a zero separated column string.</p>
+
+<dl class="api">
+<dt><code>bool tctdbput2(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, const void *<var>cbuf</var>, int <var>csiz</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>cbuf</var>' specifies the pointer to the region of the zero separated column string where the name and the value of each column are situated one after the other.</dd>
+<dd>`<var>csiz</var>' specifies the size of the region of the column string.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If a record with the same key exists in the database, it is overwritten.</dd>
+</dl>
+
+<p>The function `tctdbput3' is used in order to store a string record into a table database object with a tab separated column string.</p>
+
+<dl class="api">
+<dt><code>bool tctdbput3(TCTDB *<var>tdb</var>, const char *<var>pkstr</var>, const char *<var>cstr</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkstr</var>' specifies the string of the primary key.</dd>
+<dd>`<var>cstr</var>' specifies the string of the the tab separated column string where the name and the value of each column are situated one after the other.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If a record with the same key exists in the database, it is overwritten.</dd>
+</dl>
+
+<p>The function `tctdbputkeep' is used in order to store a new record into a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbputkeep(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, TCMAP *<var>cols</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>cols</var>' specifies a map object containing columns.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If a record with the same key exists in the database, this function has no effect.</dd>
+</dl>
+
+<p>The function `tctdbputkeep2' is used in order to store a new string record into a table database object with a zero separated column string.</p>
+
+<dl class="api">
+<dt><code>bool tctdbputkeep2(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, const void *<var>cbuf</var>, int <var>csiz</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>cbuf</var>' specifies the pointer to the region of the zero separated column string where the name and the value of each column are situated one after the other.</dd>
+<dd>`<var>csiz</var>' specifies the size of the region of the column string.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If a record with the same key exists in the database, this function has no effect.</dd>
+</dl>
+
+<p>The function `tctdbputkeep3' is used in order to store a new string record into a table database object with a tab separated column string.</p>
+
+<dl class="api">
+<dt><code>bool tctdbputkeep3(TCTDB *<var>tdb</var>, const char *<var>pkstr</var>, const char *<var>cstr</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkstr</var>' specifies the string of the primary key.</dd>
+<dd>`<var>cstr</var>' specifies the string of the the tab separated column string where the name and the value of each column are situated one after the other.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If a record with the same key exists in the database, this function has no effect.</dd>
+</dl>
+
+<p>The function `tctdbputcat' is used in order to concatenate columns of the existing record in a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbputcat(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, TCMAP *<var>cols</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>cols</var>' specifies a map object containing columns.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If there is no corresponding record, a new record is created.</dd>
+</dl>
+
+<p>The function `tctdbputcat2' is used in order to concatenate columns in a table database object with a zero separated column string.</p>
+
+<dl class="api">
+<dt><code>bool tctdbputcat2(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, const void *<var>cbuf</var>, int <var>csiz</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>cbuf</var>' specifies the pointer to the region of the zero separated column string where the name and the value of each column are situated one after the other.</dd>
+<dd>`<var>csiz</var>' specifies the size of the region of the column string.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If there is no corresponding record, a new record is created.</dd>
+</dl>
+
+<p>The function `tctdbputcat3' is used in order to concatenate columns in a table database object with with a tab separated column string.</p>
+
+<dl class="api">
+<dt><code>bool tctdbputcat3(TCTDB *<var>tdb</var>, const char *<var>pkstr</var>, const char *<var>cstr</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkstr</var>' specifies the string of the primary key.</dd>
+<dd>`<var>cstr</var>' specifies the string of the the tab separated column string where the name and the value of each column are situated one after the other.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>If there is no corresponding record, a new record is created.</dd>
+</dl>
+
+<p>The function `tctdbout' is used in order to remove a record of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbout(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+</dl>
+
+<p>The function `tctdbout2' is used in order to remove a string record of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbout2(TCTDB *<var>tdb</var>, const char *<var>pkstr</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>pkstr</var>' specifies the string of the primary key.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+</dl>
+
+<p>The function `tctdbget' is used in order to retrieve a record in a table database object.</p>
+
+<dl class="api">
+<dt><code>TCMAP *tctdbget(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>If successful, the return value is a map object of the columns of the corresponding record.  `NULL' is returned if no record corresponds.</dd>
+<dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.</dd>
+</dl>
+
+<p>The function `tctdbget2' is used in order to retrieve a record in a table database object as a zero separated column string.</p>
+
+<dl class="api">
+<dt><code>char *tctdbget2(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, int *<var>sp</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>pkbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>pksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>sp</var>' specifies the pointer to the variable into which the size of the region of the return value is assigned.</dd>
+<dd>If successful, the return value is the pointer to the region of the column string of the corresponding record.  `NULL' is returned if no record corresponds.</dd>
+<dd>Because an additional zero code is appended at the end of the region of the return value, the return value can be treated as a character string.  Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.</dd>
+</dl>
+
+<p>The function `tctdbget3' is used in order to retrieve a string record in a table database object as a tab separated column string.</p>
+
+<dl class="api">
+<dt><code>char *tctdbget3(TCTDB *<var>tdb</var>, const char *<var>pkstr</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>pkstr</var>' specifies the string of the primary key.</dd>
+<dd>If successful, the return value is the tab separated column string of the corresponding record.  `NULL' is returned if no record corresponds.</dd>
+<dd>Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.</dd>
+</dl>
+
+<p>The function `tctdbvsiz' is used in order to get the size of the value of a record in a table database object.</p>
+
+<dl class="api">
+<dt><code>int tctdbvsiz(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>kbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>ksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>If successful, the return value is the size of the value of the corresponding record, else, it is -1.</dd>
+</dl>
+
+<p>The function `tctdbvsiz2' is used in order to get the size of the value of a string record in a table database object.</p>
+
+<dl class="api">
+<dt><code>int tctdbvsiz2(TCTDB *<var>tdb</var>, const char *<var>pkstr</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>kstr</var>' specifies the string of the primary key.</dd>
+<dd>If successful, the return value is the size of the value of the corresponding record, else, it is -1.</dd>
+</dl>
+
+<p>The function `tctdbiterinit' is used in order to initialize the iterator of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbiterinit(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The iterator is used in order to access the key of every record stored in a database.</dd>
+</dl>
+
+<p>The function `tctdbiternext' is used in order to get the next primary key of the iterator of a table database object.</p>
+
+<dl class="api">
+<dt><code>void *tctdbiternext(TCTDB *<var>tdb</var>, int *<var>sp</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>sp</var>' specifies the pointer to the variable into which the size of the region of the return value is assigned.</dd>
+<dd>If successful, the return value is the pointer to the region of the next primary key, else, it is `NULL'.  `NULL' is returned when no record is to be get out of the iterator.</dd>
+<dd>Because an additional zero code is appended at the end of the region of the return value, the return value can be treated as a character string.  Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.  It is possible to access every record by iteration of calling this function.  It is allowed to update or remove records whose keys are fetched while the iteration.  However, it is not assured if updating the database is occurred while the iteration.  Besides, the order of this traversal access method is arbitrary, so it is not assured that the order of storing matches the one of the traversal access.</dd>
+</dl>
+
+<p>The function `tctdbiternext2' is used in order to get the next primary key string of the iterator of a table database object.</p>
+
+<dl class="api">
+<dt><code>char *tctdbiternext2(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>If successful, the return value is the string of the next primary key, else, it is `NULL'.  `NULL' is returned when no record is to be get out of the iterator.</dd>
+<dd>Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.  It is possible to access every record by iteration of calling this function.  However, it is not assured if updating the database is occurred while the iteration.  Besides, the order of this traversal access method is arbitrary, so it is not assured that the order of storing matches the one of the traversal access.</dd>
+</dl>
+
+<p>The function `tctdbfwmkeys' is used in order to get forward matching primary keys in a table database object.</p>
+
+<dl class="api">
+<dt><code>TCLIST *tctdbfwmkeys(TCTDB *<var>tdb</var>, const void *<var>pbuf</var>, int <var>psiz</var>, int <var>max</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>pbuf</var>' specifies the pointer to the region of the prefix.</dd>
+<dd>`<var>psiz</var>' specifies the size of the region of the prefix.</dd>
+<dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
+</dl>
+
+<p>The function `tctdbfwmkeys2' is used in order to get forward matching string primary keys in a table database object.</p>
+
+<dl class="api">
+<dt><code>TCLIST *tctdbfwmkeys2(TCTDB *<var>tdb</var>, const char *<var>pstr</var>, int <var>max</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>pstr</var>' specifies the string of the prefix.</dd>
+<dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
+</dl>
+
+<p>The function `tctdbaddint' is used in order to add an integer to a column of a record in a table database object.</p>
+
+<dl class="api">
+<dt><code>int tctdbaddint(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, int <var>num</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>kbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>ksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>num</var>' specifies the additional value.</dd>
+<dd>If successful, the return value is the summation value, else, it is `INT_MIN'.</dd>
+<dd>The additional value is stored as a decimal string value of a column whose name is "_num".  If no record corresponds, a new record with the additional value is stored.</dd>
+</dl>
+
+<p>The function `tctdbadddouble' is used in order to add a real number to a column of a record in a table database object.</p>
+
+<dl class="api">
+<dt><code>double tctdbadddouble(TCTDB *<var>tdb</var>, const void *<var>pkbuf</var>, int <var>pksiz</var>, double <var>num</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>kbuf</var>' specifies the pointer to the region of the primary key.</dd>
+<dd>`<var>ksiz</var>' specifies the size of the region of the primary key.</dd>
+<dd>`<var>num</var>' specifies the additional value.</dd>
+<dd>If successful, the return value is the summation value, else, it is Not-a-Number.</dd>
+<dd>The additional value is stored as a decimal string value of a column whose name is "_num".  If no record corresponds, a new record with the additional value is stored.</dd>
+</dl>
+
+<p>The function `tctdbsync' is used in order to synchronize updated contents of a table database object with the file and the device.</p>
+
+<dl class="api">
+<dt><code>bool tctdbsync(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>This function is useful when another process connects to the same database file.</dd>
+</dl>
+
+<p>The function `tctdboptimize' is used in order to optimize the file of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdboptimize(TCTDB *<var>tdb</var>, int64_t <var>bnum</var>, int8_t <var>apow</var>, int8_t <var>fpow</var>, uint8_t <var>opts</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>bnum</var>' specifies the number of elements of the bucket array.  If it is not more than 0, the default value is specified.  The default value is two times of the number of records.</dd>
+<dd>`<var>apow</var>' specifies the size of record alignment by power of 2.  If it is negative, the current setting is not changed.</dd>
+<dd>`<var>fpow</var>' specifies the maximum number of elements of the free block pool by power of 2.  If it is negative, the current setting is not changed.</dd>
+<dd>`<var>opts</var>' specifies options by bitwise or: `BDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64-bit bucket array, `BDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `BDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `BDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>This function is useful to reduce the size of the database file with data fragmentation by successive updating.</dd>
+</dl>
+
+<p>The function `tctdbvanish' is used in order to remove all records of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbvanish(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+</dl>
+
+<p>The function `tctdbcopy' is used in order to copy the database file of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbcopy(TCTDB *<var>tdb</var>, const char *<var>path</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>`<var>path</var>' specifies the path of the destination file.  If it begins with `@', the trailing substring is executed as a command line.</dd>
+<dd>If successful, the return value is true, else, it is false.  False is returned if the executed command returns non-zero code.</dd>
+<dd>The database file is assured to be kept synchronized and not modified while the copying or executing operation is in progress.  So, this function is useful to create a backup file of the database file.</dd>
+</dl>
+
+<p>The function `tctdbtranbegin' is used in order to begin the transaction of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbtranbegin(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The database is locked by the thread while the transaction so that only one transaction can be activated with a database object at the same time.  Thus, the serializable isolation level is assumed if every database operation is performed in the transaction.  Because all pages are cached on memory while the transaction, the amount of referred records is limited by the memory capacity.  If the database is closed during transaction, the transaction is aborted implicitly.</dd>
+</dl>
+
+<p>The function `tctdbtrancommit' is used in order to commit the transaction of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbtrancommit(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is fixed when it is committed successfully.</dd>
+</dl>
+
+<p>The function `tctdbtranabort' is used in order to abort the transaction of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbtranabort(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.</dd>
+</dl>
+
+<p>The function `tctdbpath' is used in order to get the file path of a table database object.</p>
+
+<dl class="api">
+<dt><code>const char *tctdbpath(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>The return value is the path of the database file or `NULL' if the object does not connect to any database file.</dd>
+</dl>
+
+<p>The function `tctdbrnum' is used in order to get the number of records ccccof a table database object.</p>
+
+<dl class="api">
+<dt><code>uint64_t tctdbrnum(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>The return value is the number of records or 0 if the object does not connect to any database file.</dd>
+</dl>
+
+<p>The function `tctdbfsiz' is used in order to get the size of the database file of a table database object.</p>
+
+<dl class="api">
+<dt><code>uint64_t tctdbfsiz(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>The return value is the size of the database file or 0 if the object does not connect to any database file.</dd>
+</dl>
+
+<p>The function `tctdbsetindex' is used in order to set a column index to a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbsetindex(TCTDB *<var>tdb</var>, const char *<var>name</var>, int <var>type</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
+<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITVOID', the index is removed.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Note that the setting indexes should be set after the database is opened.</dd>
+</dl>
+
+
+<p>The function `tctdbgenuid' is used in order to generate a unique ID number of a table database object.</p>
+
+<dl class="api">
+<dt><code>int64_t tctdbgenuid(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
+<dd>The return value is the new unique ID number or -1 on failure.</dd>
+</dl>
+
+<p>The function `tctdbqrynew' is used in order to create a query object.</p>
+
+<dl class="api">
+<dt><code>TDBQRY *tctdbqrynew(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>The return value is the new query object.</dd>
+</dl>
+
+<p>The function `tctdbqrydel' is used in order to delete a query object.</p>
+
+<dl class="api">
+<dt><code>void tctdbqrydel(TDBQRY *<var>qry</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object.</dd>
+</dl>
+
+<p>The function `tctdbqryaddcond' is used in order to add a narrowing condition to a query object.</p>
+
+<dl class="api">
+<dt><code>void tctdbqryaddcond(TDBQRY *<var>qry</var>, const char *<var>name</var>, int <var>op</var>, const char *<var>expr</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object.</dd>
+<dd>`<var>name</var>' specifies the name of a column.  An empty string means the primary key.</dd>
+<dd>`<var>op</var>' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression.  All operations can be flagged by bitwise or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.</dd>
+<dd>`<var>expr</var>' specifies an operand exression.</dd>
+</dl>
+
+<p>The function `tctdbqrysetorder' is used in order to set the order of a query object.</p>
+
+<dl class="api">
+<dt><code>void tctdbqrysetorder(TDBQRY *<var>qry</var>, const char *<var>name</var>, int <var>type</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object.</dd>
+<dd>`<var>name</var>' specifies the name of a column.  An empty string means the primary key.</dd>
+<dd>`<var>type</var>' specifies the order type: `TDBQOSTRASC' for string ascending, `TDBQOSTRDESC' for string descending, `TDBQONUMASC' for number ascending, `TDBQONUMDESC' for number descending.</dd>
+</dl>
+
+<p>The function `tctdbqrysetmax' is used in order to set the maximum number of records of the result of a query object.</p>
+
+<dl class="api">
+<dt><code>void tctdbqrysetmax(TDBQRY *<var>qry</var>, int <var>max</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object.</dd>
+<dd>`<var>max</var>' specifies the maximum number of records of the result.</dd>
+</dl>
+
+<p>The function `tctdbqrysearch' is used in order to execute the search of a query object.</p>
+
+<dl class="api">
+<dt><code>TCLIST *tctdbqrysearch(TDBQRY *<var>qry</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object.</dd>
+<dd>The return value is a list object of the primary keys of the corresponding records.  This function does never fail and return an empty list even if no record corresponds.</dd>
+<dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
+</dl>
+
+<p>The function `tctdbqryhint' is used in order to get the hint of a query object.</p>
+
+<dl class="api">
+<dt><code>const char *tctdbqryhint(TDBQRY *<var>qry</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object.</dd>
+<dd>The return value is the hint string.</dd>
+</dl>
+
+<h3>Example Code</h3>
+
+<p>The following code is an example to use a table database.</p>
+
+<pre>#include &lt;tctdb.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdbool.h&gt;
+#include &lt;stdint.h&gt;
+
+int main(int argc, char **argv){
+  TCTDB *tdb;
+  int ecode, pksiz, i, rsiz;
+  char pkbuf[256];
+  const char *rbuf, *name;
+  TCMAP *cols;
+  TDBQRY *qry;
+  TCLIST *res;
+
+  /* create the object */
+  tdb = tctdbnew();
+
+  /* open the database */
+  if(!tctdbopen(tdb, "casket.tdb", TDBOWRITER | TDBOCREAT)){
+    ecode = tctdbecode(tdb);
+    fprintf(stderr, "open error: %s\n", tctdberrmsg(ecode));
+  }
+
+  /* store a record */
+  pksiz = sprintf(pkbuf, "%ld", (long)tctdbgenuid(tdb));
+  cols = tcmapnew3("name", "mikio", "age", "30", "lang", "ja,en,c", NULL);
+  if(!tctdbput(tdb, pkbuf, pksiz, cols)){
+    ecode = tctdbecode(tdb);
+    fprintf(stderr, "put error: %s\n", tctdberrmsg(ecode));
+  }
+  tcmapdel(cols);
+
+  /* store a record in a naive way */
+  pksiz = sprintf(pkbuf, "12345");
+  cols = tcmapnew();
+  tcmapput2(cols, "name", "falcon");
+  tcmapput2(cols, "age", "31");
+  tcmapput2(cols, "lang", "ja");
+  if(!tctdbput(tdb, pkbuf, pksiz, cols)){
+    ecode = tctdbecode(tdb);
+    fprintf(stderr, "put error: %s\n", tctdberrmsg(ecode));
+  }
+  tcmapdel(cols);
+
+  /* store a record with a TSV string */
+  if(!tctdbput3(tdb, "abcde", "name\tjoker\tage\t19\tlang\ten,es")){
+    ecode = tctdbecode(tdb);
+    fprintf(stderr, "put error: %s\n", tctdberrmsg(ecode));
+  }
+
+  /* search for records */
+  qry = tctdbqrynew(tdb);
+  tctdbqryaddcond(qry, "age", TDBQCNUMGE, "20");
+  tctdbqryaddcond(qry, "lang", TDBQCSTROR, "ja,en");
+  tctdbqrysetorder(qry, "name", TDBQOSTRASC);
+  tctdbqrysetmax(qry, 10);
+  res = tctdbqrysearch(qry);
+  for(i = 0; i &lt; tclistnum(res); i++){
+    rbuf = tclistval(res, i, &amp;rsiz);
+    cols = tctdbget(tdb, rbuf, rsiz);
+    if(cols){
+      printf("%s", rbuf);
+      tcmapiterinit(cols);
+      while((name = tcmapiternext2(cols)) != NULL){
+        printf("\t%s\t%s", name, tcmapget2(cols, name));
+      }
+      printf("\n");
+      tcmapdel(cols);
+    }
+  }
+  tclistdel(res);
+  tctdbqrydel(qry);
+
+  /* close the database */
+  if(!tctdbclose(tdb)){
+    ecode = tctdbecode(tdb);
+    fprintf(stderr, "close error: %s\n", tctdberrmsg(ecode));
+  }
+
+  /* delete the object */
+  tctdbdel(tdb);
+
+  return 0;
+}
+</pre>
+
+<h3>CLI</h3>
+
+<p>To use the table database API easily, the commands `<code>tcttest</code>', `<code>tctmttest</code>', and `<code>tctmgr</code>' are provided.</p>
+
+<p>The command `<code>tcttest</code>' is a utility for facility test and performance test.  This command is used in the following format.  `<var>path</var>' specifies the path of a database file.  `<var>rnum</var>' specifies the number of iterations.  `<var>bnum</var>' specifies the number of buckets.  `<var>apow</var>' specifies the power of the alignment.  `<var>fpow</var>' specifies the power of the free block pool.</p>
+
+<dl class="api">
+<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dd>Store records with columns "str", "num", "type", and "flag".</dd>
+<dt><code>tcttest read [-mt] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
+<dd>Retrieve all records of the database above.</dd>
+<dt><code>tcttest remove [-mt] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
+<dd>Remove all records of the database above.</dd>
+<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dd>Store records with partway duplicated keys using concatenate mode.</dd>
+<dt><code>tcttest misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
+<dd>Perform miscellaneous test of various operations.</dd>
+<dt><code>tcttest wicked [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
+<dd>Perform updating operations selected at random.</dd>
+</dl>
+
+<p>Options feature the following.</p>
+
+<ul class="options">
+<li><code>-mt</code> : call the function `tctdbsetmutex'.</li>
+<li><code>-tl</code> : enable the option `TDBTLARGE'.</li>
+<li><code>-td</code> : enable the option `TDBTDEFLATE'.</li>
+<li><code>-tb</code> : enable the option `TDBTBZIP'.</li>
+<li><code>-tt</code> : enable the option `TDBTTCBS'.</li>
+<li><code>-tx</code> : enable the option `TDBTEXCODEC'.</li>
+<li><code>-xm <var>num</var></code> : specify the size of the extra mapped memory.</li>
+<li><code>-ip</code> : create the number index for the primary key.</li>
+<li><code>-is</code> : create the string index for the column "str".</li>
+<li><code>-in</code> : create the number index for the column "num".</li>
+<li><code>-it</code> : create the string index for the column "type".</li>
+<li><code>-if</code> : create the string index for the column "flag".</li>
+<li><code>-nl</code> : enable the option `TDBNOLCK'.</li>
+<li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
+<li><code>-rnd</code> : select keys at random.</li>
+<li><code>-pn <var>num</var></code> : specify the number of patterns.</li>
+<li><code>-dai</code> : use the function `tctdbaddint' instead of `tctdbputcat'.</li>
+<li><code>-dad</code> : use the function `tctdbadddouble' instead of `tctdbputcat'.</li>
+<li><code>-rl</code> : set the length of values at random.</li>
+<li><code>-ru</code> : select update operations at random.</li>
+</ul>
+
+<p>This command returns 0 on success, another on failure.</p>
+
+<p>The command `<code>tctmttest</code>' is a utility for facility test under multi-thread situation.  This command is used in the following format.  `<var>path</var>' specifies the path of a database file.  `<var>tnum</var>' specifies the number of running threads.  `<var>rnum</var>' specifies the number of iterations.  `<var>bnum</var>' specifies the number of buckets.  `<var>apow</var>' specifies the power of the alignment.  `<var>fpow</var>' specifies the power of the free block pool.</p>
+
+<dl class="api">
+<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dd>Store records with columns "str", "num", "type", and "flag".</dd>
+<dt><code>tctmttest read [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dd>Retrieve all records of the database above.</dd>
+<dt><code>tctmttest remove [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dd>Remove all records of the database above.</dd>
+<dt><code>tctmttest wicked [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var></code></dt>
+<dd>Perform updating operations selected at random.</dd>
+<dt><code>tctmttest typical [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-nl|-nb] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
+<dd>Perform typical operations selected at random.</dd>
+</dl>
+
+<p>Options feature the following.</p>
+
+<ul class="options">
+<li><code>-tl</code> : enable the option `TDBTLARGE'.</li>
+<li><code>-td</code> : enable the option `TDBTDEFLATE'.</li>
+<li><code>-tb</code> : enable the option `TDBTBZIP'.</li>
+<li><code>-tt</code> : enable the option `TDBTTCBS'.</li>
+<li><code>-tx</code> : enable the option `TDBTEXCODEC'.</li>
+<li><code>-xm <var>num</var></code> : specify the size of the extra mapped memory.</li>
+<li><code>-ip</code> : create the number index for the primary key.</li>
+<li><code>-is</code> : create the string index for the column "str".</li>
+<li><code>-in</code> : create the number index for the column "num".</li>
+<li><code>-it</code> : create the string index for the column "type".</li>
+<li><code>-if</code> : create the string index for the column "flag".</li>
+<li><code>-nl</code> : enable the option `TDBNOLCK'.</li>
+<li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
+<li><code>-rnd</code> : select keys at random.</li>
+<li><code>-nc</code> : omit the comparison test.</li>
+<li><code>-rr <var>num</var></code> : specifiy the ratio of reading operation by percentage.</li>
+</ul>
+
+<p>This command returns 0 on success, another on failure.</p>
+
+<p>The command `<code>tctmgr</code>' is a utility for test and debugging of the table database API and its applications.  `<var>path</var>' specifies the path of a database file.  `<var>bnum</var>' specifies the number of buckets.  `<var>apow</var>' specifies the power of the alignment.  `<var>fpow</var>' specifies the power of the free block pool.  `<var>pkey</var>' specifies the primary key of a record.  `<var>cols</var>' specifies the names and the values of a record alternately.  `<var>name</var>' specifies the name of a column.  `<var>op</var>' specifies an operator.  `<var>expr</var>' specifies the condition expression.  `<var>file</var>' specifies the input file.</p>
+
+<dl class="api">
+<dt><code>tctmgr create [-tl] [-td|-tb|-tt|-tx] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dd>Create a database file.</dd>
+<dt><code>tctmgr inform [-nl|-nb] <var>path</var></code></dt>
+<dd>Print miscellaneous information to the standard output.</dd>
+<dt><code>tctmgr put [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>pkey</var> [<var>cols</var> ...]</code></dt>
+<dd>Store a record.</dd>
+<dt><code>tctmgr out [-nl|-nb] [-sx] <var>path</var> <var>pkey</var></code></dt>
+<dd>Remove a record.</dd>
+<dt><code>tctmgr get [-nl|-nb] [-sx] [-px] [-pz] <var>path</var> <var>pkey</var></code></dt>
+<dd>Print the value of a record.</dd>
+<dt><code>tctmgr list [-nl|-nb] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>path</var></code></dt>
+<dd>Print the primary keys of all records, separated by line feeds.</dd>
+<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
+<dd>Print records matching conditions, separated by line feeds.</dd>
+<dt><code>tctmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dd>Optimize a database file.</dd>
+<dt><code>tctmgr setindex [-nl|-nb] [-cd|-cv] <var>path</var> <var>name</var></code></dt>
+<dd>Set the index of a column.</dd>
+<dt><code>tctmgr importtsv [-nl|-nb] [-sc] <var>path</var> [<var>file</var>]</code></dt>
+<dd>Store records of TSV in each line of a file.</dd>
+<dt><code>tctmgr version</code></dt>
+<dd>Print the version information of Tokyo Cabinet.</dd>
+</dl>
+
+<p>Options feature the following.</p>
+
+<ul class="options">
+<li><code>-tl</code> : enable the option `TDBTLARGE'.</li>
+<li><code>-td</code> : enable the option `TDBTDEFLATE'.</li>
+<li><code>-tb</code> : enable the option `TDBTBZIP'.</li>
+<li><code>-tt</code> : enable the option `TDBTTCBS'.</li>
+<li><code>-tx</code> : enable the option `TDBTEXCODEC'.</li>
+<li><code>-nl</code> : enable the option `TDBNOLCK'.</li>
+<li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
+<li><code>-sx</code> : input data is evaluated as a hexadecimal data string.</li>
+<li><code>-dk</code> : use the function `tctdbputkeep' instead of `tctdbput'.</li>
+<li><code>-dc</code> : use the function `tctdbputcat' instead of `tctdbput'.</li>
+<li><code>-px</code> : output data is converted into a hexadecimal data string.</li>
+<li><code>-pz</code> : do not append line feed at the end of the output.</li>
+<li><code>-m <var>num</var></code> : specify the maximum number of the output.</li>
+<li><code>-pv</code> : print values of records also.</li>
+<li><code>-fm <var>str</var></code> : specify the prefix of keys.</li>
+<li><code>-ord <var>name</var> <var>type</var></code> : specify the order of the result.</li>
+<li><code>-ph</code> : print hint information also.</li>
+<li><code>-bt</code> : specifies the number of benchmark tests.</li>
+<li><code>-tz</code> : enable the option `UINT8_MAX'.</li>
+<li><code>-cd</code> : create the number index instead of the string index.</li>
+<li><code>-cv</code> : remove the existing index.</li>
+<li><code>-sc</code> : normalize keys as lower cases.</li>
+</ul>
+
+<p>The operator of the `search' subcommand is one of "STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", and "NUMOREQ".  The type of the `-ord' option is one of "STRASC", "STRDESC", "NUMASC", and "NUMDESC".  This command returns 0 on success, another on failure.</p>
 
 <hr />
 
@@ -5377,7 +6182,7 @@ int main(int argc, char **argv){
 <dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
 <dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
 <dd>`<var>num</var>' specifies the additional value.</dd>
-<dd>If successful, the return value is the summation value, else, it is `NAN'.</dd>
+<dd>If successful, the return value is the summation value, else, it is Not-a-Number.</dd>
 <dd>If the corresponding record exists, the value is treated as a real number and is added to.  If no record corresponds, a new record of the additional value is stored.</dd>
 </dl>
 
@@ -5434,7 +6239,7 @@ int main(int argc, char **argv){
 <dd>All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>Example</h3>
+<h3>Example Code</h3>
 
 <p>The following code is an example to use an abstract database.</p>
 
@@ -5445,7 +6250,6 @@ int main(int argc, char **argv){
 #include &lt;stdint.h&gt;
 
 int main(int argc, char **argv){
-
   TCADB *adb;
   char *key, *value;
 

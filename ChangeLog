@@ -1,4 +1,28 @@
-2009-12-27  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+2009-01-04  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tccmpdecimal): equal numbers are now distinct by lexical order.
+
+	* tcutil.c (tclistnew3, tcmapnew3): new functions.
+
+	* tcutil.c (tcatoix, tclistinvert, tclog2l, tclog2d): new functions.
+
+	* tcutil.c (tcstrsplit2, tcstrsplit3, tcstrsplit4): new functions.
+
+	* tcutil.c (tcstrjoin2, tcstrjoin3, tcstrjoin4): new functions.
+
+	* tchdb.c (tchdbputimpl): a bug of memory corruption was fixed.
+
+	* tchdb.c (tchdbgetnext3): new function.
+
+	* tcbdb.c (tcbdbleafaddrec): a bug of memory corruption was fixed.
+
+	* tcbdb.c (tcbdboptimizeimpl): a bug related to parameter accession was fixed.
+
+	* tctdb.h, tctdb.c, tcttest.c, tctmttest.c, tctmgr.c: new files.
+
+	- Release: 1.4.0
+
+2008-12-27  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcadb.c (tcadbmisc): the return value of the "getlist" function was modified.
 

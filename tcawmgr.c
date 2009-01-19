@@ -77,7 +77,7 @@ int main(int argc, char **argv){
   params.action = ACTLIST;
   int size;
   const char *buf = tcmapget(pmap, "action", 6, &size);
-  if(buf) params.action = tcatoi(buf);
+  if(buf) params.action = tcatoix(buf);
   if(params.action < ACTLIST) params.action = ACTLIST;
   buf = tcmapget(pmap, "key", 3, &size);
   if(buf){
@@ -104,11 +104,11 @@ int main(int argc, char **argv){
   }
   params.num = 0;
   buf = tcmapget(pmap, "num", 3, &size);
-  if(buf) params.num = tcatoi(buf);
+  if(buf) params.num = tcatoix(buf);
   if(params.num < 1) params.num = DEFSHOWNUM;
   params.page = 1;
   buf = tcmapget(pmap, "page", 4, &size);
-  if(buf) params.page = tcatoi(buf);
+  if(buf) params.page = tcatoix(buf);
   if(params.page < 1) params.page = 1;
   bool wmode;
   switch(params.action){
@@ -161,7 +161,7 @@ static void readparameters(TCMAP *params){
   int len = 0;
   const char *rp;
   if((rp = getenv("REQUEST_METHOD")) != NULL && !strcmp(rp, "POST") &&
-     (rp = getenv("CONTENT_LENGTH")) != NULL && (len = tcatoi(rp)) > 0){
+     (rp = getenv("CONTENT_LENGTH")) != NULL && (len = tcatoix(rp)) > 0){
     if(len > maxlen) len = maxlen;
     buf = tccalloc(len + 1, 1);
     if(fread(buf, 1, len, stdin) != len){

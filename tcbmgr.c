@@ -61,7 +61,7 @@ int main(int argc, char **argv){
   g_progname = argv[0];
   g_dbgfd = -1;
   const char *ebuf = getenv("TCDBGFD");
-  if(ebuf) g_dbgfd = tcatoi(ebuf);
+  if(ebuf) g_dbgfd = tcatoix(ebuf);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "create")){
@@ -218,11 +218,11 @@ static int runcreate(int argc, char **argv){
     }
   }
   if(!path) usage();
-  int lmemb = lmstr ? tcatoi(lmstr) : -1;
-  int nmemb = nmstr ? tcatoi(nmstr) : -1;
-  int bnum = bstr ? tcatoi(bstr) : -1;
-  int apow = astr ? tcatoi(astr) : -1;
-  int fpow = fstr ? tcatoi(fstr) : -1;
+  int lmemb = lmstr ? tcatoix(lmstr) : -1;
+  int nmemb = nmstr ? tcatoix(nmstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
+  int apow = astr ? tcatoix(astr) : -1;
+  int fpow = fstr ? tcatoix(fstr) : -1;
   int rv = proccreate(path, lmemb, nmemb, bnum, apow, fpow, cmp, opts);
   return rv;
 }
@@ -298,8 +298,8 @@ static int runput(int argc, char **argv){
     }
   }
   if(!path || !key || !value) usage();
-  int ksiz, vsiz;
   char *kbuf, *vbuf;
+  int ksiz, vsiz;
   if(sx){
     kbuf = tchexdecode(key, &ksiz);
     vbuf = tchexdecode(value, &vsiz);
@@ -443,7 +443,7 @@ static int runlist(int argc, char **argv){
         omode |= BDBOLCKNB;
       } else if(!strcmp(argv[i], "-m")){
         if(++i >= argc) usage();
-        max = tcatoi(argv[i]);
+        max = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-bk")){
         bk = true;
       } else if(!strcmp(argv[i], "-pv")){
@@ -536,11 +536,11 @@ static int runoptimize(int argc, char **argv){
     }
   }
   if(!path) usage();
-  int lmemb = lmstr ? tcatoi(lmstr) : -1;
-  int nmemb = nmstr ? tcatoi(nmstr) : -1;
-  int bnum = bstr ? tcatoi(bstr) : -1;
-  int apow = astr ? tcatoi(astr) : -1;
-  int fpow = fstr ? tcatoi(fstr) : -1;
+  int lmemb = lmstr ? tcatoix(lmstr) : -1;
+  int nmemb = nmstr ? tcatoix(nmstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
+  int apow = astr ? tcatoix(astr) : -1;
+  int fpow = fstr ? tcatoix(fstr) : -1;
   int rv = procoptimize(path, lmemb, nmemb, bnum, apow, fpow, cmp, opts, omode);
   return rv;
 }
@@ -975,7 +975,8 @@ static int procimporttsv(const char *path, const char *file, int omode, bool sc)
 
 /* perform version command */
 static int procversion(void){
-  printf("Tokyo Cabinet version %s (%d:%s)\n", tcversion, _TC_LIBVER, _TC_FORMATVER);
+  printf("Tokyo Cabinet version %s (%d:%s) for %s\n",
+         tcversion, _TC_LIBVER, _TC_FORMATVER, TCSYSNAME);
   printf("Copyright (C) 2006-2009 Mikio Hirabayashi\n");
   return 0;
 }

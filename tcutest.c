@@ -17,7 +17,7 @@
 #include <tcutil.h>
 #include "myconf.h"
 
-#define RECBUFSIZ      32                // buffer for records
+#define RECBUFSIZ      48                // buffer for records
 
 
 /* global variables */
@@ -145,7 +145,7 @@ static int runxstr(int argc, char **argv){
     }
   }
   if(!rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procxstr(rnum);
   return rv;
@@ -173,9 +173,9 @@ static int runlist(int argc, char **argv){
     }
   }
   if(!rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
-  int anum = astr ? tcatoi(astr) : -1;
+  int anum = astr ? tcatoix(astr) : -1;
   int rv = proclist(rnum, anum, rd);
   return rv;
 }
@@ -217,9 +217,9 @@ static int runmap(int argc, char **argv){
     }
   }
   if(!rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
-  int bnum = bstr ? tcatoi(bstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
   int rv = procmap(rnum, bnum, rd, tr, rnd, dmode);
   return rv;
 }
@@ -258,7 +258,7 @@ static int runtree(int argc, char **argv){
     }
   }
   if(!rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = proctree(rnum, rd, tr, rnd, dmode);
   return rv;
@@ -301,9 +301,9 @@ static int runmdb(int argc, char **argv){
     }
   }
   if(!rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
-  int bnum = bstr ? tcatoi(bstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
   int rv = procmdb(rnum, bnum, rd, tr, rnd, dmode);
   return rv;
 }
@@ -342,7 +342,7 @@ static int runndb(int argc, char **argv){
     }
   }
   if(!rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procndb(rnum, rd, tr, rnd, dmode);
   return rv;
@@ -362,7 +362,7 @@ static int runmisc(int argc, char **argv){
     }
   }
   if(!rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procmisc(rnum);
   return rv;
@@ -382,7 +382,7 @@ static int runwicked(int argc, char **argv){
     }
   }
   if(!rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procwicked(rnum);
   return rv;
@@ -800,12 +800,39 @@ static int procmisc(int rnum){
           if(dary[j] != dary[j]) err = true;
         }
       }
+      list = tclistnew3("hop", "step", "jump", "touchdown", NULL);
+      if(tclistnum(list) != 4) err = true;
+      tclistdel(list);
+      map = tcmapnew3("hop", "step", "jump", "touchdown", NULL);
+      if(tcmaprnum(map) != 2) err = true;
+      tcmapdel(map);
       list = tcstrsplit(",a,b..c,d,", ",.");
       if(tclistnum(list) != 7) err = true;
       buf = tcstrjoin(list, ':');
       if(strcmp(buf, ":a:b::c:d:")) err = true;
       tcfree(buf);
       tclistdel(list);
+      char zbuf[RECBUFSIZ];
+      memcpy(zbuf, "abc\0def\0ghij\0kl\0m", 17);
+      list = tcstrsplit2(zbuf, 17);
+      if(tclistnum(list) != 5) err = true;
+      buf = tcstrjoin2(list, &bsiz);
+      if(bsiz != 17 || memcmp(buf, "abc\0def\0ghij\0kl\0m", 17)) err = true;
+      tcfree(buf);
+      tclistdel(list);
+      map = tcstrsplit3("abc.def,ghij.kl,", ",.");
+      if(tcmaprnum(map) != 2) err = true;
+      buf = tcstrjoin3(map, ':');
+      if(strcmp(buf, "abc:def:ghij:kl")) err = true;
+      tcfree(buf);
+      tcmapdel(map);
+      memcpy(zbuf, "abc\0def\0ghij\0kl\0m", 17);
+      map = tcstrsplit4(zbuf, 17);
+      if(tcmaprnum(map) != 2) err = true;
+      buf = tcstrjoin4(map, &bsiz);
+      if(bsiz != 15 || memcmp(buf, "abc\0def\0ghij\0kl", 15)) err = true;
+      tcfree(buf);
+      tcmapdel(map);
       if(!tcregexmatch("ABCDEFGHI", "*(b)c[d-f]*g(h)")) err = true;
       buf = tcregexreplace("ABCDEFGHI", "*(b)c[d-f]*g(h)", "[\\1][\\2][&]");
       if(strcmp(buf, "A[B][H][BCDEFGH]I")) err = true;

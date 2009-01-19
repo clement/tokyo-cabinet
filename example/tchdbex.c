@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 int main(int argc, char **argv){
-
   TCHDB *hdb;
   int ecode;
   char *key, *value;

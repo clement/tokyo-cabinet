@@ -17,7 +17,7 @@
 #include <tcutil.h>
 #include "myconf.h"
 
-#define RECBUFSIZ      32                // buffer for records
+#define RECBUFSIZ      48                // buffer for records
 
 typedef struct {                         // type of structure for combo thread
   TCMDB *mdb;
@@ -151,10 +151,10 @@ static int runcombo(int argc, char **argv){
     }
   }
   if(!tstr || !rstr) usage();
-  int tnum = tcatoi(tstr);
-  int rnum = tcatoi(rstr);
+  int tnum = tcatoix(tstr);
+  int rnum = tcatoix(rstr);
   if(tnum < 1 || rnum < 1) usage();
-  int bnum = bstr ? tcatoi(bstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
   int rv = proccombo(tnum, rnum, bnum, tr, rnd);
   return rv;
 }
@@ -176,7 +176,7 @@ static int runtypical(int argc, char **argv){
         nc = true;
       } else if(!strcmp(argv[i], "-rr")){
         if(++i >= argc) usage();
-        rratio = tcatoi(argv[i]);
+        rratio = tcatoix(argv[i]);
       } else {
         usage();
       }
@@ -191,10 +191,10 @@ static int runtypical(int argc, char **argv){
     }
   }
   if(!tstr || !rstr) usage();
-  int tnum = tcatoi(tstr);
-  int rnum = tcatoi(rstr);
+  int tnum = tcatoix(tstr);
+  int rnum = tcatoix(rstr);
   if(tnum < 1 || rnum < 1) usage();
-  int bnum = bstr ? tcatoi(bstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
   int rv = proctypical(tnum, rnum, bnum, tr, nc, rratio);
   return rv;
 }

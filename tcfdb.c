@@ -70,8 +70,8 @@ enum {                                   // enumeration for duplication behavior
 
 
 /* private function prototypes */
-static void tcdumpmeta(TCFDB *fdb, char *hbuf);
-static void tcloadmeta(TCFDB *fdb, const char *hbuf);
+static void tcfdbdumpmeta(TCFDB *fdb, char *hbuf);
+static void tcfdbloadmeta(TCFDB *fdb, const char *hbuf);
 static void tcfdbclear(TCFDB *fdb);
 static void tcfdbsetflag(TCFDB *fdb, int flag, bool sign);
 static bool tcfdblockmethod(TCFDB *fdb, bool wr);
@@ -948,6 +948,13 @@ int tcfdbdbgfd(TCFDB *fdb){
 }
 
 
+/* Check whether mutual exclusion control is set to a fixed-length database object. */
+bool tcfdbhasmutex(TCFDB *fdb){
+  assert(fdb);
+  return fdb->mmtx != NULL;
+}
+
+
 /* Synchronize updating contents on memory of a fixed-length database object. */
 bool tcfdbmemsync(TCFDB *fdb, bool phys){
   assert(fdb);
@@ -957,7 +964,7 @@ bool tcfdbmemsync(TCFDB *fdb, bool phys){
   }
   bool err = false;
   char hbuf[FDBHEADSIZ];
-  tcdumpmeta(fdb, hbuf);
+  tcfdbdumpmeta(fdb, hbuf);
   memcpy(fdb->map, hbuf, FDBOPAQUEOFF);
   if(phys){
     if(msync(fdb->map, fdb->limsiz, MS_SYNC) == -1){
@@ -1147,7 +1154,7 @@ int64_t tcfdbkeytoid(const char *kbuf, int ksiz){
 /* Serialize meta data into a buffer.
    `fdb' specifies the fixed-length database object.
    `hbuf' specifies the buffer. */
-static void tcdumpmeta(TCFDB *fdb, char *hbuf){
+static void tcfdbdumpmeta(TCFDB *fdb, char *hbuf){
   memset(hbuf, 0, FDBHEADSIZ);
   sprintf(hbuf, "%s\n%s:%d\n", FDBMAGICDATA, _TC_FORMATVER, _TC_LIBVER);
   memcpy(hbuf + FDBTYPEOFF, &(fdb->type), sizeof(fdb->type));
@@ -1177,7 +1184,7 @@ static void tcdumpmeta(TCFDB *fdb, char *hbuf){
 /* Deserialize meta data from a buffer.
    `fdb' specifies the fixed-length database object.
    `hbuf' specifies the buffer. */
-static void tcloadmeta(TCFDB *fdb, const char *hbuf){
+static void tcfdbloadmeta(TCFDB *fdb, const char *hbuf){
   memcpy(&(fdb->type), hbuf + FDBTYPEOFF, sizeof(fdb->type));
   memcpy(&(fdb->flags), hbuf + FDBFLAGSOFF, sizeof(fdb->flags));
   uint64_t llnum;
@@ -1426,7 +1433,7 @@ static bool tcfdbopenimpl(TCFDB *fdb, const char *path, int omode){
     fdb->fsiz = FDBHEADSIZ;
     fdb->min = 0;
     fdb->max = 0;
-    tcdumpmeta(fdb, hbuf);
+    tcfdbdumpmeta(fdb, hbuf);
     if(!tcwrite(fd, hbuf, FDBHEADSIZ)){
       tcfdbsetecode(fdb, TCEWRITE, __FILE__, __LINE__, __func__);
       close(fd);
@@ -1445,7 +1452,7 @@ static bool tcfdbopenimpl(TCFDB *fdb, const char *path, int omode){
     return false;
   }
   int type = fdb->type;
-  tcloadmeta(fdb, hbuf);
+  tcfdbloadmeta(fdb, hbuf);
   if(!(omode & FDBONOLCK)){
     if(memcmp(hbuf, FDBMAGICDATA, strlen(FDBMAGICDATA)) || fdb->type != type ||
        fdb->width < 1 || sbuf.st_size < fdb->fsiz || fdb->limsiz < FDBHEADSIZ ||
@@ -1928,10 +1935,10 @@ static uint64_t *tcfdbrangeimpl(TCFDB *fdb, int64_t lower, int64_t upper, int ma
    If successful, the return value is true, else, it is false. */
 static bool tcfdboptimizeimpl(TCFDB *fdb, int32_t width, int64_t limsiz){
   assert(fdb);
-  if(width < 1) width = fdb->width;
-  if(limsiz < 1) limsiz = fdb->limsiz;
   char *tpath = tcsprintf("%s%ctmp%c%llu", fdb->path, MYEXTCHR, MYEXTCHR, fdb->inode);
   TCFDB *tfdb = tcfdbnew();
+  if(width < 1) width = fdb->width;
+  if(limsiz < 1) limsiz = fdb->limsiz;
   tcfdbtune(tfdb, width, limsiz);
   if(!tcfdbopen(tfdb, tpath, FDBOWRITER | FDBOCREAT | FDBOTRUNC)){
     tcfdbsetecode(fdb, tfdb->ecode, __FILE__, __LINE__, __func__);

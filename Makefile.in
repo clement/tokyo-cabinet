@@ -162,6 +162,20 @@ distclean : clean
 
 
 check :
+	make check-util
+	make check-hdb
+	make check-bdb
+	make check-fdb
+	make check-tdb
+	make check-adb
+	rm -rf casket*
+	@printf '\n'
+	@printf '#================================================================\n'
+	@printf '# Checking completed.\n'
+	@printf '#================================================================\n'
+
+
+check-util :
 	rm -rf casket*
 	$(RUNENV) $(RUNCMD) ./tcamgr version
 	$(RUNENV) $(RUNCMD) ./tcutest xstr 50000
@@ -206,6 +220,11 @@ check :
 	$(RUNENV) $(RUNCMD) ./tcucodec ucs -d check.in > check.out
 	$(RUNENV) $(RUNCMD) ./tcucodec date -ds '1978-02-11T18:05:30+09:00' -rf > check.out
 	$(RUNENV) $(RUNCMD) ./tcucodec conf
+	rm -rf casket*
+
+
+check-hdb :
+	rm -rf casket*
 	$(RUNENV) $(RUNCMD) ./tchtest write casket 50000 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tchtest read casket
 	$(RUNENV) $(RUNCMD) ./tchtest remove casket
@@ -219,6 +238,8 @@ check :
 	$(RUNENV) $(RUNCMD) ./tchtest rcat -tl -td -pn 5000 casket 50000 500 5 15
 	$(RUNENV) $(RUNCMD) ./tchtest rcat -nl -pn 500 -rl casket 5000 500 5 5
 	$(RUNENV) $(RUNCMD) ./tchtest rcat -tb -pn 500 casket 5000 500 5 5
+	$(RUNENV) $(RUNCMD) ./tchtest rcat -ru -pn 500 casket 5000 500 1 1
+	$(RUNENV) $(RUNCMD) ./tchtest rcat -tl -td -ru -pn 500 casket 5000 500 1 1
 	$(RUNENV) $(RUNCMD) ./tchmgr list -pv casket > check.out
 	$(RUNENV) $(RUNCMD) ./tchmgr list -pv -fm 1 -px casket > check.out
 	$(RUNENV) $(RUNCMD) ./tchtest misc casket 5000
@@ -261,6 +282,11 @@ check :
 	$(RUNENV) $(RUNCMD) ./tchmgr get casket four > check.out
 	$(RUNENV) $(RUNCMD) ./tchmgr get casket five > check.out
 	$(RUNENV) $(RUNCMD) ./tchmgr list -pv casket > check.out
+	rm -rf casket*
+
+
+check-bdb :
+	rm -rf casket*
 	$(RUNENV) $(RUNCMD) ./tcbtest write casket 50000 5 5 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbtest read casket
 	$(RUNENV) $(RUNCMD) ./tcbtest remove casket
@@ -276,6 +302,8 @@ check :
 	$(RUNENV) $(RUNCMD) ./tcbtest rcat -tl -td -pn 5000 casket 50000 5 5 500 5 15
 	$(RUNENV) $(RUNCMD) ./tcbtest rcat -nl -pn 5000 -rl casket 15000 5 5 500 5 5
 	$(RUNENV) $(RUNCMD) ./tcbtest rcat -ca 1000 -tb -pn 5000 casket 15000 5 5 500 5 5
+	$(RUNENV) $(RUNCMD) ./tcbtest rcat -ru -pn 500 casket 5000 5 5 500 1 1
+	$(RUNENV) $(RUNCMD) ./tcbtest rcat -cd -tl -td -ru -pn 500 casket 5000 5 5 500 1 1
 	$(RUNENV) $(RUNCMD) ./tcbmgr list -pv casket > check.out
 	$(RUNENV) $(RUNCMD) ./tcbtest queue casket 15000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbtest misc casket 5000
@@ -332,6 +360,10 @@ check :
 	$(RUNENV) $(RUNCMD) ./tcbmgr get casket four > check.out
 	$(RUNENV) $(RUNCMD) ./tcbmgr get casket five > check.out
 	$(RUNENV) $(RUNCMD) ./tcbmgr list -pv casket > check.out
+
+
+check-fdb :
+	rm -rf casket*
 	$(RUNENV) $(RUNCMD) ./tcftest write casket 50000 50
 	$(RUNENV) $(RUNCMD) ./tcftest read casket
 	$(RUNENV) $(RUNCMD) ./tcftest remove casket
@@ -377,6 +409,74 @@ check :
 	$(RUNENV) $(RUNCMD) ./tcfmgr get casket 4 > check.out
 	$(RUNENV) $(RUNCMD) ./tcfmgr get casket 5 > check.out
 	$(RUNENV) $(RUNCMD) ./tcfmgr list -pv casket > check.out
+
+
+check-tdb :
+	rm -rf casket*
+	$(RUNENV) $(RUNCMD) ./tcttest write casket 50000 5000 5 5
+	$(RUNENV) $(RUNCMD) ./tcttest read casket
+	$(RUNENV) $(RUNCMD) ./tcttest remove casket
+	$(RUNENV) $(RUNCMD) ./tcttest write -mt -tl -td -xm 500000 \
+	  -is -in -it -if casket 5000 5000 5 5
+	$(RUNENV) $(RUNCMD) ./tcttest read -mt -nb -xm 500000 casket
+	$(RUNENV) $(RUNCMD) ./tcttest remove -mt -xm 500000 casket
+	$(RUNENV) $(RUNCMD) ./tcttest rcat -pn 500 -xm 50000 -is casket 5000 5000 5 5
+	$(RUNENV) $(RUNCMD) ./tcttest rcat -tl -td -pn 5000 -is -in casket 5000 500 5 15
+	$(RUNENV) $(RUNCMD) ./tcttest rcat -nl -pn 500 -rl -is -in casket 5000 500 5 5
+	$(RUNENV) $(RUNCMD) ./tcttest rcat -tb -pn 500 -is -in casket 5000 500 5 5
+	$(RUNENV) $(RUNCMD) ./tcttest rcat -ru -pn 500 -is -in casket 5000 500 1 1
+	$(RUNENV) $(RUNCMD) ./tcttest rcat -tl -td -ru -pn 500 -is -in casket 5000 500 1 1
+	$(RUNENV) $(RUNCMD) ./tctmgr list -pv casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr list -pv -px casket > check.out
+	$(RUNENV) $(RUNCMD) ./tcttest misc casket 500
+	$(RUNENV) $(RUNCMD) ./tcttest misc -tl -td casket 500
+	$(RUNENV) $(RUNCMD) ./tcttest misc -mt -tb casket 500
+	$(RUNENV) $(RUNCMD) ./tcttest wicked casket 5000
+	$(RUNENV) $(RUNCMD) ./tcttest wicked -tl -td casket 5000
+	$(RUNENV) $(RUNCMD) ./tcttest wicked -mt -tb casket 5000
+	$(RUNENV) $(RUNCMD) ./tcttest wicked -tt casket 5000
+	$(RUNENV) $(RUNCMD) ./tcttest wicked -tx casket 5000
+	$(RUNENV) $(RUNCMD) ./tctmttest write -xm 500000 -tl -is -in casket 5 5000 500 5
+	$(RUNENV) $(RUNCMD) ./tctmttest read -xm 500000 casket 5
+	$(RUNENV) $(RUNCMD) ./tctmttest read -xm 500000 -rnd casket 5
+	$(RUNENV) $(RUNCMD) ./tctmttest remove -xm 500000 casket 5
+	$(RUNENV) $(RUNCMD) ./tctmttest wicked casket 5 5000
+	$(RUNENV) $(RUNCMD) ./tctmttest wicked -tl -td casket 5 5000
+	$(RUNENV) $(RUNCMD) ./tctmttest typical casket 5 5000 500
+	$(RUNENV) $(RUNCMD) ./tctmttest typical -rr 1000 casket 5 5000 500
+	$(RUNENV) $(RUNCMD) ./tctmgr create casket 3 1 1
+	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket name
+	$(RUNENV) $(RUNCMD) ./tctmgr inform casket
+	$(RUNENV) $(RUNCMD) ./tctmgr put casket "" name mikio birth 19780211 lang ja,en,c
+	$(RUNENV) $(RUNCMD) ./tctmgr put casket "" name fal birth 19771007 lang ja
+	$(RUNENV) $(RUNCMD) ./tctmgr put casket "" name banana price 100
+	$(RUNENV) $(RUNCMD) ./tctmgr put -dc casket 3 color yellow
+	$(RUNENV) $(RUNCMD) ./tctmgr put -dk casket "" name melon price 1200 color green
+	$(RUNENV) $(RUNCMD) ./tctmgr put casket "" name void birth 20010101 lang en
+	$(RUNENV) $(RUNCMD) ./tctmgr out casket 5
+	$(RUNENV) $(RUNCMD) ./tctmgr get casket 1 > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr get casket 2 > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr get casket 3 > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -pv -ph casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name strdesc -pv -ph casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name strdesc -pv -ph casket \
+	  name strbw mi birth numbt 19700101,19791231 lang strand ja,en > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket name
+	$(RUNENV) $(RUNCMD) ./tctmgr setindex -cd casket birth
+	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket lang
+	$(RUNENV) $(RUNCMD) ./tctmgr list -pv casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr optimize casket
+	$(RUNENV) $(RUNCMD) ./tctmgr put casket "" name tokyo country japan lang ja
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -pv -ph casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name strdesc -pv -ph casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name strdesc -pv -ph casket \
+	  name strbw mi birth numbt 19700101,19791231 lang strand ja,en > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr list -pv casket > check.out
+
+
+check-adb :
+	rm -rf casket*
 	$(RUNENV) $(RUNCMD) ./tcatest write 'casket.tch#mode=wct#bnum=5000' 50000
 	$(RUNENV) $(RUNCMD) ./tcatest read 'casket.tch#mode=r'
 	$(RUNENV) $(RUNCMD) ./tcatest remove 'casket.tch#mode=w'
@@ -418,11 +518,6 @@ check :
 	$(RUNENV) $(RUNCMD) ./tcamgr misc casket.tch outlist six
 	$(RUNENV) $(RUNCMD) ./tcamgr misc casket.tch getlist three four five six > check.out
 	$(RUNENV) $(RUNCMD) ./tcamgr list -pv casket.tch > check.out
-	rm -rf casket*
-	@printf '\n'
-	@printf '#================================================================\n'
-	@printf '# Checking completed.\n'
-	@printf '#================================================================\n'
 
 
 check-valgrind :
@@ -467,7 +562,7 @@ words :
 	rm -f casket-* words.tsv
 	cat /usr/share/dict/words | \
 	  tr '\t\r' '  ' | grep -v '^ *$$' | cat -n | sort | \
-	  sed -e 's/^ *//' -e 's/\(^[0-9]*\)\t\(.*\)/\2\t\1/' > words.tsv
+	  LC_ALL=C sed -e 's/^ *//' -e 's/\(^[0-9]*\)\t\(.*\)/\2\t\1/' > words.tsv
 	./tchmgr create casket-hash -1 0 ; ./tchmgr importtsv casket-hash words.tsv
 	./tcbmgr create casket-btree 8192 ; ./tcbmgr importtsv casket-btree words.tsv
 	./tcbmgr create -td casket-btree-td 8192 ; ./tcbmgr importtsv casket-btree-td words.tsv
@@ -476,6 +571,18 @@ words :
 	./tcbmgr create -tx casket-btree-tx 8192 ; ./tcbmgr importtsv casket-btree-tx words.tsv
 	wc -c words.tsv casket-hash casket-btree \
 	  casket-btree-td casket-btree-tb casket-btree-tt casket-btree-tx
+
+
+wordtable :
+	rm -rf casket* words.tsv
+	cat /usr/share/dict/words | \
+	  tr '\t\r' '  ' | grep -v '^ *$$' | cat -n | sort | \
+	  LC_ALL=C sed -e 's/^ *//' -e 's/\(^[0-9]*\)\t\(.*\)/\1\tword\t\2\tnum\t\1/' \
+	    -e 's/$$/\txxx\tabc\tyyy\t123/' > words.tsv
+	./tctmgr create casket
+	./tctmgr setindex casket word
+	./tctmgr setindex -cd casket num
+	./tctmgr importtsv casket words.tsv
 
 
 .PHONY : all clean install check
@@ -573,6 +680,18 @@ tcfmgr : tcfmgr.o $(LIBRARYFILES)
 	$(LDENV) $(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) -ltokyocabinet $(LIBS)
 
 
+tcttest : tcttest.o $(LIBRARYFILES)
+	$(LDENV) $(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) -ltokyocabinet $(LIBS)
+
+
+tctmttest : tctmttest.o $(LIBRARYFILES)
+	$(LDENV) $(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) -ltokyocabinet $(LIBS)
+
+
+tctmgr : tctmgr.o $(LIBRARYFILES)
+	$(LDENV) $(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) -ltokyocabinet $(LIBS)
+
+
 tcatest : tcatest.o $(LIBRARYFILES)
 	$(LDENV) $(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(CMDLDFLAGS) -ltokyocabinet $(LIBS)
 
@@ -587,23 +706,29 @@ tcawmgr.cgi : tcawmgr.o $(LIBRARYFILES)
 
 myconf.o : myconf.h
 
-tcutil.o : tcutil.h myconf.h md5.h
+tcutil.o : myconf.h tcutil.h md5.h
 
-tchdb.o : tchdb.h tcutil.h myconf.h
+tchdb.o : myconf.h tcutil.h tchdb.h
 
-tcbdb.o : tcbdb.h tchdb.h tcutil.h myconf.h
+tcbdb.o : myconf.h tcutil.h tchdb.h tcbdb.h
 
-tcfdb.o : tcfdb.h tcutil.h myconf.h
+tcfdb.o : myconf.h tcutil.h tcfdb.h
 
-tcutest.o tcucodec.o : tcutil.h myconf.h
+tctdb.o : myconf.h tcutil.h tchdb.h tctdb.h
 
-tchtest.o tchmttest.o tchmgr.o : tcutil.h tchdb.h myconf.h
+tcadb.o : myconf.h tcutil.h tchdb.h tcbdb.h tcfdb.h tctdb.h tcadb.h
 
-tcbtest.o tcbmttest.o tcbmgr.o : tcutil.h tchdb.h tcbdb.h myconf.h
+tcutest.o tcucodec.o : myconf.h tcutil.h
 
-tcftest.o tcfmttest.o tcfmgr.o : tcutil.h tcfdb.h myconf.h
+tchtest.o tchmttest.o tchmgr.o : myconf.h tcutil.h tchdb.h
 
-tcatest.o tcamgr.o tcawmgr.o : tcutil.h tchdb.h tcbdb.h tcadb.h myconf.h
+tcbtest.o tcbmttest.o tcbmgr.o : myconf.h tcutil.h tchdb.h tcbdb.h
+
+tcftest.o tcfmttest.o tcfmgr.o : myconf.h tcutil.h tcfdb.h
+
+tcttest.o tctmttest.o tctmgr.o : myconf.h tcutil.h tchdb.h tcbdb.h tctdb.h
+
+tcatest.o tcamgr.o tcawmgr.o : myconf.h tcutil.h tchdb.h tcbdb.h tcfdb.h tctdb.h tcadb.h
 
 
 

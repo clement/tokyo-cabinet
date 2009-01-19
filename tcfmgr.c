@@ -57,7 +57,7 @@ int main(int argc, char **argv){
   g_progname = argv[0];
   g_dbgfd = -1;
   const char *ebuf = getenv("TCDBGFD");
-  if(ebuf) g_dbgfd = tcatoi(ebuf);
+  if(ebuf) g_dbgfd = tcatoix(ebuf);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "create")){
@@ -176,8 +176,8 @@ static int runcreate(int argc, char **argv){
     }
   }
   if(!path) usage();
-  int width = wstr ? tcatoi(wstr) : -1;
-  int64_t limsiz = lstr ? strtoll(lstr, NULL, 10) : -1;
+  int width = wstr ? tcatoix(wstr) : -1;
+  int64_t limsiz = lstr ? tcatoix(lstr) : -1;
   int rv = proccreate(path, width, limsiz);
   return rv;
 }
@@ -242,8 +242,8 @@ static int runput(int argc, char **argv){
     }
   }
   if(!path || !key || !value) usage();
-  int ksiz, vsiz;
   char *kbuf, *vbuf;
+  int ksiz, vsiz;
   if(sx){
     kbuf = tchexdecode(key, &ksiz);
     vbuf = tchexdecode(value, &vsiz);
@@ -364,7 +364,7 @@ static int runlist(int argc, char **argv){
         omode |= FDBOLCKNB;
       } else if(!strcmp(argv[i], "-m")){
         if(++i >= argc) usage();
-        max = tcatoi(argv[i]);
+        max = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-pv")){
         pv = true;
       } else if(!strcmp(argv[i], "-px")){
@@ -418,8 +418,8 @@ static int runoptimize(int argc, char **argv){
     }
   }
   if(!path) usage();
-  int width = wstr ? tcatoi(wstr) : -1;
-  int64_t limsiz = lstr ? strtoll(lstr, NULL, 10) : -1;
+  int width = wstr ? tcatoix(wstr) : -1;
+  int64_t limsiz = lstr ? tcatoix(lstr) : -1;
   int rv = procoptimize(path, width, limsiz, omode);
   return rv;
 }
@@ -505,6 +505,7 @@ static int procinform(const char *path, int omode){
   case TCDBTHASH: type = "hash"; break;
   case TCDBTBTREE: type = "btree"; break;
   case TCDBTFIXED: type = "fixed"; break;
+  case TCDBTTABLE: type = "table"; break;
   }
   printf("database type: %s\n", type);
   uint8_t flags = tcfdbflags(fdb);
@@ -758,7 +759,8 @@ static int procimporttsv(const char *path, const char *file, int omode, bool sc)
 
 /* perform version command */
 static int procversion(void){
-  printf("Tokyo Cabinet version %s (%d:%s)\n", tcversion, _TC_LIBVER, _TC_FORMATVER);
+  printf("Tokyo Cabinet version %s (%d:%s) for %s\n",
+         tcversion, _TC_LIBVER, _TC_FORMATVER, TCSYSNAME);
   printf("Copyright (C) 2006-2009 Mikio Hirabayashi\n");
   return 0;
 }

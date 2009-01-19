@@ -306,7 +306,7 @@ int tcadbaddint(TCADB *adb, const void *kbuf, int ksiz, int num);
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
    `num' specifies the additional value.
-   If successful, the return value is the summation value, else, it is `NAN'.
+   If successful, the return value is the summation value, else, it is Not-a-Number.
    If the corresponding record exists, the value is treated as a real number and is added to.  If
    no record corresponds, a new record of the additional value is stored. */
 double tcadbadddouble(TCADB *adb, const void *kbuf, int ksiz, double num);

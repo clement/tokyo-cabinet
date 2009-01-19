@@ -93,11 +93,11 @@ bool tcadbopen(TCADB *adb, const char *name){
     if(!pv) continue;
     *(pv++) = '\0';
     if(!tcstricmp(elem, "bnum")){
-      bnum = tcatoi(pv);
+      bnum = tcatoix(pv);
     } else if(!tcstricmp(elem, "capnum")){
-      capnum = tcatoi(pv);
+      capnum = tcatoix(pv);
     } else if(!tcstricmp(elem, "capsiz")){
-      capsiz = tcatoi(pv);
+      capsiz = tcatoix(pv);
     } else if(!tcstricmp(elem, "mode")){
       owmode = strchr(pv, 'w') || strchr(pv, 'W');
       ocmode = strchr(pv, 'c') || strchr(pv, 'C');
@@ -105,30 +105,30 @@ bool tcadbopen(TCADB *adb, const char *name){
       onlmode = strchr(pv, 'e') || strchr(pv, 'E');
       onbmode = strchr(pv, 'f') || strchr(pv, 'F');
     } else if(!tcstricmp(elem, "apow")){
-      apow = tcatoi(pv);
+      apow = tcatoix(pv);
     } else if(!tcstricmp(elem, "fpow")){
-      fpow = tcatoi(pv);
+      fpow = tcatoix(pv);
     } else if(!tcstricmp(elem, "opts")){
       if(strchr(pv, 'l') || strchr(pv, 'L')) tlmode = true;
       if(strchr(pv, 'd') || strchr(pv, 'D')) tdmode = true;
       if(strchr(pv, 'b') || strchr(pv, 'B')) tbmode = true;
       if(strchr(pv, 't') || strchr(pv, 'T')) ttmode = true;
     } else if(!tcstricmp(elem, "rcnum")){
-      rcnum = tcatoi(pv);
+      rcnum = tcatoix(pv);
     } else if(!tcstricmp(elem, "xmsiz")){
-      xmsiz = tcatoi(pv);
+      xmsiz = tcatoix(pv);
     } else if(!tcstricmp(elem, "lmemb")){
-      lmemb = tcatoi(pv);
+      lmemb = tcatoix(pv);
     } else if(!tcstricmp(elem, "nmemb")){
-      nmemb = tcatoi(pv);
+      nmemb = tcatoix(pv);
     } else if(!tcstricmp(elem, "lcnum")){
-      lcnum = tcatoi(pv);
+      lcnum = tcatoix(pv);
     } else if(!tcstricmp(elem, "ncnum")){
-      ncnum = tcatoi(pv);
+      ncnum = tcatoix(pv);
     } else if(!tcstricmp(elem, "width")){
-      width = tcatoi(pv);
+      width = tcatoix(pv);
     } else if(!tcstricmp(elem, "limsiz")){
-      limsiz = tcatoi(pv);
+      limsiz = tcatoix(pv);
     }
   }
   tclistdel(elems);

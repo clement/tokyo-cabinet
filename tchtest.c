@@ -18,7 +18,7 @@
 #include <tchdb.h>
 #include "myconf.h"
 
-#define RECBUFSIZ      32                // buffer for records
+#define RECBUFSIZ      48                // buffer for records
 
 
 /* global variables */
@@ -48,7 +48,7 @@ static int procread(const char *path, bool mt, int rcnum, int xmsiz, int omode,
 static int procremove(const char *path, bool mt, int rcnum, int xmsiz, int omode, bool rnd);
 static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
                     bool mt, int opts, int rcnum, int xmsiz, int omode, int pnum,
-                    bool dai, bool dad, bool rl);
+                    bool dai, bool dad, bool rl, bool ru);
 static int procmisc(const char *path, int rnum, bool mt, int opts, int omode);
 static int procwicked(const char *path, int rnum, bool mt, int opts, int omode);
 
@@ -58,7 +58,7 @@ int main(int argc, char **argv){
   g_progname = argv[0];
   g_dbgfd = -1;
   const char *ebuf = getenv("TCDBGFD");
-  if(ebuf) g_dbgfd = tcatoi(ebuf);
+  if(ebuf) g_dbgfd = tcatoix(ebuf);
   srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
@@ -92,7 +92,7 @@ static void usage(void){
           g_progname);
   fprintf(stderr, "  %s remove [-mt] [-rc num] [-xm num] [-nl|-nb] [-rnd] path\n", g_progname);
   fprintf(stderr, "  %s rcat [-mt] [-rc num] [-xm num] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb]"
-          " [-pn num] [-dai|-dad|-rl] path rnum [bnum [apow [fpow]]]\n", g_progname);
+          " [-pn num] [-dai|-dad|-rl|-ru] path rnum [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "  %s misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] path rnum\n", g_progname);
   fprintf(stderr, "  %s wicked [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] path rnum\n", g_progname);
   fprintf(stderr, "\n");
@@ -197,10 +197,10 @@ static int runwrite(int argc, char **argv){
         opts |= HDBTEXCODEC;
       } else if(!strcmp(argv[i], "-rc")){
         if(++i >= argc) usage();
-        rcnum = tcatoi(argv[i]);
+        rcnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
-        xmsiz = tcatoi(argv[i]);
+        xmsiz = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -227,11 +227,11 @@ static int runwrite(int argc, char **argv){
     }
   }
   if(!path || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
-  int bnum = bstr ? tcatoi(bstr) : -1;
-  int apow = astr ? tcatoi(astr) : -1;
-  int fpow = fstr ? tcatoi(fstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
+  int apow = astr ? tcatoix(astr) : -1;
+  int fpow = fstr ? tcatoix(fstr) : -1;
   int rv = procwrite(path, rnum, bnum, apow, fpow, mt, opts, rcnum, xmsiz, omode, as, rnd);
   return rv;
 }
@@ -252,10 +252,10 @@ static int runread(int argc, char **argv){
         mt = true;
       } else if(!strcmp(argv[i], "-rc")){
         if(++i >= argc) usage();
-        rcnum = tcatoi(argv[i]);
+        rcnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
-        xmsiz = tcatoi(argv[i]);
+        xmsiz = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -293,10 +293,10 @@ static int runremove(int argc, char **argv){
         mt = true;
       } else if(!strcmp(argv[i], "-rc")){
         if(++i >= argc) usage();
-        rcnum = tcatoi(argv[i]);
+        rcnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
-        xmsiz = tcatoi(argv[i]);
+        xmsiz = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -334,6 +334,7 @@ static int runrcat(int argc, char **argv){
   bool dai = false;
   bool dad = false;
   bool rl = false;
+  bool ru = false;
   for(int i = 2; i < argc; i++){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-mt")){
@@ -350,23 +351,25 @@ static int runrcat(int argc, char **argv){
         opts |= HDBTEXCODEC;
       } else if(!strcmp(argv[i], "-rc")){
         if(++i >= argc) usage();
-        rcnum = tcatoi(argv[i]);
+        rcnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
-        xmsiz = tcatoi(argv[i]);
+        xmsiz = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
         omode |= HDBOLCKNB;
       } else if(!strcmp(argv[i], "-pn")){
         if(++i >= argc) usage();
-        pnum = tcatoi(argv[i]);
+        pnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-dai")){
         dai = true;
       } else if(!strcmp(argv[i], "-dad")){
         dad = true;
       } else if(!strcmp(argv[i], "-rl")){
         rl = true;
+      } else if(!strcmp(argv[i], "-ru")){
+        ru = true;
       } else {
         usage();
       }
@@ -385,13 +388,13 @@ static int runrcat(int argc, char **argv){
     }
   }
   if(!path || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
-  int bnum = bstr ? tcatoi(bstr) : -1;
-  int apow = astr ? tcatoi(astr) : -1;
-  int fpow = fstr ? tcatoi(fstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
+  int apow = astr ? tcatoix(astr) : -1;
+  int fpow = fstr ? tcatoix(fstr) : -1;
   int rv = procrcat(path, rnum, bnum, apow, fpow, mt, opts, rcnum, xmsiz, omode, pnum,
-                    dai, dad, rl);
+                    dai, dad, rl, ru);
   return rv;
 }
 
@@ -433,7 +436,7 @@ static int runmisc(int argc, char **argv){
     }
   }
   if(!path || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procmisc(path, rnum, mt, opts, omode);
   return rv;
@@ -477,7 +480,7 @@ static int runwicked(int argc, char **argv){
     }
   }
   if(!path || !rstr) usage();
-  int rnum = tcatoi(rstr);
+  int rnum = tcatoix(rstr);
   if(rnum < 1) usage();
   int rv = procwicked(path, rnum, mt, opts, omode);
   return rv;
@@ -683,11 +686,11 @@ static int procremove(const char *path, bool mt, int rcnum, int xmsiz, int omode
 /* perform rcat command */
 static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
                     bool mt, int opts, int rcnum, int xmsiz, int omode, int pnum,
-                    bool dai, bool dad, bool rl){
+                    bool dai, bool dad, bool rl, bool ru){
   iprintf("<Random Concatenating Test>\n"
           "  path=%s  rnum=%d  bnum=%d  apow=%d  fpow=%d  mt=%d  opts=%d  rcnum=%d  xmsiz=%d"
-          "  omode=%d  pnum=%d  dai=%d  dad=%d  rl=%d\n\n",
-          path, rnum, bnum, apow, fpow, mt, opts, rcnum, xmsiz, omode, pnum, dai, dad, rl);
+          "  omode=%d  pnum=%d  dai=%d  dad=%d  rl=%d  ru=%d\n\n",
+          path, rnum, bnum, apow, fpow, mt, opts, rcnum, xmsiz, omode, pnum, dai, dad, rl, ru);
   if(pnum < 1) pnum = rnum;
   bool err = false;
   double stime = tctime();
@@ -718,36 +721,82 @@ static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
     err = true;
   }
   for(int i = 1; i <= rnum; i++){
-    char kbuf[RECBUFSIZ];
-    int ksiz = sprintf(kbuf, "%d", myrand(pnum));
-    if(dai){
-      if(tchdbaddint(hdb, kbuf, ksiz, myrand(3)) == INT_MIN){
-        eprint(hdb, "tchdbaddint");
-        err = true;
+    if(ru){
+      char fmt[RECBUFSIZ];
+      sprintf(fmt, "%%0%dd", myrand(RECBUFSIZ));
+      char kbuf[RECBUFSIZ];
+      int ksiz = sprintf(kbuf, fmt, myrand(pnum));
+      switch(myrand(7)){
+      case 0:
+        if(!tchdbput(hdb, kbuf, ksiz, kbuf, ksiz)){
+          eprint(hdb, "tchdbput");
+          err = true;
+        }
+        break;
+      case 1:
+        if(!tchdbputkeep(hdb, kbuf, ksiz, kbuf, ksiz) && tchdbecode(hdb) != TCEKEEP){
+          eprint(hdb, "tchdbputkeep");
+          err = true;
+        }
+        break;
+      case 2:
+        if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
+          eprint(hdb, "tchdbout");
+          err = true;
+        }
+        break;
+      case 3:
+        if(tchdbaddint(hdb, kbuf, ksiz, 1) == INT_MIN && tchdbecode(hdb) != TCEKEEP){
+          eprint(hdb, "tchdbaddint");
+          err = true;
+        }
+        break;
+      case 4:
+        if(isnan(tchdbadddouble(hdb, kbuf, ksiz, 1.0)) && tchdbecode(hdb) != TCEKEEP){
+          eprint(hdb, "tchdbadddouble");
+          err = true;
+        }
+        break;
+      default:
+        if(!tchdbputcat(hdb, kbuf, ksiz, kbuf, ksiz)){
+          eprint(hdb, "tchdbputcat");
+          err = true;
+        }
         break;
       }
-    } else if(dad){
-      if(isnan(tchdbadddouble(hdb, kbuf, ksiz, myrand(3)))){
-        eprint(hdb, "tchdbadddouble");
-        err = true;
-        break;
-      }
-    } else if(rl){
-      char vbuf[PATH_MAX];
-      int vsiz = myrand(PATH_MAX);
-      for(int j = 0; j < vsiz; j++){
-        vbuf[j] = myrand(0x100);
-      }
-      if(!tchdbputcat(hdb, kbuf, ksiz, vbuf, vsiz)){
-        eprint(hdb, "tchdbputcat");
-        err = true;
-        break;
-      }
+      if(err) break;
     } else {
-      if(!tchdbputcat(hdb, kbuf, ksiz, kbuf, ksiz)){
-        eprint(hdb, "tchdbputcat");
-        err = true;
-        break;
+      char kbuf[RECBUFSIZ];
+      int ksiz = sprintf(kbuf, "%d", myrand(pnum));
+      if(dai){
+        if(tchdbaddint(hdb, kbuf, ksiz, myrand(3)) == INT_MIN){
+          eprint(hdb, "tchdbaddint");
+          err = true;
+          break;
+        }
+      } else if(dad){
+        if(isnan(tchdbadddouble(hdb, kbuf, ksiz, myrand(30) / 10.0))){
+          eprint(hdb, "tchdbadddouble");
+          err = true;
+          break;
+        }
+      } else if(rl){
+        char vbuf[PATH_MAX];
+        int vsiz = myrand(PATH_MAX);
+        for(int j = 0; j < vsiz; j++){
+          vbuf[j] = myrand(0x100);
+        }
+        if(!tchdbputcat(hdb, kbuf, ksiz, vbuf, vsiz)){
+          eprint(hdb, "tchdbputcat");
+          err = true;
+          break;
+        }
+      } else {
+        if(!tchdbputcat(hdb, kbuf, ksiz, kbuf, ksiz)){
+          eprint(hdb, "tchdbputcat");
+          err = true;
+          break;
+        }
       }
     }
     if(rnum > 250 && i % (rnum / 250) == 0){
@@ -1764,13 +1813,27 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
   }
   if(rnum % 50 > 0) iprintf(" (%08d)\n", rnum);
   int inum = 0;
+  char *cbuf;
   int csiz;
-  char *cbuf = tchdbgetnext(hdb, NULL, -1, &csiz);
+  if(myrand(2) == 0){
+    cbuf = tchdbgetnext(hdb, NULL, -1, &csiz);
+  } else {
+    const char *cvbuf;
+    int cvsiz;
+    cbuf = tchdbgetnext3(hdb, NULL, -1, &csiz, &cvbuf, &cvsiz);
+  }
   while(cbuf){
     inum++;
     iputchar(':');
     int nsiz;
-    char *nbuf = tchdbgetnext(hdb, cbuf, csiz, &nsiz);
+    char *nbuf;
+    if(myrand(2) == 0){
+      nbuf = tchdbgetnext(hdb, cbuf, csiz, &nsiz);
+    } else {
+      const char *cvbuf;
+      int cvsiz;
+      nbuf = tchdbgetnext3(hdb, cbuf, csiz, &nsiz, &cvbuf, &cvsiz);
+    }
     tcfree(cbuf);
     cbuf = nbuf;
     csiz = nsiz;

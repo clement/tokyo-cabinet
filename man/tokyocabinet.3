@@ -1,4 +1,4 @@
-.TH "TOKYOCABINET" 3 "2008-11-25" "Man Page" "Tokyo Cabinet"
+.TH "TOKYOCABINET" 3 "2009-01-07" "Man Page" "Tokyo Cabinet"
 
 .SH NAME
 tokyocabinet \- a modern implementation of DBM
@@ -12,6 +12,8 @@ As for database of hash table, each key must be unique within a database, so it 
 As for database of B+ tree, records whose keys are duplicated can be stored.  Access methods of storing, deleting, and retrieving are provided as with the database of hash table.  Records are stored in order by a comparison function assigned by a user.  It is possible to access each record with the cursor in ascending or descending order.  According to this mechanism, forward matching search for strings and range search for integers are realized.
 .PP
 As for database of fixed\-length array, records are stored with unique natural numbers.  It is impossible to store two or more records with a key overlaps.  Moreover, the length of each record is limited by the specified length.  Provided operations are the same as ones of hash database.
+.PP
+Table database is also provided as a variant of hash database.  Each record is identified by the primary key and has a set of named columns.  Although there is no concept of data schema, it is possible to search for records with complex conditions efficiently by using indexes of arbitrary columns.
 .PP
 Tokyo Cabinet is written in the C language, and provided as API of C, Perl, Ruby, Java, and Lua.  Tokyo Cabinet is available on platforms which have API conforming to C99 and POSIX.  Tokyo Cabinet is a free software licensed under the GNU Lesser General Public License.
 
@@ -70,6 +72,14 @@ Because the whole region of the database is mapped on memory by the `mmap' call 
 .PP
 The size of the database is proportional to the range of keys and the limit size of each value.  That is, the smaller the range of keys is or the smaller the length of each value is, the higher the space efficiency is.  For example, if the maximum key is 1000000 and the limit size of the value is 100 bytes, the size of the database will be about 100MB.  Because regions around referred records are only loaded on the RAM, you can increase the size of the database to the size of the virtual memory.
 
+.SH FLEXIBLE IMPLEMENTATION OF TABLE DATABASE
+.PP
+Table database does not express simple key/value structure but expresses a structure like a table of relational database.  Each record is identified by the primary key and has a set of multiple columns named with arbitrary strings.  For example, a stuff in your company can be expressed by a record identified by the primary key of the employee ID number and structured by columns of his name, division, salary, and so on.  Unlike relational database, table database does not need to define any data schema and can contain records of various structures different from each other.
+.PP
+Table database supports query functions with not only the primary key but also with conditions about arbitrary columns.  Each column condition is composed of the name of a column and a condition expression.  Operators of full matching, forward matching, regular expression matching, and so on are provided for the string type.  Operators of full matching, range matching and so on are provided for the number type.  A query can contain multiple conditions.  The order of the result set can be specified as the ascending or descending order of strings or numbers.
+.PP
+You can create indexes for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indexes have types for strings or numbers.  The query optimizer uses indexes in suitable way according to each query.  Indexes are implemented as different files of B+ tree database.
+
 .SH PRACTICAL FUNCTIONALITY
 .PP
 Hash database and B+ tree database feature transaction mechanisms.  It is possible to commit a series of operations between the beginning and the end of the transaction in a lump, or to abort the transaction and perform rollback to the state before the transaction.  Two isolation levels are supported; serializable and read uncommitted.  Durability is secured by write ahead logging and shadow paging.
@@ -84,7 +94,7 @@ Tokyo Cabinet provides simple API based on the object oriented design.  Every op
 .PP
 The utility API is also provided.  Such fundamental data structure as list and map are included.  And, some useful features; memory pool, string processing, encoding, are also included.
 .PP
-Five kinds of API; the utility API, the hash database API, the B+ tree database API, the fixed\-length database API, and the abstract database API, are provided for the C language.  Command line interfaces are also provided corresponding to each API.  They are useful for prototyping, test, and debugging.  Except for C, Tokyo Cabinet provides APIs for Perl, Ruby, Java, and Lua.  The Perl API has methods calling the hash database API, the B+ tree database API, and the fixed\-length database API with XS language.  The Ruby API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Ruby.  The Java API has native methods calling the hash database API, the B+ tree database API, and the fixed\-length database API with Java Native Interface.  The Lua API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Lua.  APIs for other languages will hopefully be provided by third party.
+Six kinds of API; the utility API, the hash database API, the B+ tree database API, the fixed\-length database API, the table database API, and the abstract database API, are provided for the C language.  Command line interfaces are also provided corresponding to each API.  They are useful for prototyping, test, and debugging.  Except for C, Tokyo Cabinet provides APIs for Perl, Ruby, Java, and Lua.  The Perl API has methods calling the hash database API, the B+ tree database API, and the fixed\-length database API with XS language.  The Ruby API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Ruby.  The Java API has native methods calling the hash database API, the B+ tree database API, and the fixed\-length database API with Java Native Interface.  The Lua API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Lua.  APIs for other languages will hopefully be provided by third party.
 .PP
 In cases that multiple processes access a database at the same time or some processes access a database on a remote host, the remote service is useful.  The remote service is composed of a database server and its access library.  Applications can access the database server by using the remote database API.  The server implements HTTP and the memcached protocol partly so that client programs on almost all platforms can access the server easily.
 
@@ -114,7 +124,10 @@ Tokyo Cabinet was written by Mikio Hirabayashi.  You can contact the author by e
 .PP
 .BR tcutil (3),
 .BR tchdb (3),
-.BR tcbdb (3)
+.BR tcbdb (3),
+.BR tcfdb (3),
+.BR tctdb (3),
+.BR tcadb (3)
 .PP
 Please see
 .I http://tokyocabinet.sourceforge.net/spex\-en.html

@@ -27,67 +27,67 @@
 #if defined(__linux__)
 
 #define _SYS_LINUX_
-#define TCSYSNAME  "Linux"
+#define TCSYSNAME   "Linux"
 
 #elif defined(__FreeBSD__)
 
 #define _SYS_FREEBSD_
-#define TCSYSNAME  "FreeBSD"
+#define TCSYSNAME   "FreeBSD"
 
 #elif defined(__NetBSD__)
 
 #define _SYS_NETBSD_
-#define TCSYSNAME  "NetBSD"
+#define TCSYSNAME   "NetBSD"
 
 #elif defined(__OpenBSD__)
 
 #define _SYS_OPENBSD_
-#define TCSYSNAME  "OpenBSD"
+#define TCSYSNAME   "OpenBSD"
 
 #elif defined(__sun__)
 
 #define _SYS_SUNOS_
-#define TCSYSNAME  "SunOS"
+#define TCSYSNAME   "SunOS"
 
 #elif defined(__hpux)
 
 #define _SYS_HPUX_
-#define TCSYSNAME  "HP-UX"
+#define TCSYSNAME   "HP-UX"
 
 #elif defined(__osf)
 
 #define _SYS_TRU64_
-#define TCSYSNAME  "Tru64"
+#define TCSYSNAME   "Tru64"
 
 #elif defined(_AIX)
 
 #define _SYS_AIX_
-#define TCSYSNAME  "AIX"
+#define TCSYSNAME   "AIX"
 
 #elif defined(__APPLE__) && defined(__MACH__)
 
 #define _SYS_MACOSX_
-#define TCSYSNAME  "Mac OS X"
+#define TCSYSNAME   "Mac OS X"
 
 #elif defined(_MSC_VER)
 
 #define _SYS_MSVC_
-#define TCSYSNAME  "Windows (VC++)"
+#define TCSYSNAME   "Windows (VC++)"
 
 #elif defined(_WIN32)
 
 #define _SYS_MINGW_
-#define TCSYSNAME  "Windows (MinGW)"
+#define TCSYSNAME   "Windows (MinGW)"
 
 #elif defined(__CYGWIN__)
 
 #define _SYS_CYGWIN_
-#define TCSYSNAME  "Windows (Cygwin)"
+#define TCSYSNAME   "Windows (Cygwin)"
 
 #else
 
 #define _SYS_GENERIC_
-#define TCSYSNAME  "Generic"
+#define TCSYSNAME   "Generic"
 
 #endif
 

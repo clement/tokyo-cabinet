@@ -19,7 +19,6 @@
 #include "tcbdb.h"
 #include "myconf.h"
 
-#define BDBFILEMODE    00644             // permission of created files
 #define BDBOPAQUESIZ   64                // size of using opaque field
 #define BDBLEFTOPQSIZ  64                // size of left opaque field
 #define BDBPAGEBUFSIZ  32768             // size of a buffer to read each page
@@ -90,8 +89,8 @@ enum {                                   // enumeration for duplication behavior
 
 /* private function prototypes */
 static void tcbdbclear(TCBDB *bdb);
-static void tcdumpmeta(TCBDB *bdb);
-static void tcloadmeta(TCBDB *bdb);
+static void tcbdbdumpmeta(TCBDB *bdb);
+static void tcbdbloadmeta(TCBDB *bdb);
 static BDBLEAF *tcbdbleafnew(TCBDB *bdb, uint64_t prev, uint64_t next);
 static bool tcbdbleafcacheout(TCBDB *bdb, BDBLEAF *leaf);
 static bool tcbdbleafsave(TCBDB *bdb, BDBLEAF *leaf);
@@ -274,6 +273,7 @@ bool tcbdbsetcache(TCBDB *bdb, int32_t lcnum, int32_t ncnum){
 
 /* Set the size of the extra mapped memory of a B+ tree database object. */
 bool tcbdbsetxmsiz(TCBDB *bdb, int64_t xmsiz){
+  assert(bdb);
   if(bdb->open){
     tcbdbsetecode(bdb, TCEINVALID, __FILE__, __LINE__, __func__);
     return false;
@@ -606,6 +606,7 @@ TCLIST *tcbdbrange(TCBDB *bdb, const void *bkbuf, int bksiz, bool binc,
 /* Get string keys of ranged records in a B+ tree database object. */
 TCLIST *tcbdbrange2(TCBDB *bdb, const char *bkstr, bool binc,
                     const char *ekstr, bool einc, int max){
+  assert(bdb);
   return tcbdbrange(bdb, bkstr, bkstr ? strlen(bkstr) : 0, binc,
                     ekstr, ekstr ? strlen(ekstr) : 0, einc, max);
 }
@@ -851,7 +852,7 @@ bool tcbdbtranabort(TCBDB *bdb){
   }
   tcbdbcachepurge(bdb);
   memcpy(bdb->opaque, bdb->rbopaque, BDBOPAQUESIZ);
-  tcloadmeta(bdb);
+  tcbdbloadmeta(bdb);
   TCFREE(bdb->rbopaque);
   bdb->tran = false;
   bdb->rbopaque = NULL;
@@ -1292,6 +1293,13 @@ int tcbdbdbgfd(TCBDB *bdb){
 }
 
 
+/* Check whether mutual exclusion control is set to a B+ tree database object. */
+bool tcbdbhasmutex(TCBDB *bdb){
+  assert(bdb);
+  return bdb->mmtx != NULL;
+}
+
+
 /* Synchronize updating contents on memory of a B+ tree database object. */
 bool tcbdbmemsync(TCBDB *bdb, bool phys){
   assert(bdb);
@@ -1318,7 +1326,7 @@ bool tcbdbmemsync(TCBDB *bdb, bool phys){
     if(node->dirty && !tcbdbnodesave(bdb, node)) err = true;
   }
   if(clk) BDBUNLOCKCACHE(bdb);
-  tcdumpmeta(bdb);
+  tcbdbdumpmeta(bdb);
   if(!tchdbmemsync(bdb->hdb, phys)) err = true;
   return !err;
 }
@@ -1490,9 +1498,9 @@ char *tcbdbopaque(TCBDB *bdb){
   assert(bdb);
   if(!bdb->open){
     tcbdbsetecode(bdb, TCEINVALID, __FILE__, __LINE__, __func__);
-    return 0;
+    return NULL;
   }
-  return tchdbopaque(bdb->hdb) + BDBOPAQUESIZ;
+  return bdb->opaque + BDBOPAQUESIZ;
 }
 
 
@@ -1666,7 +1674,7 @@ static void tcbdbclear(TCBDB *bdb){
 
 /* Serialize meta data into the opaque field.
    `bdb' specifies the B+ tree database object. */
-static void tcdumpmeta(TCBDB *bdb){
+static void tcbdbdumpmeta(TCBDB *bdb){
   assert(bdb);
   memset(bdb->opaque, 0, 64);
   char *wp = bdb->opaque;
@@ -1721,7 +1729,7 @@ static void tcdumpmeta(TCBDB *bdb){
 
 /* Deserialize meta data from the opaque field.
    `bdb' specifies the B+ tree database object. */
-static void tcloadmeta(TCBDB *bdb){
+static void tcbdbloadmeta(TCBDB *bdb){
   const char *rp = bdb->opaque;
   uint8_t cnum = *(uint8_t *)(rp++);
   if(cnum == 0x0){
@@ -2064,7 +2072,7 @@ static bool tcbdbleafaddrec(TCBDB *bdb, BDBLEAF *leaf, int dmode,
       rv = cmp(kbuf, ksiz, dbuf, rec->ksiz, cmpop);
     }
     if(rv == 0){
-      int psiz = TCALIGNPAD(ksiz);
+      int psiz = TCALIGNPAD(rec->ksiz);
       BDBREC *orec = rec;
       switch(dmode){
       case BDBPDKEEP:
@@ -2075,9 +2083,9 @@ static bool tcbdbleafaddrec(TCBDB *bdb, BDBLEAF *leaf, int dmode,
           tcptrlistover(recs, i, rec);
           dbuf = (char *)rec + sizeof(*rec);
         }
-        memcpy(dbuf + ksiz + psiz + rec->vsiz, vbuf, vsiz);
+        memcpy(dbuf + rec->ksiz + psiz + rec->vsiz, vbuf, vsiz);
         rec->vsiz += vsiz;
-        dbuf[ksiz+psiz+rec->vsiz] = '\0';
+        dbuf[rec->ksiz+psiz+rec->vsiz] = '\0';
         break;
       case BDBPDDUP:
         if(!rec->rest) rec->rest = tclistnew();
@@ -2094,39 +2102,39 @@ static bool tcbdbleafaddrec(TCBDB *bdb, BDBLEAF *leaf, int dmode,
             dbuf = (char *)rec + sizeof(*rec);
           }
         }
-        memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
-        dbuf[ksiz+psiz+vsiz] = '\0';
+        memcpy(dbuf + rec->ksiz + psiz, vbuf, vsiz);
+        dbuf[rec->ksiz+psiz+vsiz] = '\0';
         rec->vsiz = vsiz;
         bdb->rnum++;
         break;
       case BDBPDADDINT:
         if(rec->vsiz != sizeof(int)) return false;
         if(*(int *)vbuf == 0){
-          *(int *)vbuf = *(int *)(dbuf + ksiz + psiz);
+          *(int *)vbuf = *(int *)(dbuf + rec->ksiz + psiz);
           return true;
         }
-        *(int *)(dbuf + ksiz + psiz) += *(int *)vbuf;
-        *(int *)vbuf = *(int *)(dbuf + ksiz + psiz);
+        *(int *)(dbuf + rec->ksiz + psiz) += *(int *)vbuf;
+        *(int *)vbuf = *(int *)(dbuf + rec->ksiz + psiz);
         break;
       case BDBPDADDDBL:
         if(rec->vsiz != sizeof(double)) return false;
         if(*(double *)vbuf == 0.0){
-          *(double *)vbuf = *(double *)(dbuf + ksiz + psiz);
+          *(double *)vbuf = *(double *)(dbuf + rec->ksiz + psiz);
           return true;
         }
-        *(double *)(dbuf + ksiz + psiz) += *(double *)vbuf;
-        *(double *)vbuf = *(double *)(dbuf + ksiz + psiz);
+        *(double *)(dbuf + rec->ksiz + psiz) += *(double *)vbuf;
+        *(double *)vbuf = *(double *)(dbuf + rec->ksiz + psiz);
         break;
       default:
         if(vsiz > rec->vsiz){
-          TCREALLOC(rec, rec, sizeof(*rec) + ksiz + psiz + vsiz + 1);
+          TCREALLOC(rec, rec, sizeof(*rec) + rec->ksiz + psiz + vsiz + 1);
           if(rec != orec){
             tcptrlistover(recs, i, rec);
             dbuf = (char *)rec + sizeof(*rec);
           }
         }
-        memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
-        dbuf[ksiz+psiz+vsiz] = '\0';
+        memcpy(dbuf + rec->ksiz + psiz, vbuf, vsiz);
+        dbuf[rec->ksiz+psiz+vsiz] = '\0';
         rec->vsiz = vsiz;
         break;
       }
@@ -2746,7 +2754,7 @@ static bool tcbdbopenimpl(TCBDB *bdb, const char *path, int omode){
       bdb->cmp = tccmplexical;
       bdb->cmpop = NULL;
     }
-    tcdumpmeta(bdb);
+    tcbdbdumpmeta(bdb);
     if(!tcbdbleafsave(bdb, leaf)){
       tcmapdel(bdb->nodec);
       tcmapdel(bdb->leafc);
@@ -2754,7 +2762,7 @@ static bool tcbdbopenimpl(TCBDB *bdb, const char *path, int omode){
       return false;
     }
   }
-  tcloadmeta(bdb);
+  tcbdbloadmeta(bdb);
   if(!bdb->cmp){
     tcbdbsetecode(bdb, TCEINVALID, __FILE__, __LINE__, __func__);
     tcmapdel(bdb->nodec);
@@ -2797,7 +2805,7 @@ static bool tcbdbcloseimpl(TCBDB *bdb){
   if(bdb->tran){
     tcbdbcachepurge(bdb);
     memcpy(bdb->opaque, bdb->rbopaque, BDBOPAQUESIZ);
-    tcloadmeta(bdb);
+    tcbdbloadmeta(bdb);
     TCFREE(bdb->rbopaque);
     bdb->tran = false;
     bdb->rbopaque = NULL;
@@ -2816,7 +2824,7 @@ static bool tcbdbcloseimpl(TCBDB *bdb){
   while((vbuf = tcmapiternext(nodec, &vsiz)) != NULL){
     if(!tcbdbnodecacheout(bdb, (BDBNODE *)tcmapiterval(vbuf, &vsiz))) err = true;
   }
-  if(bdb->wmode) tcdumpmeta(bdb);
+  if(bdb->wmode) tcbdbdumpmeta(bdb);
   tcmapdel(bdb->nodec);
   tcmapdel(bdb->leafc);
   if(!tchdbclose(bdb->hdb)) err = true;
@@ -3205,10 +3213,6 @@ static bool tcbdbrangefwm(TCBDB *bdb, const char *pbuf, int psiz, int max, TCLIS
 static bool tcbdboptimizeimpl(TCBDB *bdb, int32_t lmemb, int32_t nmemb,
                               int64_t bnum, int8_t apow, int8_t fpow, uint8_t opts){
   assert(bdb);
-  if(lmemb < 1) lmemb = bdb->lmemb;
-  if(nmemb < 1) nmemb = bdb->nmemb;
-  if(bnum < 1) bnum = tchdbrnum(bdb->hdb) * 2 + 1;
-  if(opts == UINT8_MAX) opts = bdb->opts;
   const char *path = tchdbpath(bdb->hdb);
   char *tpath = tcsprintf("%s%ctmp%c%llu", path, MYEXTCHR, MYEXTCHR, tchdbinode(bdb->hdb));
   TCBDB *tbdb = tcbdbnew();
@@ -3217,6 +3221,12 @@ static bool tcbdboptimizeimpl(TCBDB *bdb, int32_t lmemb, int32_t nmemb,
   void *encop, *decop;
   tchdbcodecfunc(bdb->hdb, &enc, &encop, &dec, &decop);
   if(enc && dec) tcbdbsetcodecfunc(tbdb, enc, encop, dec, decop);
+  if(lmemb < 1) lmemb = bdb->lmemb;
+  if(nmemb < 1) nmemb = bdb->nmemb;
+  if(bnum < 1) bnum = tchdbrnum(bdb->hdb) * 2 + 1;
+  if(apow < 0) apow = tclog2l(tchdbalign(bdb->hdb));
+  if(fpow < 0) fpow = tclog2l(tchdbfbpmax(bdb->hdb));
+  if(opts == UINT8_MAX) opts = bdb->opts;
   tcbdbtune(tbdb, lmemb, nmemb, bnum, apow, fpow, opts);
   tcbdbsetlsmax(tbdb, bdb->lsmax);
   if(!tcbdbopen(tbdb, tpath, BDBOWRITER | BDBOCREAT | BDBOTRUNC)){

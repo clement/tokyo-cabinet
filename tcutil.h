@@ -297,6 +297,13 @@ TCLIST *tclistnew(void);
 TCLIST *tclistnew2(int anum);
 
 
+/* Create a list object with initial string elements.
+   `str' specifies the string of the first element.
+   The other arguments are other elements.  They should be trailed by a `NULL' argument.
+   The return value is the new list object. */
+TCLIST *tclistnew3(const char *str, ...);
+
+
 /* Copy a list object.
    `list' specifies the list object.
    The return value is the new list object equivalent to the specified object. */
@@ -538,6 +545,11 @@ void tclistsortci(TCLIST *list);
 void tclistsortex(TCLIST *list, int (*cmp)(const TCLISTDATUM *, const TCLISTDATUM *));
 
 
+/* Invert elements of a list object.
+   `list' specifies the list object. */
+void tclistinvert(TCLIST *list);
+
+
 
 /*************************************************************************************************
  * hash map
@@ -574,6 +586,14 @@ TCMAP *tcmapnew(void);
    `bnum' specifies the number of the buckets.
    The return value is the new map object. */
 TCMAP *tcmapnew2(uint32_t bnum);
+
+
+/* Create a map object with initial string elements.
+   `str' specifies the string of the first element.
+   The other arguments are other elements.  They should be trailed by a `NULL' argument.
+   The return value is the new map object.
+   The key and the value of each record are situated one after the other. */
+TCMAP *tcmapnew3(const char *str, ...);
 
 
 /* Copy a map object.
@@ -2221,8 +2241,8 @@ void tcstrucstoutf(const uint16_t *ary, int num, char *str);
    `delim' specifies a string containing delimiting characters.
    The return value is a list object of the split elements.
    If two delimiters are successive, it is assumed that an empty element is between the two.
-   Because the object of the return value is created with the function `tclistnew', it should
-   be deleted with the function `tclistdel' when it is no longer in use. */
+   Because the object of the return value is created with the function `tclistnew', it should be
+   deleted with the function `tclistdel' when it is no longer in use. */
 TCLIST *tcstrsplit(const char *str, const char *delims);
 
 
@@ -2232,7 +2252,15 @@ TCLIST *tcstrsplit(const char *str, const char *delims);
    The return value is the result string.
    Because the region of the return value is allocated with the `malloc' call, it should be
    released with the `free' call when it is no longer in use. */
-char *tcstrjoin(TCLIST *list, char delim);
+char *tcstrjoin(const TCLIST *list, char delim);
+
+
+/* Convert a string to an integer.
+   `str' specifies a string.
+   The return value is the integer.  If the string does not contain numeric expression, 0 is
+   returned.
+   This function is equivalent to `atoll' except that it does not depend on the locale. */
+int64_t tcatoi(const char *str);
 
 
 /* Convert a string with a metric prefix to an integer.
@@ -2241,7 +2269,7 @@ char *tcstrjoin(TCLIST *list, char delim);
    The return value is the integer.  If the string does not contain numeric expression, 0 is
    returned.  If the integer overflows the domain, `INT64_MAX' or `INT64_MIN' is returned
    according to the sign. */
-int64_t tcatoi(const char *str);
+int64_t tcatoix(const char *str);
 
 
 /* Check whether a string matches a regular expression.
@@ -2364,6 +2392,73 @@ int tcjetlag(void);
    `day' specifies the day of the date.
    The return value is the day of week of the date.  0 means Sunday and 6 means Saturday. */
 int tcdayofweek(int year, int mon, int day);
+
+
+
+/*************************************************************************************************
+ * miscellaneous utilities (for experts)
+ *************************************************************************************************/
+
+
+/* Create a list object by splitting a region by zero code.
+   `ptr' specifies the pointer to the region.
+   `size' specifies the size of the region.
+   The return value is a list object of the split elements.
+   If two delimiters are successive, it is assumed that an empty element is between the two.
+   Because the object of the return value is created with the function `tclistnew', it should be
+   deleted with the function `tclistdel' when it is no longer in use. */
+TCLIST *tcstrsplit2(const void *ptr, int size);
+
+
+/* Create a map object by splitting a string.
+   `str' specifies the source string where the key and the value of each record are situated one
+   after the other.
+   `delim' specifies a string containing delimiting characters.
+   The return value is a map object of the split records.
+   Because the object of the return value is created with the function `tcmapnew', it should be
+   deleted with the function `tcmapdel' when it is no longer in use. */
+TCMAP *tcstrsplit3(const char *str, const char *delims);
+
+
+/* Create a map object by splitting a region by zero code.
+   `ptr' specifies the pointer to the region where the key and the value of each record are
+   situated one after the other.
+   `size' specifies the size of the region.
+   The return value is a map object of the split records.
+   Because the object of the return value is created with the function `tcmapnew', it should be
+   deleted with the function `tcmapdel' when it is no longer in use. */
+TCMAP *tcstrsplit4(const void *ptr, int size);
+
+
+/* Create a region separated by zero code by joining all elements of a list object.
+   `list' specifies a list object.
+   The return value is the result region.
+   `sp' specifies the pointer to the variable into which the size of the region of the return
+   value is assigned.
+   Because the region of the return value is allocated with the `malloc' call, it should be
+   released with the `free' call when it is no longer in use. */
+void *tcstrjoin2(const TCLIST *list, int *sp);
+
+
+/* Create a string by joining all records of a map object.
+   `map' specifies a map object.
+   `delim' specifies a delimiting character.
+   The return value is the result string where the key and the value of each record are situated
+   one after the other.
+   Because the region of the return value is allocated with the `malloc' call, it should be
+   released with the `free' call when it is no longer in use. */
+char *tcstrjoin3(const TCMAP *map, char delim);
+
+
+/* Create a region separated by zero code by joining all records of a map object.
+   `list' specifies a list object.
+   The return value is the result region, where the key and the value of each record are
+   situated one after the other.
+   `sp' specifies the pointer to the variable into which the size of the region of the return
+   value is assigned.
+   Because the region of the return value is allocated with the `malloc' call, it should be
+   released with the `free' call when it is no longer in use. */
+void *tcstrjoin4(const TCMAP *map, int *sp);
 
 
 
@@ -3060,8 +3155,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.3.27"
-#define _TC_LIBVER     704
+#define _TC_VERSION    "1.4.0"
+#define _TC_LIBVER     705
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */
@@ -3094,7 +3189,8 @@ enum {                                   /* enumeration for error codes */
 enum {                                   /* enumeration for database type */
   TCDBTHASH,                             /* hash table */
   TCDBTBTREE,                            /* B+ tree */
-  TCDBTFIXED                             /* fixed-length */
+  TCDBTFIXED,                            /* fixed-length */
+  TCDBTTABLE                             /* table */
 };
 
 
@@ -3215,6 +3311,18 @@ char *tcbwtencode(const char *ptr, int size, int *idxp);
    value is allocated with the `malloc' call, it should be released with the `free' call when it
    is no longer in use. */
 char *tcbwtdecode(const char *ptr, int size, int idx);
+
+
+/* Get the binary logarithm of an integer.
+   `num' specifies an integer.
+   The return value is the binary logarithm. */
+long tclog2l(long num);
+
+
+/* Get the binary logarithm of a real number.
+   `num' specifies a real number.
+   The return value is the binary logarithm. */
+double tclog2d(double num);
 
 
 /* Get the aligned offset of a file offset.

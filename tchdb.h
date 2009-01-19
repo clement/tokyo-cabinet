@@ -475,7 +475,7 @@ int tchdbaddint(TCHDB *hdb, const void *kbuf, int ksiz, int num);
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
    `num' specifies the additional value.
-   If successful, the return value is the summation value, else, it is `NAN'.
+   If successful, the return value is the summation value, else, it is Not-a-Number.
    If the corresponding record exists, the value is treated as a real number and is added to.  If
    no record corresponds, a new record of the additional value is stored. */
 double tchdbadddouble(TCHDB *hdb, const void *kbuf, int ksiz, double num);
@@ -605,6 +605,12 @@ void tchdbsetdbgfd(TCHDB *hdb, int fd);
 int tchdbdbgfd(TCHDB *hdb);
 
 
+/* Check whether mutual exclusion control is set to a hash database object.
+   `hdb' specifies the hash database object.
+   If mutual exclusion control is set, it is true, else it is false. */
+bool tchdbhasmutex(TCHDB *hdb);
+
+
 /* Synchronize updating contents on memory of a hash database object.
    `hdb' specifies the hash database object connected as a writer.
    `phys' specifies whether to synchronize physically.
@@ -648,15 +654,15 @@ uint64_t tchdbxmsiz(TCHDB *hdb);
 
 /* Get the inode number of the database file of a hash database object.
    `hdb' specifies the hash database object.
-   The return value is the inode number of the database file or 0 the object does not connect to
-   any database file. */
+   The return value is the inode number of the database file or 0 if the object does not connect
+   to any database file. */
 uint64_t tchdbinode(TCHDB *hdb);
 
 
 /* Get the modification time of the database file of a hash database object.
    `hdb' specifies the hash database object.
-   The return value is the inode number of the database file or 0 the object does not connect to
-   any database file. */
+   The return value is the inode number of the database file or 0 if the object does not connect
+   to any database file. */
 time_t tchdbmtime(TCHDB *hdb);
 
 
@@ -731,7 +737,7 @@ void tchdbcodecfunc(TCHDB *hdb, TCCODEC *ep, void **eop, TCCODEC *dp, void **dop
    `ksiz' specifies the size of the region of the key.
    `sp' specifies the pointer to the variable into which the size of the region of the return
    value is assigned.
-   If successful, the return value is the pointer to the region of the value of the next record.
+   If successful, the return value is the pointer to the region of the key of the next record.
    `NULL' is returned if no record corresponds.
    Because an additional zero code is appended at the end of the region of the return value,
    the return value can be treated as a character string.  Because the region of the return
@@ -740,14 +746,30 @@ void tchdbcodecfunc(TCHDB *hdb, TCCODEC *ep, void **eop, TCCODEC *dp, void **dop
 void *tchdbgetnext(TCHDB *hdb, const void *kbuf, int ksiz, int *sp);
 
 
-/* Retrieve the next record of a string record in a hash database object.
+/* Retrieve the next string record in a hash database object.
    `hdb' specifies the hash database object.
    `kstr' specifies the string of the key.  If it is `NULL', the first record is retrieved.
-   If successful, the return value is the string of the value of the next record.  `NULL' is
+   If successful, the return value is the string of the key of the next record.  `NULL' is
    returned if no record corresponds.
    Because the region of the return value is allocated with the `malloc' call, it should be
    released with the `free' call when it is no longer in use. */
 char *tchdbgetnext2(TCHDB *hdb, const char *kstr);
+
+
+/* Retrieve the key and the value of the next record of a record in a hash database object.
+   `hdb' specifies the hash database object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `sp' specifies the pointer to the variable into which the size of the region of the return
+   value is assigned.
+   `vbp' specifies the pointer to the variable into which the pointer to the value is assigned.
+   `vsp' specifies the pointer to the variable into which the size of the value is assigned.
+   If successful, the return value is the pointer to the region of the key of the next
+   record.
+   Because the region of the return value is allocated with the `malloc' call, it should be
+   released with the `free' call when it is no longer in use.  The retion pointed to by `vbp'
+   should not be released. */
+char *tchdbgetnext3(TCHDB *hdb, const char *kbuf, int ksiz, int *sp, const char **vbp, int *vsp);
 
 
 /* Process each record atomically of a hash database object.

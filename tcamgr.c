@@ -183,8 +183,8 @@ static int runput(int argc, char **argv){
     }
   }
   if(!name || !key || !value) usage();
-  int ksiz, vsiz;
   char *kbuf, *vbuf;
+  int ksiz, vsiz;
   if(sx){
     kbuf = tchexdecode(key, &ksiz);
     vbuf = tchexdecode(value, &vsiz);
@@ -290,7 +290,7 @@ static int runlist(int argc, char **argv){
     if(!name && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-m")){
         if(++i >= argc) usage();
-        max = tcatoi(argv[i]);
+        max = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-pv")){
         pv = true;
       } else if(!strcmp(argv[i], "-px")){
@@ -589,7 +589,8 @@ static int procmisc(const char *name, const char *func, const TCLIST *args, bool
 
 /* perform version command */
 static int procversion(void){
-  printf("Tokyo Cabinet version %s (%d:%s)\n", tcversion, _TC_LIBVER, _TC_FORMATVER);
+  printf("Tokyo Cabinet version %s (%d:%s) for %s\n",
+         tcversion, _TC_LIBVER, _TC_FORMATVER, TCSYSNAME);
   printf("Copyright (C) 2006-2009 Mikio Hirabayashi\n");
   return 0;
 }

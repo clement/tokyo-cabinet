@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 int main(int argc, char **argv){
-
   TCBDB *bdb;
   BDBCUR *cur;
   int ecode;

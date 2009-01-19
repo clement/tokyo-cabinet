@@ -423,6 +423,23 @@ TCLIST *tclistnew2(int anum){
 }
 
 
+/* Create a list object with initial string elements. */
+TCLIST *tclistnew3(const char *str, ...){
+  TCLIST *list = tclistnew();
+  if(str){
+    tclistpush2(list, str);
+    va_list ap;
+    va_start(ap, str);
+    const char *elem;
+    while((elem = va_arg(ap, char *)) != NULL){
+      tclistpush2(list, elem);
+    }
+    va_end(ap);
+  }
+  return list;
+}
+
+
 /* Copy a list object. */
 TCLIST *tclistdup(const TCLIST *list){
   assert(list);
@@ -900,6 +917,21 @@ void tclistsortex(TCLIST *list, int (*cmp)(const TCLISTDATUM *, const TCLISTDATU
 }
 
 
+/* Invert elements of a list object. */
+void tclistinvert(TCLIST *list){
+  assert(list);
+  TCLISTDATUM *top = list->array + list->start;
+  TCLISTDATUM *bot = top + list->num - 1;
+  while(top < bot){
+    TCLISTDATUM swap = *top;
+    *top = *bot;
+    *bot = swap;
+    top++;
+    bot--;
+  }
+}
+
+
 
 /*************************************************************************************************
  * hash map
@@ -960,6 +992,28 @@ TCMAP *tcmapnew2(uint32_t bnum){
   map->bnum = bnum;
   map->rnum = 0;
   map->msiz = 0;
+  return map;
+}
+
+
+/* Create a map object with initial string elements. */
+TCMAP *tcmapnew3(const char *str, ...){
+  TCMAP *map = tcmapnew2(31);
+  if(str){
+    va_list ap;
+    va_start(ap, str);
+    const char *key = str;
+    const char *elem;
+    while((elem = va_arg(ap, char *)) != NULL){
+      if(key){
+        tcmapput2(map, key, elem);
+        key = NULL;
+      } else {
+        key = elem;
+      }
+    }
+    va_end(ap);
+  }
   return map;
 }
 
@@ -1647,7 +1701,7 @@ void *tcmapdump(const TCMAP *map, int *sp){
 /* Create a map object from a serialized byte array. */
 TCMAP *tcmapload(const void *ptr, int size){
   assert(ptr && size >= 0);
-  TCMAP *map = tcmapnew();
+  TCMAP *map = tcmapnew2(tclmin(size / 6 + 1, TCMAPBNUM));
   const char *rp = ptr;
   const char *ep = (char *)ptr + size;
   while(rp < ep){
@@ -4590,7 +4644,7 @@ TCLIST *tcstrsplit(const char *str, const char *delims){
 
 
 /* Create a string by joining all elements of a list object. */
-char *tcstrjoin(TCLIST *list, char delim){
+char *tcstrjoin(const TCLIST *list, char delim){
   assert(list);
   int num = TCLISTNUM(list);
   int size = num + 1;
@@ -4612,8 +4666,29 @@ char *tcstrjoin(TCLIST *list, char delim){
 }
 
 
-/* Convert a string with a metric prefix to an integer. */
+/* Convert a string to an integer. */
 int64_t tcatoi(const char *str){
+  assert(str);
+  while(*str > '\0' && *str <= ' '){
+    str++;
+  }
+  int sign = 1;
+  int64_t num = 0;
+  if(*str == '-'){
+    str++;
+    sign = -1;
+  }
+  while(*str != '\0'){
+    if(*str < '0' || *str > '9') break;
+    num = num * 10 + *str - '0';
+    str++;
+  }
+  return num *= sign;
+}
+
+
+/* Convert a string with a metric prefix to an integer. */
+int64_t tcatoix(const char *str){
   assert(str);
   char *end;
   long double val = strtold(str, &end);
@@ -5123,6 +5198,188 @@ static time_t tcmkgmtime(struct tm *tm){
   assert(tm);
   return mktime(tm) + tcjetlag();
 #endif
+}
+
+
+
+/*************************************************************************************************
+ * miscellaneous utilities (for experts)
+ *************************************************************************************************/
+
+
+/* Create a list object by splitting a region by zero code. */
+TCLIST *tcstrsplit2(const void *ptr, int size){
+  assert(ptr && size >= 0);
+  TCLIST *list = tclistnew();
+  while(size >= 0){
+    const char *rp = ptr;
+    const char *ep = (const char *)ptr + size;
+    while(rp < ep){
+      if(*rp == '\0') break;
+      rp++;
+    }
+    TCLISTPUSH(list, ptr, rp - (const char *)ptr);
+    rp++;
+    size -= rp - (const char *)ptr;
+    ptr = rp;
+  }
+  return list;
+}
+
+
+/* Create a map object by splitting a string. */
+TCMAP *tcstrsplit3(const char *str, const char *delims){
+  assert(str && delims);
+  TCMAP *map = tcmapnew2(31);
+  const char *kbuf = NULL;
+  int ksiz = 0;
+  while(true){
+    const char *sp = str;
+    while(*str != '\0' && !strchr(delims, *str)){
+      str++;
+    }
+    if(kbuf){
+      tcmapput(map, kbuf, ksiz, sp, str - sp);
+      kbuf = NULL;
+    } else {
+      kbuf = sp;
+      ksiz = str - sp;
+    }
+    if(*str == '\0') break;
+    str++;
+  }
+  return map;
+}
+
+
+/* Create a map object by splitting a region by zero code. */
+TCMAP *tcstrsplit4(const void *ptr, int size){
+  assert(ptr && size >= 0);
+  TCMAP *map = tcmapnew2(tclmin(size / 6 + 1, TCMAPBNUM));
+  const char *kbuf = NULL;
+  int ksiz = 0;
+  while(size >= 0){
+    const char *rp = ptr;
+    const char *ep = (const char *)ptr + size;
+    while(rp < ep){
+      if(*rp == '\0') break;
+      rp++;
+    }
+    if(kbuf){
+      tcmapput(map, kbuf, ksiz, ptr, rp - (const char *)ptr);
+      kbuf = NULL;
+    } else {
+      kbuf = ptr;
+      ksiz = rp - (const char *)ptr;
+    }
+    rp++;
+    size -= rp - (const char *)ptr;
+    ptr = rp;
+  }
+  return map;
+}
+
+
+/* Create a region separated by zero code by joining all elements of a list object. */
+void *tcstrjoin2(const TCLIST *list, int *sp){
+  assert(list && sp);
+  int num = TCLISTNUM(list);
+  int size = num + 1;
+  for(int i = 0; i < num; i++){
+    size += TCLISTVALSIZ(list, i);
+  }
+  char *buf;
+  TCMALLOC(buf, size);
+  char *wp = buf;
+  for(int i = 0; i < num; i++){
+    if(i > 0) *(wp++) = '\0';
+    int vsiz;
+    const char *vbuf = tclistval(list, i, &vsiz);
+    memcpy(wp, vbuf, vsiz);
+    wp += vsiz;
+  }
+  *wp = '\0';
+  *sp = wp - buf;
+  return buf;
+}
+
+
+/* Create a string by joining all records of a map object. */
+char *tcstrjoin3(const TCMAP *map, char delim){
+  assert(map);
+  int num = (int)TCMAPRNUM(map);
+  int size = num * 2 + 1;
+  TCMAPREC *cur = map->cur;
+  tcmapiterinit((TCMAP *)map);
+  const char *kbuf;
+  int ksiz;
+  while((kbuf = tcmapiternext((TCMAP *)map, &ksiz)) != NULL){
+    int vsiz;
+    tcmapiterval(kbuf, &vsiz);
+    size += ksiz + vsiz;
+  }
+  char *buf;
+  TCMALLOC(buf, size);
+  char *wp = buf;
+  tcmapiterinit((TCMAP *)map);
+  bool first = true;
+  while((kbuf = tcmapiternext((TCMAP *)map, &ksiz)) != NULL){
+    if(first){
+      first = false;
+    } else {
+      *(wp++) = delim;
+    }
+    memcpy(wp, kbuf, ksiz);
+    wp += ksiz;
+    int vsiz;
+    const char *vbuf = tcmapiterval(kbuf, &vsiz);
+    *(wp++) = delim;
+    memcpy(wp, vbuf, vsiz);
+    wp += vsiz;
+  }
+  *wp = '\0';
+  ((TCMAP *)map)->cur = cur;
+  return buf;
+}
+
+
+/* Create a region separated by zero code by joining all records of a map object. */
+void *tcstrjoin4(const TCMAP *map, int *sp){
+  assert(map && sp);
+  int num = (int)TCMAPRNUM(map);
+  int size = num * 2 + 1;
+  TCMAPREC *cur = map->cur;
+  tcmapiterinit((TCMAP *)map);
+  const char *kbuf;
+  int ksiz;
+  while((kbuf = tcmapiternext((TCMAP *)map, &ksiz)) != NULL){
+    int vsiz;
+    tcmapiterval(kbuf, &vsiz);
+    size += ksiz + vsiz;
+  }
+  char *buf;
+  TCMALLOC(buf, size);
+  char *wp = buf;
+  tcmapiterinit((TCMAP *)map);
+  bool first = true;
+  while((kbuf = tcmapiternext((TCMAP *)map, &ksiz)) != NULL){
+    if(first){
+      first = false;
+    } else {
+      *(wp++) = '\0';
+    }
+    memcpy(wp, kbuf, ksiz);
+    wp += ksiz;
+    int vsiz;
+    const char *vbuf = tcmapiterval(kbuf, &vsiz);
+    *(wp++) = '\0';
+    memcpy(wp, vbuf, vsiz);
+    wp += vsiz;
+  }
+  *wp = '\0';
+  *sp = wp - buf;
+  ((TCMAP *)map)->cur = cur;
+  return buf;
 }
 
 
@@ -6957,9 +7214,12 @@ int tccmplexical(const char *aptr, int asiz, const char *bptr, int bsiz, void *o
 /* Compare two keys as decimal strings of real numbers. */
 int tccmpdecimal(const char *aptr, int asiz, const char *bptr, int bsiz, void *op){
   assert(aptr && asiz >= 0 && bptr && bsiz >= 0);
-  int sign;
   int64_t anum = 0;
-  sign = 1;
+  int sign = 1;
+  while(asiz > 0 && *aptr > '\0' && *aptr <= ' '){
+    aptr++;
+    asiz--;
+  }
   if(asiz > 0 && *aptr == '-'){
     aptr++;
     asiz--;
@@ -6967,12 +7227,16 @@ int tccmpdecimal(const char *aptr, int asiz, const char *bptr, int bsiz, void *o
   }
   for(int i = 0; i < asiz; i++){
     int c = aptr[i];
-    if(c < '0' || c > '9') continue;
+    if(c < '0' || c > '9') break;
     anum = anum * 10 + c - '0';
   }
   anum *= sign;
   int64_t bnum = 0;
   sign = 1;
+  while(bsiz > 0 && *bptr > '\0' && *bptr <= ' '){
+    bptr++;
+    bsiz--;
+  }
   if(bsiz > 0 && *bptr == '-'){
     bptr++;
     bsiz--;
@@ -6980,11 +7244,15 @@ int tccmpdecimal(const char *aptr, int asiz, const char *bptr, int bsiz, void *o
   }
   for(int i = 0; i < bsiz; i++){
     int c = bptr[i];
-    if(c < '0' || c > '9') continue;
+    if(c < '0' || c > '9') break;
     bnum = bnum * 10 + c - '0';
   }
   bnum *= sign;
-  return (anum < bnum) ? -1 : anum > bnum;
+  if(anum < bnum) return -1;
+  if(anum > bnum) return 1;
+  int rv;
+  TCCMPLEXICAL(rv, aptr, asiz, bptr, bsiz);
+  return rv;
 }
 
 
@@ -7236,6 +7504,25 @@ char *tcbwtdecode(const char *ptr, int size, int idx){
   *wp = '\0';
   if(array != abuf) TCFREE(array);
   return result;
+}
+
+
+/* Get the binary logarithm of an integer. */
+long tclog2l(long num){
+  if(num <= 1) return 0;
+  num >>= 1;
+  long rv = 0;
+  while(num > 0){
+    rv++;
+    num >>= 1;
+  }
+  return rv;
+}
+
+
+/* Get the binary logarithm of a real number. */
+double tclog2d(double num){
+  return log(num) / log(2);
 }
 
 

@@ -7,7 +7,10 @@
 
 
 # set variables
-regex='(\.h|\.c|\.cc|\.cpp|\.cxx|\.java|\.pl|\.pm|\.pod|\.rb|\.rd)$'
+LANG=C
+LC_ALL=C
+export LANG LC_ALL
+regex='\.(h|c|cc|cpp|cxx|java|pl|pm|pod|rb|rd|lua)$'
 tabcode=`printf '\t'`
 
 

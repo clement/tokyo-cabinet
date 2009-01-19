@@ -567,7 +567,7 @@ int tcfdbaddint(TCFDB *fdb, int64_t id, int num);
    number of existing records is specified.  If it is `FDBIDNEXT', the number greater by one than
    the maximum ID number of existing records is specified.
    `num' specifies the additional value.
-   If successful, the return value is the summation value, else, it is `NAN'.
+   If successful, the return value is the summation value, else, it is Not-a-Number.
    If the corresponding record exists, the value is treated as a real number and is added to.  If
    no record corresponds, a new record of the additional value is stored. */
 double tcfdbadddouble(TCFDB *fdb, int64_t id, double num);
@@ -656,6 +656,12 @@ void tcfdbsetdbgfd(TCFDB *fdb, int fd);
 int tcfdbdbgfd(TCFDB *fdb);
 
 
+/* Check whether mutual exclusion control is set to a fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If mutual exclusion control is set, it is true, else it is false. */
+bool tcfdbhasmutex(TCFDB *fdb);
+
+
 /* Synchronize updating contents on memory of a fixed-length database object.
    `fdb' specifies the fixed-length database object connected as a writer.
    `phys' specifies whether to synchronize physically.
@@ -700,15 +706,15 @@ uint64_t tcfdblimid(TCFDB *fdb);
 
 /* Get the inode number of the database file of a fixed-length database object.
    `fdb' specifies the fixed-length database object.
-   The return value is the inode number of the database file or 0 the object does not connect to
-   any database file. */
+   The return value is the inode number of the database file or 0 if the object does not connect
+   to any database file. */
 uint64_t tcfdbinode(TCFDB *fdb);
 
 
 /* Get the modification time of the database file of a fixed-length database object.
    `fdb' specifies the fixed-length database object.
-   The return value is the inode number of the database file or 0 the object does not connect to
-   any database file. */
+   The return value is the inode number of the database file or 0 if the object does not connect
+   to any database file. */
 time_t tcfdbmtime(TCFDB *fdb);
 
 
