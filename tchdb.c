@@ -2689,8 +2689,9 @@ static int tchdbwalrestore(TCHDB *hdb, const char *path){
     size_t xmsiz = 0;
     if(hdb->fd >= 0 && hdb->map) xmsiz = (hdb->xmsiz > hdb->msiz) ? hdb->xmsiz : hdb->msiz;
     for(int i = TCLISTNUM(list) - 1; i >= 0; i--){
+      const char *rec;
       int size;
-      const char *rec = tclistval(list, i, &size);
+      TCLISTVAL(rec, list, i, size);
       uint64_t off = *(uint64_t *)rec;
       rec += sizeof(off);
       size -= sizeof(off);
@@ -4109,6 +4110,7 @@ static bool tchdbcopyimpl(TCHDB *hdb, const char *path){
 
 
 /* Process each record atomically of a hash database object.
+   `hdb' specifies the hash database object.
    `func' specifies the pointer to the iterator function called for each record.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.
    If successful, the return value is true, else, it is false. */

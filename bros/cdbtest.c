@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "cdb.h"
+#include <cdb.h>
 
 #undef TRUE
 #define TRUE           1                 /* boolean true */
@@ -51,7 +51,7 @@ int main(int argc, char **argv){
 
 /* print the usage and exit */
 void usage(void){
-  fprintf(stderr, "%s: test cases for GNU Database Manager\n", progname);
+  fprintf(stderr, "%s: test cases for Constant Database\n", progname);
   fprintf(stderr, "\n");
   fprintf(stderr, "usage:\n");
   fprintf(stderr, "  %s write name rnum\n", progname);
@@ -118,7 +118,7 @@ int dowrite(char *name, int rnum){
   struct cdb_make cdb;
   int i, fd, err, len;
   char buf[32];
-  if(showprgr) printf("<Writing Test of Hash>\n  name=%s  rnum=%d\n\n", name, rnum);
+  if(showprgr) printf("<Writing Test>\n  name=%s  rnum=%d\n\n", name, rnum);
   /* open a database */
   if((fd = open(name, O_RDWR | O_CREAT | O_TRUNC, 0644)) == -1){
     perror("open");
@@ -169,7 +169,7 @@ int doread(char *name, int rnum){
   struct cdb cdb;
   int i, fd, err, len;
   char buf[RECBUFSIZ], *val;
-  if(showprgr) printf("<Reading Test of Hash>\n  name=%s  rnum=%d\n\n", name, rnum);
+  if(showprgr) printf("<Reading Test>\n  name=%s  rnum=%d\n\n", name, rnum);
   /* open a database */
   if((fd = open(name, O_RDONLY, 0644)) == -1){
     perror("open");

@@ -412,8 +412,9 @@ bool tcbdbputdup3(TCBDB *bdb, const void *kbuf, int ksiz, const TCLIST *vals){
   bool err = false;
   int ln = TCLISTNUM(vals);
   for(int i = 0; i < ln; i++){
+    const char *vbuf;
     int vsiz;
-    const char *vbuf = tclistval(vals, i, &vsiz);
+    TCLISTVAL(vbuf, vals, i, vsiz);
     if(!tcbdbputimpl(bdb, kbuf, ksiz, vbuf, vsiz, BDBPDDUP)) err = true;
   }
   BDBUNLOCKMETHOD(bdb);
@@ -1852,8 +1853,9 @@ static bool tcbdbleafsave(TCBDB *bdb, BDBLEAF *leaf){
     TCXSTRCAT(rbuf, dbuf, rec->ksiz);
     TCXSTRCAT(rbuf, dbuf + rec->ksiz + TCALIGNPAD(rec->ksiz), rec->vsiz);
     for(int j = 0; j < rnum; j++){
+      const char *vbuf;
       int vsiz;
-      const char *vbuf = tclistval(rest, j, &vsiz);
+      TCLISTVAL(vbuf, rest, j, vsiz);
       TCSETVNUMBUF(step, hbuf, vsiz);
       TCXSTRCAT(rbuf, hbuf, step);
       TCXSTRCAT(rbuf, vbuf, vsiz);
@@ -3094,8 +3096,9 @@ static TCLIST *tcbdbgetlist(TCBDB *bdb, const char *kbuf, int ksiz){
     vals = tclistnew2(ln + 1);
     TCLISTPUSH(vals, (char *)rec + sizeof(*rec) + rec->ksiz + TCALIGNPAD(rec->ksiz), rec->vsiz);
     for(int i = 0; i < ln; i++){
+      const char *vbuf;
       int vsiz;
-      const char *vbuf = tclistval(rest, i, &vsiz);
+      TCLISTVAL(vbuf, rest, i, vsiz);
       TCLISTPUSH(vals, vbuf, vsiz);
     }
   } else {
@@ -3435,7 +3438,10 @@ static bool tcbdbcurjumpimpl(BDBCUR *cur, const char *kbuf, int ksiz, bool forwa
   } else {
     rv = bdb->cmp(kbuf, ksiz, dbuf, rec->ksiz, bdb->cmpop);
   }
-  if(rv > 0) return true;
+  if(rv > 0){
+    cur->vidx = rec->rest ? TCLISTNUM(rec->rest) : 0;
+    return true;
+  }
   cur->vidx = 0;
   return tcbdbcurprevimpl(cur);
 }

@@ -32,6 +32,7 @@ static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCTDB *tdb, const char *func);
+static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int myrand(int range);
 static int runwrite(int argc, char **argv);
 static int runread(int argc, char **argv);
@@ -40,12 +41,15 @@ static int runrcat(int argc, char **argv);
 static int runmisc(int argc, char **argv);
 static int runwicked(int argc, char **argv);
 static int procwrite(const char *path, int rnum, int bnum, int apow, int fpow,
-                     bool mt, int opts, int xmsiz, int iflags, int omode, bool rnd);
-static int procread(const char *path, bool mt, int xmsiz, int omode, bool rnd);
-static int procremove(const char *path, bool mt, int xmsiz, int omode, bool rnd);
+                     bool mt, int opts, int rcnum, int lcnum, int ncnum, int xmsiz,
+                     int iflags, int omode, bool rnd);
+static int procread(const char *path, bool mt, int rcnum, int lcnum, int ncnum, int xmsiz,
+                    int omode, bool rnd);
+static int procremove(const char *path, bool mt, int rcnum, int lcnum, int ncnum, int xmsiz,
+                      int omode, bool rnd);
 static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
-                    bool mt, int opts, int xmsiz, int iflags, int omode,
-                    int pnum, bool dai, bool dad, bool rl, bool ru);
+                    bool mt, int opts, int rcnum, int lcnum, int ncnum, int xmsiz,
+                    int iflags, int omode, int pnum, bool dai, bool dad, bool rl, bool ru);
 static int procmisc(const char *path, int rnum, bool mt, int opts, int omode);
 static int procwicked(const char *path, int rnum, bool mt, int opts, int omode);
 
@@ -83,13 +87,15 @@ static void usage(void){
   fprintf(stderr, "%s: test cases of the table database API of Tokyo Cabinet\n", g_progname);
   fprintf(stderr, "\n");
   fprintf(stderr, "usage:\n");
-  fprintf(stderr, "  %s write [-mt] [-tl] [-td|-tb|-tt|-tx] [-xm num]"
-          " [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] path rnum [bnum [apow [fpow]]]\n",
-          g_progname);
-  fprintf(stderr, "  %s read [-mt] [-xm num] [-nl|-nb] [-rnd] path\n", g_progname);
-  fprintf(stderr, "  %s remove [-mt] [-xm num] [-nl|-nb] [-rnd] path\n", g_progname);
-  fprintf(stderr, "  %s rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-xm num]"
-          " [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn num] [-dai|-dad|-rl|-ru]"
+  fprintf(stderr, "  %s write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc num] [-lc num] [-nc num]"
+          " [-xm num] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd]"
+          " path rnum [bnum [apow [fpow]]]\n", g_progname);
+  fprintf(stderr, "  %s read [-mt] [-rc num] [-lc num] [-nc num] [-xm num] [-nl|-nb] [-rnd]"
+          " path\n", g_progname);
+  fprintf(stderr, "  %s remove [-mt] [-rc num] [-lc num] [-nc num] [-xm num] [-nl|-nb] [-rnd]"
+          " path\n", g_progname);
+  fprintf(stderr, "  %s rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc num] [-lc num] [-nc num]"
+          " [-xm num] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn num] [-dai|-dad|-rl|-ru]"
           " path rnum [bnum [apow [fpow]]]\n",
           g_progname);
   fprintf(stderr, "  %s misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] path rnum\n", g_progname);
@@ -125,6 +131,19 @@ static void eprint(TCTDB *tdb, const char *func){
 }
 
 
+/* iterator function */
+static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op){
+  unsigned int sum = 0;
+  while(--ksiz >= 0){
+    sum += ((char *)kbuf)[ksiz];
+  }
+  while(--vsiz >= 0){
+    sum += ((char *)vbuf)[vsiz];
+  }
+  return myrand(100 + (sum & 0xff)) > 0;
+}
+
+
 /* get a random number */
 static int myrand(int range){
   return (int)((double)range * rand() / (RAND_MAX + 1.0));
@@ -140,6 +159,9 @@ static int runwrite(int argc, char **argv){
   char *fstr = NULL;
   bool mt = false;
   int opts = 0;
+  int rcnum = 0;
+  int lcnum = 0;
+  int ncnum = 0;
   int xmsiz = -1;
   int iflags = 0;
   int omode = 0;
@@ -158,6 +180,15 @@ static int runwrite(int argc, char **argv){
         opts |= TDBTTCBS;
       } else if(!strcmp(argv[i], "-tx")){
         opts |= TDBTEXCODEC;
+      } else if(!strcmp(argv[i], "-rc")){
+        if(++i >= argc) usage();
+        rcnum = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-lc")){
+        if(++i >= argc) usage();
+        lcnum = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-nc")){
+        if(++i >= argc) usage();
+        ncnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
@@ -200,7 +231,8 @@ static int runwrite(int argc, char **argv){
   int bnum = bstr ? tcatoix(bstr) : -1;
   int apow = astr ? tcatoix(astr) : -1;
   int fpow = fstr ? tcatoix(fstr) : -1;
-  int rv = procwrite(path, rnum, bnum, apow, fpow, mt, opts, xmsiz, iflags, omode, rnd);
+  int rv = procwrite(path, rnum, bnum, apow, fpow, mt, opts, rcnum, lcnum, ncnum, xmsiz,
+                     iflags, omode, rnd);
   return rv;
 }
 
@@ -209,6 +241,9 @@ static int runwrite(int argc, char **argv){
 static int runread(int argc, char **argv){
   char *path = NULL;
   bool mt = false;
+  int rcnum = 0;
+  int lcnum = 0;
+  int ncnum = 0;
   int xmsiz = -1;
   int omode = 0;
   bool rnd = false;
@@ -216,6 +251,15 @@ static int runread(int argc, char **argv){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-mt")){
         mt = true;
+      } else if(!strcmp(argv[i], "-rc")){
+        if(++i >= argc) usage();
+        rcnum = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-lc")){
+        if(++i >= argc) usage();
+        lcnum = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-nc")){
+        if(++i >= argc) usage();
+        ncnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
@@ -235,7 +279,7 @@ static int runread(int argc, char **argv){
     }
   }
   if(!path) usage();
-  int rv = procread(path, mt, xmsiz, omode, rnd);
+  int rv = procread(path, mt, rcnum, lcnum, ncnum, xmsiz, omode, rnd);
   return rv;
 }
 
@@ -244,6 +288,9 @@ static int runread(int argc, char **argv){
 static int runremove(int argc, char **argv){
   char *path = NULL;
   bool mt = false;
+  int rcnum = 0;
+  int lcnum = 0;
+  int ncnum = 0;
   int xmsiz = -1;
   int omode = 0;
   bool rnd = false;
@@ -251,6 +298,15 @@ static int runremove(int argc, char **argv){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-mt")){
         mt = true;
+      } else if(!strcmp(argv[i], "-rc")){
+        if(++i >= argc) usage();
+        rcnum = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-lc")){
+        if(++i >= argc) usage();
+        lcnum = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-nc")){
+        if(++i >= argc) usage();
+        ncnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
@@ -270,7 +326,7 @@ static int runremove(int argc, char **argv){
     }
   }
   if(!path) usage();
-  int rv = procremove(path, mt, xmsiz, omode, rnd);
+  int rv = procremove(path, mt, rcnum, lcnum, ncnum, xmsiz, omode, rnd);
   return rv;
 }
 
@@ -284,6 +340,9 @@ static int runrcat(int argc, char **argv){
   char *fstr = NULL;
   bool mt = false;
   int opts = 0;
+  int rcnum = 0;
+  int lcnum = 0;
+  int ncnum = 0;
   int xmsiz = -1;
   int iflags = 0;
   int omode = 0;
@@ -309,6 +368,15 @@ static int runrcat(int argc, char **argv){
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-rc")){
+        if(++i >= argc) usage();
+        rcnum = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-lc")){
+        if(++i >= argc) usage();
+        lcnum = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-nc")){
+        if(++i >= argc) usage();
+        ncnum = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-ip")){
         iflags |= 1 << 0;
       } else if(!strcmp(argv[i], "-is")){
@@ -357,8 +425,8 @@ static int runrcat(int argc, char **argv){
   int bnum = bstr ? tcatoix(bstr) : -1;
   int apow = astr ? tcatoix(astr) : -1;
   int fpow = fstr ? tcatoix(fstr) : -1;
-  int rv = procrcat(path, rnum, bnum, apow, fpow, mt, opts, xmsiz, iflags, omode, pnum,
-                    dai, dad, rl, ru);
+  int rv = procrcat(path, rnum, bnum, apow, fpow, mt, opts, rcnum, lcnum, ncnum, xmsiz,
+                    iflags, omode, pnum, dai, dad, rl, ru);
   return rv;
 }
 
@@ -453,10 +521,12 @@ static int runwicked(int argc, char **argv){
 
 /* perform write command */
 static int procwrite(const char *path, int rnum, int bnum, int apow, int fpow,
-                     bool mt, int opts, int xmsiz, int iflags, int omode, bool rnd){
+                     bool mt, int opts, int rcnum, int lcnum, int ncnum, int xmsiz,
+                     int iflags, int omode, bool rnd){
   iprintf("<Writing Test>\n  path=%s  rnum=%d  bnum=%d  apow=%d  fpow=%d  mt=%d"
-          "  opts=%d  xmsiz=%d  iflags=%d  omode=%d  rnd=%d\n\n",
-          path, rnum, bnum, apow, fpow, mt, opts, xmsiz, iflags, omode, rnd);
+          "  opts=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d  iflags=%d  omode=%d  rnd=%d\n\n",
+          path, rnum, bnum, apow, fpow, mt, opts, rcnum, lcnum, ncnum, xmsiz,
+          iflags, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCTDB *tdb = tctdbnew();
@@ -471,6 +541,10 @@ static int procwrite(const char *path, int rnum, int bnum, int apow, int fpow,
   }
   if(!tctdbtune(tdb, bnum, apow, fpow, opts)){
     eprint(tdb, "tctdbtune");
+    err = true;
+  }
+  if(!tctdbsetcache(tdb, rcnum, lcnum, ncnum)){
+    eprint(tdb, "tctdbsetcache");
     err = true;
   }
   if(xmsiz >= 0 && !tctdbsetxmsiz(tdb, xmsiz)){
@@ -549,9 +623,10 @@ static int procwrite(const char *path, int rnum, int bnum, int apow, int fpow,
 
 
 /* perform read command */
-static int procread(const char *path, bool mt, int xmsiz, int omode, bool rnd){
-  iprintf("<Reading Test>\n  path=%s  mt=%d  xmsiz=%d  omode=%d  rnd=%d\n\n",
-          path, mt, xmsiz, omode, rnd);
+static int procread(const char *path, bool mt, int rcnum, int lcnum, int ncnum, int xmsiz,
+                    int omode, bool rnd){
+  iprintf("<Reading Test>\n  path=%s  mt=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d"
+          "  omode=%d  rnd=%d\n\n", path, mt, rcnum, lcnum, ncnum, xmsiz, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCTDB *tdb = tctdbnew();
@@ -562,6 +637,10 @@ static int procread(const char *path, bool mt, int xmsiz, int omode, bool rnd){
   }
   if(!tctdbsetcodecfunc(tdb, _tc_recencode, NULL, _tc_recdecode, NULL)){
     eprint(tdb, "tctdbsetcodecfunc");
+    err = true;
+  }
+  if(!tctdbsetcache(tdb, rcnum, lcnum, ncnum)){
+    eprint(tdb, "tctdbsetcache");
     err = true;
   }
   if(xmsiz >= 0 && !tctdbsetxmsiz(tdb, xmsiz)){
@@ -603,9 +682,10 @@ static int procread(const char *path, bool mt, int xmsiz, int omode, bool rnd){
 
 
 /* perform remove command */
-static int procremove(const char *path, bool mt, int xmsiz, int omode, bool rnd){
-  iprintf("<Removing Test>\n  path=%s  mt=%d  xmsiz=%d  omode=%d  rnd=%d\n\n",
-          path, mt, xmsiz, omode, rnd);
+static int procremove(const char *path, bool mt, int rcnum, int lcnum, int ncnum, int xmsiz,
+                      int omode, bool rnd){
+  iprintf("<Removing Test>\n  path=%s  mt=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d"
+          "  omode=%d  rnd=%d\n\n", path, mt, rcnum, lcnum, ncnum, xmsiz, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCTDB *tdb = tctdbnew();
@@ -616,6 +696,10 @@ static int procremove(const char *path, bool mt, int xmsiz, int omode, bool rnd)
   }
   if(!tctdbsetcodecfunc(tdb, _tc_recencode, NULL, _tc_recdecode, NULL)){
     eprint(tdb, "tctdbsetcodecfunc");
+    err = true;
+  }
+  if(!tctdbsetcache(tdb, rcnum, lcnum, ncnum)){
+    eprint(tdb, "tctdbsetcache");
     err = true;
   }
   if(xmsiz >= 0 && !tctdbsetxmsiz(tdb, xmsiz)){
@@ -655,12 +739,14 @@ static int procremove(const char *path, bool mt, int xmsiz, int omode, bool rnd)
 
 /* perform rcat command */
 static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
-                    bool mt, int opts, int xmsiz, int iflags, int omode,
-                    int pnum, bool dai, bool dad, bool rl, bool ru){
+                    bool mt, int opts, int rcnum, int lcnum, int ncnum, int xmsiz,
+                    int iflags, int omode, int pnum, bool dai, bool dad, bool rl, bool ru){
   iprintf("<Random Concatenating Test>\n"
-          "  path=%s  rnum=%d  bnum=%d  apow=%d  fpow=%d  mt=%d  opts=%d  xmsiz=%d  iflags=%d"
+          "  path=%s  rnum=%d  bnum=%d  apow=%d  fpow=%d  mt=%d  opts=%d"
+          "  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d  iflags=%d"
           "  omode=%d  pnum=%d  dai=%d  dad=%d  rl=%d  ru=%d\n\n",
-          path, rnum, bnum, apow, fpow, mt, opts, xmsiz, iflags, omode, pnum, dai, dad, rl, ru);
+          path, rnum, bnum, apow, fpow, mt, opts, rcnum, lcnum, rcnum, xmsiz,
+          iflags, omode, pnum, dai, dad, rl, ru);
   if(pnum < 1) pnum = rnum;
   bool err = false;
   double stime = tctime();
@@ -676,6 +762,10 @@ static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
   }
   if(!tctdbtune(tdb, bnum, apow, fpow, opts)){
     eprint(tdb, "tctdbtune");
+    err = true;
+  }
+  if(!tctdbsetcache(tdb, rcnum, lcnum, ncnum)){
+    eprint(tdb, "tctdbsetcache");
     err = true;
   }
   if(xmsiz >= 0 && !tctdbsetxmsiz(tdb, xmsiz)){
@@ -842,6 +932,10 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
   }
   if(!tctdbtune(tdb, rnum / 50, 2, -1, opts)){
     eprint(tdb, "tctdbtune");
+    err = true;
+  }
+  if(!tctdbsetcache(tdb, rnum / 10, 128, 256)){
+    eprint(tdb, "tctdbsetcache");
     err = true;
   }
   if(!tctdbsetxmsiz(tdb, rnum * sizeof(int))){
@@ -1230,6 +1324,10 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
       err = true;
     }
   }
+  if(!tctdbforeach(tdb, iterfunc, NULL)){
+    eprint(tdb, "tctdbforeach");
+    err = true;
+  }
   iprintf("record number: %llu\n", (unsigned long long)tctdbrnum(tdb));
   iprintf("size: %llu\n", (unsigned long long)tctdbfsiz(tdb));
   if(!tctdbclose(tdb)){
@@ -1261,6 +1359,10 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
   }
   if(!tctdbtune(tdb, rnum / 50, 2, -1, opts)){
     eprint(tdb, "tctdbtune");
+    err = true;
+  }
+  if(!tctdbsetcache(tdb, rnum / 10, 128, 256)){
+    eprint(tdb, "tctdbsetcache");
     err = true;
   }
   if(!tctdbsetxmsiz(tdb, rnum * sizeof(int))){

@@ -7215,35 +7215,39 @@ int tccmplexical(const char *aptr, int asiz, const char *bptr, int bsiz, void *o
 int tccmpdecimal(const char *aptr, int asiz, const char *bptr, int bsiz, void *op){
   assert(aptr && asiz >= 0 && bptr && bsiz >= 0);
   int64_t anum = 0;
+  int64_t bnum = 0;
+  const unsigned char *rp = (unsigned char *)aptr;
+  int len = asiz;
   int sign = 1;
-  while(asiz > 0 && *aptr > '\0' && *aptr <= ' '){
-    aptr++;
-    asiz--;
+  while(len > 0 && (*rp <= ' ' || *rp == 0x7f)){
+    rp++;
+    len--;
   }
-  if(asiz > 0 && *aptr == '-'){
-    aptr++;
-    asiz--;
+  if(len > 0 && *rp == '-'){
+    rp++;
+    len--;
     sign = -1;
   }
-  for(int i = 0; i < asiz; i++){
-    int c = aptr[i];
+  for(int i = 0; i < len; i++){
+    int c = rp[i];
     if(c < '0' || c > '9') break;
     anum = anum * 10 + c - '0';
   }
   anum *= sign;
-  int64_t bnum = 0;
+  rp = (unsigned char *)bptr;
+  len = bsiz;
   sign = 1;
-  while(bsiz > 0 && *bptr > '\0' && *bptr <= ' '){
-    bptr++;
-    bsiz--;
+  while(len > 0 && (*rp <= ' ' || *rp == 0x7f)){
+    rp++;
+    len--;
   }
-  if(bsiz > 0 && *bptr == '-'){
-    bptr++;
-    bsiz--;
+  if(len > 0 && *rp == '-'){
+    rp++;
+    len--;
     sign = -1;
   }
-  for(int i = 0; i < bsiz; i++){
-    int c = bptr[i];
+  for(int i = 0; i < len; i++){
+    int c = rp[i];
     if(c < '0' || c > '9') break;
     bnum = bnum * 10 + c - '0';
   }

@@ -11,7 +11,7 @@
 SHELL = /bin/sh
 
 # Targets
-MYBINS = tctest qdbmtest ndbmtest sdbmtest gdbmtest tdbtest cdbtest bdbtest maptest
+MYBINS = tctest qdbmtest ndbmtest sdbmtest gdbmtest tdbtest cdbtest bdbtest maptest sqltest
 
 
 
@@ -110,6 +110,12 @@ maptest : maptest.cc
 	  g++ -I.. -I/usr/local/include -D_GNU_SOURCE=1 \
 	    -Wall -ansi -pedantic -O3 -o $@ maptest.cc \
 	    -static -L. -L.. -lstdc++ $$ldflags
+
+
+sqltest : sqltest.c
+	gcc -I/usr/local/include -D_GNU_SOURCE=1 \
+	  -Wall -O3 -o $@ sqltest.c \
+	  -static -L/usr/local/lib -lsqlite3 -lpthread -ldl -lc
 
 
 

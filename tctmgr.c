@@ -49,7 +49,7 @@ static int procout(const char *path, const char *pkbuf, int pksiz, int omode);
 static int procget(const char *path, const char *pkbuf, int pksiz, int omode, bool px, bool pz);
 static int proclist(const char *path, int omode, int max, bool pv, bool px, const char *fmstr);
 static int procsearch(const char *path, TCLIST *conds, const char *oname, const char *otype,
-                      int omode, int max, bool pv, bool px, bool ph, int bt);
+                      int omode, int max, bool pv, bool px, bool ph, int bt, bool rm);
 static int procoptimize(const char *path, int bnum, int apow, int fpow, int opts, int omode);
 static int procsetindex(const char *path, const char *name, int omode, int type);
 static int procimporttsv(const char *path, const char *file, int omode, bool sc);
@@ -105,7 +105,7 @@ static void usage(void){
   fprintf(stderr, "  %s get [-nl|-nb] [-sx] [-px] [-pz] path pkey\n", g_progname);
   fprintf(stderr, "  %s list [-nl|-nb] [-m num] [-pv] [-px] [-fm str] path\n", g_progname);
   fprintf(stderr, "  %s search [-nl|-nb] [-ord name type] [-m num] [-pv] [-px] [-ph] [-bt num]"
-          " path [name op expr ...]\n", g_progname);
+          " [-rm] path [name op expr ...]\n", g_progname);
   fprintf(stderr, "  %s optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] path"
           " [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "  %s setindex [-nl|-nb] [-cd|-cv] path name\n", g_progname);
@@ -441,6 +441,7 @@ static int runsearch(int argc, char **argv){
   bool px = false;
   bool ph = false;
   int bt = 0;
+  bool rm = false;
   for(int i = 2; i < argc; i++){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-nl")){
@@ -464,6 +465,8 @@ static int runsearch(int argc, char **argv){
       } else if(!strcmp(argv[i], "-bt")){
         if(++i >= argc) usage();
         bt = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-rm")){
+        rm = true;
       } else {
         usage();
       }
@@ -474,7 +477,7 @@ static int runsearch(int argc, char **argv){
     }
   }
   if(!path || tclistnum(conds) % 3 != 0) usage();
-  int rv = procsearch(path, conds, oname, otype, omode, max, pv, px, ph, bt);
+  int rv = procsearch(path, conds, oname, otype, omode, max, pv, px, ph, bt, rm);
   return rv;
 }
 
@@ -885,11 +888,11 @@ static int proclist(const char *path, int omode, int max, bool pv, bool px, cons
 
 /* perform search command */
 static int procsearch(const char *path, TCLIST *conds, const char *oname, const char *otype,
-                      int omode, int max, bool pv, bool px, bool ph, int bt){
+                      int omode, int max, bool pv, bool px, bool ph, int bt, bool rm){
   TCTDB *tdb = tctdbnew();
   if(g_dbgfd >= 0) tctdbsetdbgfd(tdb, g_dbgfd);
   if(!tctdbsetcodecfunc(tdb, _tc_recencode, NULL, _tc_recdecode, NULL)) printerr(tdb);
-  if(!tctdbopen(tdb, path, TDBOREADER | omode)){
+  if(!tctdbopen(tdb, path, (rm ? TDBOWRITER : TDBOREADER) | omode)){
     printerr(tdb);
     tctdbdel(tdb);
     return 1;
@@ -958,7 +961,25 @@ static int procsearch(const char *path, TCLIST *conds, const char *oname, const 
     if(type >= 0) tctdbqrysetorder(qry, oname, type);
   }
   if(max >= 0) tctdbqrysetmax(qry, max);
-  if(bt > 0){
+  if(rm){
+    double stime = tctime();
+    if(!tctdbqryproc(qry, tctdbqryprocout, NULL)){
+      printerr(tdb);
+      err = true;
+    }
+    double etime = tctime();
+    if(ph){
+      TCLIST *hints = tcstrsplit(tctdbqryhint(qry), "\n");
+      int hnum = tclistnum(hints);
+      for(int i = 0; i < hnum; i++){
+        const char *hint = tclistval2(hints, i);
+        if(*hint == '\0') continue;
+        printf("\t:::: %s\n", hint);
+      }
+      tclistdel(hints);
+      printf("\t:::: elapsed time: %.5f\n", etime - stime);
+    }
+  } else if(bt > 0){
     double sum = 0;
     for(int i = 1; i <= bt; i++){
       double stime = tctime();

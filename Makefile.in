@@ -416,10 +416,10 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tcttest write casket 50000 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tcttest read casket
 	$(RUNENV) $(RUNCMD) ./tcttest remove casket
-	$(RUNENV) $(RUNCMD) ./tcttest write -mt -tl -td -xm 500000 \
+	$(RUNENV) $(RUNCMD) ./tcttest write -mt -tl -td -rc 50 -lc 5 -nc 5 -xm 500000 \
 	  -is -in -it -if casket 5000 5000 5 5
-	$(RUNENV) $(RUNCMD) ./tcttest read -mt -nb -xm 500000 casket
-	$(RUNENV) $(RUNCMD) ./tcttest remove -mt -xm 500000 casket
+	$(RUNENV) $(RUNCMD) ./tcttest read -mt -nb -rc 50 -lc 5 -nc 5 -xm 500000 casket
+	$(RUNENV) $(RUNCMD) ./tcttest remove -mt -rc 50 -lc 5 -nc 5 -xm 500000 casket
 	$(RUNENV) $(RUNCMD) ./tcttest rcat -pn 500 -xm 50000 -is casket 5000 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tcttest rcat -tl -td -pn 5000 -is -in casket 5000 500 5 15
 	$(RUNENV) $(RUNCMD) ./tcttest rcat -nl -pn 500 -rl -is -in casket 5000 500 5 5
@@ -444,6 +444,7 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tctmttest wicked -tl -td casket 5 5000
 	$(RUNENV) $(RUNCMD) ./tctmttest typical casket 5 5000 500
 	$(RUNENV) $(RUNCMD) ./tctmttest typical -rr 1000 casket 5 5000 500
+	$(RUNENV) $(RUNCMD) ./tctmttest typical -tl -rc 50000 -lc 5 -nc 5 casket 5 5000 500
 	$(RUNENV) $(RUNCMD) ./tctmgr create casket 3 1 1
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket name
 	$(RUNENV) $(RUNCMD) ./tctmgr inform casket
@@ -459,9 +460,9 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tctmgr get casket 3 > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr search casket > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -pv -ph casket > check.out
-	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name strdesc -pv -ph casket > check.out
-	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name strdesc -pv -ph casket \
-	  name strbw mi birth numbt 19700101,19791231 lang strand ja,en > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket \
+	  name STRBW mi birth NUMBT 19700101,19791231 lang STRAND ja,en > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket name
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex -cd casket birth
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket lang
@@ -469,9 +470,10 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tctmgr optimize casket
 	$(RUNENV) $(RUNCMD) ./tctmgr put casket "" name tokyo country japan lang ja
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -pv -ph casket > check.out
-	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name strdesc -pv -ph casket > check.out
-	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name strdesc -pv -ph casket \
-	  name strbw mi birth numbt 19700101,19791231 lang strand ja,en > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket \
+	  name STRBW mi birth NUMBT 19700101,19791231 lang STRAND ja,en > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -ord price NUMDESC -ph -rm casket name STRINC a
 	$(RUNENV) $(RUNCMD) ./tctmgr list -pv casket > check.out
 
 
@@ -532,6 +534,8 @@ check-large :
 	$(RUNENV) $(RUNCMD) ./tchmttest typical -nc casket 3 1000000 5000000 13 8
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical casket 3 500000 8 8 500000 16 8
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical -nc casket 3 500000 8 8 500000 16 8
+	$(RUNENV) $(RUNCMD) ./tcfmttest typical casket 3 500000 2048 4g
+	$(RUNENV) $(RUNCMD) ./tcfmttest typical -nc casket 3 500000 2048 4g
 	rm -rf casket*
 
 
@@ -543,6 +547,8 @@ check-thread :
 	$(RUNENV) $(RUNCMD) ./tchmttest typical -rc 500000 -nc -rr 1000 casket 5 500000 500000
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical casket 5 100000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical -nc -rr 1000 casket 5 100000 5 5
+	$(RUNENV) $(RUNCMD) ./tcfmttest typical casket 5 500000 10
+	$(RUNENV) $(RUNCMD) ./tcfmttest typical -nc -rr 1000 casket 5 500000 10
 	rm -rf casket*
 
 

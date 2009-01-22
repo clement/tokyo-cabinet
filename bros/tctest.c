@@ -7,6 +7,7 @@
 #include <tchdb.h>
 #include <tcbdb.h>
 #include <tcfdb.h>
+#include <tctdb.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,6 +35,8 @@ int runbtwrite(int argc, char **argv);
 int runbtread(int argc, char **argv);
 int runflwrite(int argc, char **argv);
 int runflread(int argc, char **argv);
+int runtblwrite(int argc, char **argv);
+int runtblread(int argc, char **argv);
 int myrand(void);
 int dowrite(char *name, int rnum);
 int doread(char *name, int rnum);
@@ -41,6 +44,8 @@ int dobtwrite(char *name, int rnum, int rnd);
 int dobtread(char *name, int rnum, int rnd);
 int doflwrite(char *name, int rnum);
 int doflread(char *name, int rnum);
+int dotblwrite(char *name, int rnum);
+int dotblread(char *name, int rnum);
 
 
 /* main routine */
@@ -64,6 +69,10 @@ int main(int argc, char **argv){
     rv = runflwrite(argc, argv);
   } else if(!strcmp(argv[1], "flread")){
     rv = runflread(argc, argv);
+  } else if(!strcmp(argv[1], "tblwrite")){
+    rv = runtblwrite(argc, argv);
+  } else if(!strcmp(argv[1], "tblread")){
+    rv = runtblread(argc, argv);
   } else {
     usage();
   }
@@ -82,6 +91,8 @@ void usage(void){
   fprintf(stderr, "  %s btread [-rnd] name rnum\n", progname);
   fprintf(stderr, "  %s flwrite name rnum\n", progname);
   fprintf(stderr, "  %s flread name rnum\n", progname);
+  fprintf(stderr, "  %s tblwrite name rnum\n", progname);
+  fprintf(stderr, "  %s tblread name rnum\n", progname);
   fprintf(stderr, "\n");
   exit(1);
 }
@@ -249,6 +260,60 @@ int runflread(int argc, char **argv){
   rnum = atoi(rstr);
   if(rnum < 1) usage();
   rv = doflread(name, rnum);
+  return rv;
+}
+
+
+/* parse arguments of tblwrite command */
+int runtblwrite(int argc, char **argv){
+  char *name, *rstr;
+  int i, rnum, rnd, rv;
+  name = NULL;
+  rstr = NULL;
+  rnum = 0;
+  rnd = FALSE;
+  for(i = 2; i < argc; i++){
+    if(!name && argv[i][0] == '-'){
+      usage();
+    } else if(!name){
+      name = argv[i];
+    } else if(!rstr){
+      rstr = argv[i];
+    } else {
+      usage();
+    }
+  }
+  if(!name || !rstr) usage();
+  rnum = atoi(rstr);
+  if(rnum < 1) usage();
+  rv = dotblwrite(name, rnum);
+  return rv;
+}
+
+
+/* parse arguments of tblread command */
+int runtblread(int argc, char **argv){
+  char *name, *rstr;
+  int i, rnum, rnd, rv;
+  name = NULL;
+  rstr = NULL;
+  rnum = 0;
+  rnd = FALSE;
+  for(i = 2; i < argc; i++){
+    if(!name && argv[i][0] == '-'){
+      usage();
+    } else if(!name){
+      name = argv[i];
+    } else if(!rstr){
+      rstr = argv[i];
+    } else {
+      usage();
+    }
+  }
+  if(!name || !rstr) usage();
+  rnum = atoi(rstr);
+  if(rnum < 1) usage();
+  rv = dotblread(name, rnum);
   return rv;
 }
 
@@ -463,7 +528,7 @@ int doflwrite(char *name, int rnum){
   TCFDB *fdb;
   int i, err, len;
   char buf[RECBUFSIZ];
-  if(showprgr) printf("<Writing Test of Hash>\n  name=%s  rnum=%d\n\n", name, rnum);
+  if(showprgr) printf("<Writing Test of Fixed-Length>\n  name=%s  rnum=%d\n\n", name, rnum);
   /* open a database */
   fdb = tcfdbnew();
   tcfdbtune(fdb, 8, 1024 + rnum * 9);
@@ -509,7 +574,7 @@ int doflread(char *name, int rnum){
   TCFDB *fdb;
   int i, err;
   char vbuf[RECBUFSIZ];
-  if(showprgr) printf("<Reading Test of Hash>\n  name=%s  rnum=%d\n\n", name, rnum);
+  if(showprgr) printf("<Reading Test of Fixed-length>\n  name=%s  rnum=%d\n\n", name, rnum);
   /* open a database */
   fdb = tcfdbnew();
   if(!tcfdbopen(fdb, name, FDBOREADER)){
@@ -522,7 +587,7 @@ int doflread(char *name, int rnum){
   for(i = 1; i <= rnum; i++){
     /* store a record */
     if(tcfdbget4(fdb, i, vbuf, RECBUFSIZ) == -1){
-      fprintf(stderr, "tcfdbget3 failed\n");
+      fprintf(stderr, "tcfdbget4 failed\n");
       err = TRUE;
       break;
     }
@@ -543,6 +608,137 @@ int doflread(char *name, int rnum){
     return 1;
   }
   tcfdbdel(fdb);
+  if(showprgr && !err) printf("ok\n\n");
+  return err ? 1 : 0;
+}
+
+
+/* perform tblwrite command */
+int dotblwrite(char *name, int rnum){
+  TCTDB *tdb;
+  int i, err, pksiz, vsiz;
+  char pkbuf[RECBUFSIZ], vbuf[RECBUFSIZ];
+  TCMAP *cols;
+  if(showprgr) printf("<Writing Test of Table>\n  name=%s  rnum=%d\n\n", name, rnum);
+  /* open a database */
+  tdb = tctdbnew();
+  tctdbtune(tdb, rnum * 3, 0, 0, 0);
+  tctdbsetxmsiz(tdb, rnum * 80);
+  tctdbsetcache(tdb, -1, rnum / 100, -1);
+  if(!tctdbopen(tdb, name, TDBOWRITER | TDBOCREAT | TDBOTRUNC)){
+    fprintf(stderr, "tctdbopen failed\n");
+    tctdbdel(tdb);
+    return 1;
+  }
+  if(!tctdbsetindex(tdb, "s", TDBITLEXICAL)){
+    fprintf(stderr, "tctdbsetindex failed\n");
+    tctdbdel(tdb);
+    return 1;
+  }
+  if(!tctdbsetindex(tdb, "n", TDBITDECIMAL)){
+    fprintf(stderr, "tctdbsetindex failed\n");
+    tctdbdel(tdb);
+    return 1;
+  }
+  err = FALSE;
+  /* loop for each record */
+  for(i = 1; i <= rnum; i++){
+    /* store a record */
+    pksiz = sprintf(pkbuf, "%d", i);
+    cols = tcmapnew2(7);
+    vsiz = sprintf(vbuf, "%08d", i);
+    tcmapput(cols, "s", 1, vbuf, vsiz);
+    vsiz = sprintf(vbuf, "%08d", myrand() % i);
+    tcmapput(cols, "n", 1, vbuf, vsiz);
+    vsiz = sprintf(vbuf, "%08d", i);
+    tcmapput(cols, "t", 1, vbuf, vsiz);
+    vsiz = sprintf(vbuf, "%08d", myrand() % rnum);
+    tcmapput(cols, "f", 1, vbuf, vsiz);
+    if(!tctdbput(tdb, pkbuf, pksiz, cols)){
+      fprintf(stderr, "tctdbput failed\n");
+      err = TRUE;
+      break;
+    }
+    tcmapdel(cols);
+    /* print progression */
+    if(showprgr && rnum > 250 && i % (rnum / 250) == 0){
+      putchar('.');
+      fflush(stdout);
+      if(i == rnum || i % (rnum / 10) == 0){
+        printf(" (%08d)\n", i);
+        fflush(stdout);
+      }
+    }
+  }
+  /* close the database */
+  if(!tctdbclose(tdb)){
+    fprintf(stderr, "tctdbclose failed\n");
+    tctdbdel(tdb);
+    return 1;
+  }
+  tctdbdel(tdb);
+  if(showprgr && !err) printf("ok\n\n");
+  return err ? 1 : 0;
+}
+
+
+/* perform tblread command */
+int dotblread(char *name, int rnum){
+  TCTDB *tdb;
+  int i, j, err, pksiz, rsiz;
+  char pkbuf[RECBUFSIZ];
+  const char *rbuf;
+  TCMAP *cols;
+  TDBQRY *qry;
+  TCLIST *res;
+  if(showprgr) printf("<Reading Test of Table>\n  name=%s  rnum=%d\n\n", name, rnum);
+  /* open a database */
+  tdb = tctdbnew();
+  tctdbsetxmsiz(tdb, rnum * 80);
+  tctdbsetcache(tdb, -1, rnum / 100, -1);
+  if(!tctdbopen(tdb, name, TDBOREADER)){
+    fprintf(stderr, "tctdbopen failed\n");
+    tctdbdel(tdb);
+    return 1;
+  }
+  err = FALSE;
+  /* loop for each record */
+  for(i = 1; i <= rnum; i++){
+    /* search for a record */
+    pksiz = sprintf(pkbuf, "%08d", i);
+    qry = tctdbqrynew(tdb);
+    tctdbqryaddcond(qry, "s", TDBQCSTREQ, pkbuf);
+    res = tctdbqrysearch(qry);
+    for(j = 0; j < tclistnum(res); j++){
+      rbuf = tclistval(res, j, &rsiz);
+      cols = tctdbget(tdb, rbuf, rsiz);
+      if(cols){
+        tcmapdel(cols);
+      } else {
+        fprintf(stderr, "tctdbget failed\n");
+        err = TRUE;
+        break;
+      }
+    }
+    tclistdel(res);
+    tctdbqrydel(qry);
+    /* print progression */
+    if(showprgr && rnum > 250 && i % (rnum / 250) == 0){
+      putchar('.');
+      fflush(stdout);
+      if(i == rnum || i % (rnum / 10) == 0){
+        printf(" (%08d)\n", i);
+        fflush(stdout);
+      }
+    }
+  }
+  /* close the database */
+  if(!tctdbclose(tdb)){
+    fprintf(stderr, "tctdbclose failed\n");
+    tctdbdel(tdb);
+    return 1;
+  }
+  tctdbdel(tdb);
   if(showprgr && !err) printf("ok\n\n");
   return err ? 1 : 0;
 }

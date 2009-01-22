@@ -91,7 +91,7 @@ static void usage(void){
   fprintf(stderr, "  %s read [-mt] [-rc num] [-xm num] [-nl|-nb] [-wb] [-rnd] path\n",
           g_progname);
   fprintf(stderr, "  %s remove [-mt] [-rc num] [-xm num] [-nl|-nb] [-rnd] path\n", g_progname);
-  fprintf(stderr, "  %s rcat [-mt] [-rc num] [-xm num] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb]"
+  fprintf(stderr, "  %s rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc num] [-xm num] [-nl|-nb]"
           " [-pn num] [-dai|-dad|-rl|-ru] path rnum [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "  %s misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] path rnum\n", g_progname);
   fprintf(stderr, "  %s wicked [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] path rnum\n", g_progname);

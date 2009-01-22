@@ -387,7 +387,7 @@ void *tcadbreveal(TCADB *adb);
 
 /* Process each record atomically of an abstract database object.
    `adb' specifies the abstract database object.
-   `func' specifies the pointer to the iterator function called for each record.
+   `iter' specifies the pointer to the iterator function called for each record.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */

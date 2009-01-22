@@ -1,3 +1,17 @@
+2009-01-19  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tctdbsearchimpl): optimized with macros.
+
+	* tcbdb.c (tcbdbcurjumpimpl): a bug related to backword positioning was fixed.
+
+	* tctdb.c (tctdbsearchimpl): a bug related to numeric range search was fixed.
+
+	* tctdb.c (tctdbsetcache, tctdbforeach, tctdbqryproc): new functions.
+
+	* tctdb.c (tctdbqryonecondmatch): new function.
+
+	- Release: 1.4.1
+
 2009-01-04  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tccmpdecimal): equal numbers are now distinct by lexical order.

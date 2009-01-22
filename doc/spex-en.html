@@ -5238,6 +5238,18 @@ int main(int argc, char **argv){
 <dd>Note that the tuning parameters should be set before the database is opened.</dd>
 </dl>
 
+<p>The function `tctdbsetcache' is set the caching parameters of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbsetcache(TCTDB *<var>tdb</var>, int32_t <var>rcnum</var>, int32_t <var>lcnum</var>, int32_t <var>ncnum</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
+<dd>`<var>rcnum</var>' specifies the maximum number of records to be cached.  If it is not more than 0, the record cache is disabled.  It is disabled by default.</dd>
+<dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 1024.</dd>
+<dd>`<var>ncnum</var>' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 512.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Note that the caching parameters should be set before the database is opened.  Leaf nodes and non-leaf nodes are used in column indexes.</dd>
+</dl>
+
 <p>The function `tctdbsetxmsiz' is used in order to set the size of the extra mapped memory of a table database object.</p>
 
 <dl class="api">
@@ -5683,6 +5695,17 @@ int main(int argc, char **argv){
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
+<p>The function `tctdbqryproc' is used in order to process each corresponding record of a query object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbqryproc(TDBQRY *<var>qry</var>, TDBQRYPROC <var>proc</var>, void *<var>op</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
+<dd>`<var>proc</var>' specifies the pointer to the iterator function called for each record.</dd>
+<dd>`<var>op</var>' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The function `tctdbqryprocout' is built-in and answers to remove each record.</dd>
+</dl>
+
 <p>The function `tctdbqryhint' is used in order to get the hint of a query object.</p>
 
 <dl class="api">
@@ -5788,13 +5811,13 @@ int main(int argc, char **argv){
 <p>The command `<code>tcttest</code>' is a utility for facility test and performance test.  This command is used in the following format.  `<var>path</var>' specifies the path of a database file.  `<var>rnum</var>' specifies the number of iterations.  `<var>bnum</var>' specifies the number of buckets.  `<var>apow</var>' specifies the power of the alignment.  `<var>fpow</var>' specifies the power of the free block pool.</p>
 
 <dl class="api">
-<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Store records with columns "str", "num", "type", and "flag".</dd>
-<dt><code>tcttest read [-mt] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
+<dt><code>tcttest read [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>Retrieve all records of the database above.</dd>
-<dt><code>tcttest remove [-mt] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
+<dt><code>tcttest remove [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>Remove all records of the database above.</dd>
-<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Store records with partway duplicated keys using concatenate mode.</dd>
 <dt><code>tcttest misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
 <dd>Perform miscellaneous test of various operations.</dd>
@@ -5811,6 +5834,9 @@ int main(int argc, char **argv){
 <li><code>-tb</code> : enable the option `TDBTBZIP'.</li>
 <li><code>-tt</code> : enable the option `TDBTTCBS'.</li>
 <li><code>-tx</code> : enable the option `TDBTEXCODEC'.</li>
+<li><code>-rc <var>num</var></code> : specify the number of cached records.</li>
+<li><code>-lc <var>num</var></code> : specify the number of cached leaf pages.</li>
+<li><code>-nc <var>num</var></code> : specify the number of cached non-leaf pages.</li>
 <li><code>-xm <var>num</var></code> : specify the size of the extra mapped memory.</li>
 <li><code>-ip</code> : create the number index for the primary key.</li>
 <li><code>-is</code> : create the string index for the column "str".</li>
@@ -5832,15 +5858,15 @@ int main(int argc, char **argv){
 <p>The command `<code>tctmttest</code>' is a utility for facility test under multi-thread situation.  This command is used in the following format.  `<var>path</var>' specifies the path of a database file.  `<var>tnum</var>' specifies the number of running threads.  `<var>rnum</var>' specifies the number of iterations.  `<var>bnum</var>' specifies the number of buckets.  `<var>apow</var>' specifies the power of the alignment.  `<var>fpow</var>' specifies the power of the free block pool.</p>
 
 <dl class="api">
-<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Store records with columns "str", "num", "type", and "flag".</dd>
-<dt><code>tctmttest read [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dt><code>tctmttest read [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>Retrieve all records of the database above.</dd>
-<dt><code>tctmttest remove [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dt><code>tctmttest remove [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>Remove all records of the database above.</dd>
 <dt><code>tctmttest wicked [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var></code></dt>
 <dd>Perform updating operations selected at random.</dd>
-<dt><code>tctmttest typical [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-nl|-nb] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
+<dt><code>tctmttest typical [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
 <dd>Perform typical operations selected at random.</dd>
 </dl>
 
@@ -5852,6 +5878,9 @@ int main(int argc, char **argv){
 <li><code>-tb</code> : enable the option `TDBTBZIP'.</li>
 <li><code>-tt</code> : enable the option `TDBTTCBS'.</li>
 <li><code>-tx</code> : enable the option `TDBTEXCODEC'.</li>
+<li><code>-rc <var>num</var></code> : specify the number of cached records.</li>
+<li><code>-lc <var>num</var></code> : specify the number of cached leaf pages.</li>
+<li><code>-nc <var>num</var></code> : specify the number of cached non-leaf pages.</li>
 <li><code>-xm <var>num</var></code> : specify the size of the extra mapped memory.</li>
 <li><code>-ip</code> : create the number index for the primary key.</li>
 <li><code>-is</code> : create the string index for the column "str".</li>

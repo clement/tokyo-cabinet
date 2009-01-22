@@ -9,17 +9,17 @@ The command `\fBtctmttest\fR' is a utility for facility test under multi\-thread
 .PP
 .RS
 .br
-\fBtctmttest write \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-ip\fR]\fB \fR[\fB\-is\fR]\fB \fR[\fB\-in\fR]\fB \fR[\fB\-it\fR]\fB \fR[\fB\-if\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtctmttest write \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-ip\fR]\fB \fR[\fB\-is\fR]\fB \fR[\fB\-in\fR]\fB \fR[\fB\-it\fR]\fB \fR[\fB\-if\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Store records with columns "str", "num", "type", and "flag".
 .RE
 .br
-\fBtctmttest read \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB\fR
+\fBtctmttest read \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB\fR
 .RS
 Retrieve all records of the database above.
 .RE
 .br
-\fBtctmttest remove \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB\fR
+\fBtctmttest remove \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB\fR
 .RS
 Remove all records of the database above.
 .RE
@@ -29,7 +29,7 @@ Remove all records of the database above.
 Perform updating operations selected at random.
 .RE
 .br
-\fBtctmttest typical \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rr \fInum\fB\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR
+\fBtctmttest typical \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rr \fInum\fB\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR
 .RS
 Perform typical operations selected at random.
 .RE
@@ -47,6 +47,12 @@ Options feature the following.
 \fB\-tt\fR : enable the option `TDBTTCBS'.
 .br
 \fB\-tx\fR : enable the option `TDBTEXCODEC'.
+.br
+\fB\-rc \fInum\fR\fR : specify the number of cached records.
+.br
+\fB\-lc \fInum\fR\fR : specify the number of cached leaf pages.
+.br
+\fB\-nc \fInum\fR\fR : specify the number of cached non\-leaf pages.
 .br
 \fB\-xm \fInum\fR\fR : specify the size of the extra mapped memory.
 .br

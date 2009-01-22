@@ -3155,8 +3155,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.0"
-#define _TC_LIBVER     705
+#define _TC_VERSION    "1.4.1"
+#define _TC_LIBVER     706
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */
@@ -3494,6 +3494,14 @@ uint64_t tcpagealign(uint64_t off);
 /* Alias of `tclistnum'. */
 #define TCLISTNUM(TC_list) \
   ((TC_list)->num)
+
+
+/* Alias of `tclistval' but not checking size. */
+#define TCLISTVAL(TC_ptr, TC_list, TC_index, TC_size) \
+  do { \
+    (TC_ptr) = (TC_list)->array[(TC_index)+(TC_list)->start].ptr; \
+    (TC_size) = (TC_list)->array[(TC_index)+(TC_list)->start].size; \
+  } while(false)
 
 
 /* Alias of `tclistval' but not checking size and not using the third parameter. */

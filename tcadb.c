@@ -914,7 +914,7 @@ uint64_t tcadbsize(TCADB *adb){
 /* Call a versatile function for miscellaneous operations of an abstract database object. */
 TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
   assert(adb && name && args);
-  int argc = tclistnum(args);
+  int argc = TCLISTNUM(args);
   TCLIST *rv;
   switch(adb->omode){
   case ADBOMDB:
@@ -922,8 +922,9 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = tclistnew();
       argc--;
       for(int i = 0; i < argc; i += 2){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         const char *vbuf = tclistval(args, i + 1, &vsiz);
         tcmdbput(adb->mdb, kbuf, ksiz, vbuf, vsiz);
@@ -931,21 +932,23 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
     } else if(!strcmp(name, "outlist")){
       rv = tclistnew();
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         tcmdbout(adb->mdb, kbuf, ksiz);
       }
     } else if(!strcmp(name, "getlist")){
       rv = tclistnew2(argc);
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         char *vbuf = tcmdbget(adb->mdb, kbuf, ksiz, &vsiz);
         if(vbuf){
-          tclistpush(rv, kbuf, ksiz);
-          tclistpush(rv, vbuf, vsiz);
-          tcfree(vbuf);
+          TCLISTPUSH(rv, kbuf, ksiz);
+          TCLISTPUSH(rv, vbuf, vsiz);
+          TCFREE(vbuf);
         }
       }
     } else {
@@ -957,8 +960,9 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = tclistnew();
       argc--;
       for(int i = 0; i < argc; i += 2){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         const char *vbuf = tclistval(args, i + 1, &vsiz);
         tcndbput(adb->ndb, kbuf, ksiz, vbuf, vsiz);
@@ -966,21 +970,23 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
     } else if(!strcmp(name, "outlist")){
       rv = tclistnew();
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         tcndbout(adb->ndb, kbuf, ksiz);
       }
     } else if(!strcmp(name, "getlist")){
       rv = tclistnew2(argc);
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         char *vbuf = tcndbget(adb->ndb, kbuf, ksiz, &vsiz);
         if(vbuf){
-          tclistpush(rv, kbuf, ksiz);
-          tclistpush(rv, vbuf, vsiz);
-          tcfree(vbuf);
+          TCLISTPUSH(rv, kbuf, ksiz);
+          TCLISTPUSH(rv, vbuf, vsiz);
+          TCFREE(vbuf);
         }
       }
     } else {
@@ -993,8 +999,9 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       bool err = false;
       argc--;
       for(int i = 0; i < argc; i += 2){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         const char *vbuf = tclistval(args, i + 1, &vsiz);
         if(!tchdbput(adb->hdb, kbuf, ksiz, vbuf, vsiz)){
@@ -1010,8 +1017,9 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = tclistnew();
       bool err = false;
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         if(!tchdbout(adb->hdb, kbuf, ksiz) && tchdbecode(adb->hdb) != TCENOREC){
           err = true;
           break;
@@ -1025,14 +1033,15 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = tclistnew2(argc);
       bool err = false;
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         char *vbuf = tchdbget(adb->hdb, kbuf, ksiz, &vsiz);
         if(vbuf){
-          tclistpush(rv, kbuf, ksiz);
-          tclistpush(rv, vbuf, vsiz);
-          tcfree(vbuf);
+          TCLISTPUSH(rv, kbuf, ksiz);
+          TCLISTPUSH(rv, vbuf, vsiz);
+          TCFREE(vbuf);
         } else if(tchdbecode(adb->hdb) != TCENOREC){
           err = true;
         }
@@ -1051,8 +1060,9 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       bool err = false;
       argc--;
       for(int i = 0; i < argc; i += 2){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         const char *vbuf = tclistval(args, i + 1, &vsiz);
         if(!tcbdbputdup(adb->bdb, kbuf, ksiz, vbuf, vsiz)){
@@ -1068,8 +1078,9 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = tclistnew();
       bool err = false;
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         if(!tcbdbout3(adb->bdb, kbuf, ksiz) && tcbdbecode(adb->bdb) != TCENOREC){
           err = true;
           break;
@@ -1083,16 +1094,18 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = tclistnew2(argc);
       bool err = false;
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         TCLIST *vals = tcbdbget4(adb->bdb, kbuf, ksiz);
         if(vals){
-          int vnum = tclistnum(vals);
+          int vnum = TCLISTNUM(vals);
           for(int j = 0; j < vnum; j++){
-            tclistpush(rv, kbuf, ksiz);
+            TCLISTPUSH(rv, kbuf, ksiz);
+            const char *vbuf;
             int vsiz;
-            const char *vbuf = tclistval(vals, j, &vsiz);
-            tclistpush(rv, vbuf, vsiz);
+            TCLISTVAL(vbuf, vals, j, vsiz);
+            TCLISTPUSH(rv, vbuf, vsiz);
           }
           tclistdel(vals);
         } else if(tcbdbecode(adb->bdb) != TCENOREC){
@@ -1113,8 +1126,9 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       bool err = false;
       argc--;
       for(int i = 0; i < argc; i += 2){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         const char *vbuf = tclistval(args, i + 1, &vsiz);
         if(!tcfdbput2(adb->fdb, kbuf, ksiz, vbuf, vsiz)){
@@ -1130,8 +1144,9 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = tclistnew();
       bool err = false;
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         if(!tcfdbout2(adb->fdb, kbuf, ksiz) && tcfdbecode(adb->fdb) != TCENOREC){
           err = true;
           break;
@@ -1145,14 +1160,15 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = tclistnew2(argc);
       bool err = false;
       for(int i = 0; i < argc; i++){
+        const char *kbuf;
         int ksiz;
-        const char *kbuf = tclistval(args, i, &ksiz);
+        TCLISTVAL(kbuf, args, i, ksiz);
         int vsiz;
         char *vbuf = tcfdbget2(adb->fdb, kbuf, ksiz, &vsiz);
         if(vbuf){
-          tclistpush(rv, kbuf, ksiz);
-          tclistpush(rv, vbuf, vsiz);
-          tcfree(vbuf);
+          TCLISTPUSH(rv, kbuf, ksiz);
+          TCLISTPUSH(rv, vbuf, vsiz);
+          TCFREE(vbuf);
         } else if(tcfdbecode(adb->fdb) != TCENOREC){
           err = true;
         }

@@ -56,6 +56,8 @@ typedef struct {                         /* type of structure for a table databa
   bool open;                             /* whether the internal database is opened */
   bool wmode;                            /* whether to be writable */
   uint8_t opts;                          /* options */
+  int32_t lcnum;                         /* max number of cached leaves */
+  int32_t ncnum;                         /* max number of cached nodes */
   TDBIDX *idxs;                          /* column indexes */
   int inum;                              /* number of column indexes */
   bool tran;                             /* whether in the transaction */
@@ -138,6 +140,22 @@ enum {                                   /* enumeration for order types */
   TDBQONUMDESC                           /* number descending */
 };
 
+enum {                                   /* enumeration for post treatments */
+  TDBQPPUT = 1 << 0,                     /* modify the record */
+  TDBQPOUT = 1 << 1,                     /* remove the record */
+  TDBQPSTOP = 1 << 24                    /* stop the iteration */
+};
+
+
+/* type of the pointer to a iterator function for each table record.
+   `pkbuf' specifies the pointer to the region of the primary key.
+   `pksiz' specifies the size of the region of the primary key.
+   `cols' specifies a map object containing columns.
+   `op' specifies the pointer to the optional opaque object.
+   The return value is flagss of the post treatment by bitwise or: `TDBQPPUT' to modify the
+   record, `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration. */
+typedef int (*TDBQRYPROC)(const void *pkbuf, int pksiz, TCMAP *cols, void *op);
+
 
 /* Get the message string corresponding to an error code.
    `ecode' specifies the error code.
@@ -196,6 +214,20 @@ bool tctdbsetmutex(TCTDB *tdb);
    If successful, the return value is true, else, it is false.
    Note that the tuning parameters should be set before the database is opened. */
 bool tctdbtune(TCTDB *tdb, int64_t bnum, int8_t apow, int8_t fpow, uint8_t opts);
+
+
+/* Set the caching parameters of a table database object.
+   `tdb' specifies the table database object which is not opened.
+   `rcnum' specifies the maximum number of records to be cached.  If it is not more than 0, the
+   record cache is disabled.  It is disabled by default.
+   `lcnum' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0,
+   the default value is specified.  The default value is 1024.
+   `ncnum' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0,
+   the default value is specified.  The default value is 512.
+   If successful, the return value is true, else, it is false.
+   Note that the caching parameters should be set before the database is opened.  Leaf nodes and
+   non-leaf nodes are used in column indexes. */
+bool tctdbsetcache(TCTDB *tdb, int32_t rcnum, int32_t lcnum, int32_t ncnum);
 
 
 /* Set the size of the extra mapped memory of a table database object.
@@ -642,6 +674,16 @@ void tctdbqrysetmax(TDBQRY *qry, int max);
 TCLIST *tctdbqrysearch(TDBQRY *qry);
 
 
+/* Process each corresponding record of a query object.
+   `qry' specifies the query object of the database connected as a writer.
+   `proc' specifies the pointer to the iterator function called for each record.
+   `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false.
+   The function `tctdbqryprocout' is built-in and answers to remove each record. */
+bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op);
+
+
 /* Get the hint of a query object.
    `qry' specifies the query object.
    The return value is the hint string. */
@@ -773,6 +815,24 @@ int64_t tctdbuidseed(TCTDB *tdb);
    Note that the custom codec functions should be set before the database is opened and should be
    set every time the database is being opened. */
 bool tctdbsetcodecfunc(TCTDB *tdb, TCCODEC enc, void *encop, TCCODEC dec, void *decop);
+
+
+/* Process each record atomically of a table database object.
+   `tdb' specifies the table database object.
+   `iter' specifies the pointer to the iterator function called for each record.
+   `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tctdbforeach(TCTDB *tdb, TCITER iter, void *op);
+
+
+/* Answer to remove for each record of a query.
+   `pkbuf' is ignored.
+   `pksiz' is ignored.
+   `op' specifies the string of thename of a column to be removed partially.  If it is `NULL',
+   the record itself is removed.
+   The return value is according to the operation. */
+int tctdbqryprocout(const void *pkbuf, int pksiz, TCMAP *cols, void *op);
 
 
 

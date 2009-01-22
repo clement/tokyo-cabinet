@@ -124,6 +124,31 @@ Note that the tuning parameters should be set before the database is opened.
 .RE
 .RE
 .PP
+The function `tctdbsetcache' is set the caching parameters of a table database object.
+.PP
+.RS
+.br
+\fBbool tctdbsetcache(TCTDB *\fItdb\fB, int32_t \fIrcnum\fB, int32_t \fIlcnum\fB, int32_t \fIncnum\fB);\fR
+.RS
+`\fItdb\fR' specifies the table database object which is not opened.
+.RE
+.RS
+`\fIrcnum\fR' specifies the maximum number of records to be cached.  If it is not more than 0, the record cache is disabled.  It is disabled by default.
+.RE
+.RS
+`\fIlcnum\fR' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 1024.
+.RE
+.RS
+`\fIncnum\fR' specifies the maximum number of non\-leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 512.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+Note that the caching parameters should be set before the database is opened.  Leaf nodes and non\-leaf nodes are used in column indexes.
+.RE
+.RE
+.PP
 The function `tctdbsetxmsiz' is used in order to set the size of the extra mapped memory of a table database object.
 .PP
 .RS
@@ -969,6 +994,28 @@ The return value is a list object of the primary keys of the corresponding recor
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.
+.RE
+.RE
+.PP
+The function `tctdbqryproc' is used in order to process each corresponding record of a query object.
+.PP
+.RS
+.br
+\fBbool tctdbqryproc(TDBQRY *\fIqry\fB, TDBQRYPROC \fIproc\fB, void *\fIop\fB);\fR
+.RS
+`\fIqry\fR' specifies the query object of the database connected as a writer.
+.RE
+.RS
+`\fIproc\fR' specifies the pointer to the iterator function called for each record.
+.RE
+.RS
+`\fIop\fR' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+The function `tctdbqryprocout' is built\-in and answers to remove each record.
 .RE
 .RE
 .PP

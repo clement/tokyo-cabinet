@@ -744,7 +744,7 @@ char *tcfdbopaque(TCFDB *fdb);
 
 /* Process each record atomically of a fixed-length database object.
    `fdb' specifies the fixed-length database object.
-   `func' specifies the pointer to the iterator function called for each record.
+   `iter' specifies the pointer to the iterator function called for each record.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
