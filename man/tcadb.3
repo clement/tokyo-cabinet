@@ -5,7 +5,7 @@ tcadb \- the abstract database API
 
 .SH DESCRIPTION
 .PP
-Abstract database is a set of interfaces to use on\-memory hash database, on\-memory tree database, hash database, B+ tree database, and fixed\-length database with the same API.  See `\fBtcadb.h\fR' for entire specification.
+Abstract database is a set of interfaces to use on\-memory hash database, on\-memory tree database, hash database, B+ tree database, fixed\-length database, and table database with the same API.  See `\fBtcadb.h\fR' for entire specification.
 .PP
 To use the abstract database API, include `\fBtcutil.h\fR', `\fBtcadb.h\fR', and related standard header files.  Usually, write the following description near the front of a source file.
 .PP
@@ -57,10 +57,13 @@ The function `tcadbopen' is used in order to open an abstract database.
 `\fIadb\fR' specifies the abstract database object.
 .RE
 .RS
-`\fIname\fR' specifies the name of the database.  If it is "*", the database will be an on\-memory hash database.  If it is "+", the database will be an on\-memory tree database.  If its suffix is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed\-length database.  Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of the name and the value, separated by "=".  On\-memory hash database supports "bnum", "capnum", and "capsiz".  On\-memory tree database supports "capnum" and "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".  Fixed\-length database supports "mode", "width", and "limsiz".  "capnum" specifies the capacity number of records.  "capsiz" specifies the capacity size of using memory.  Records spilled the capacity are removed by the storing order.  "mode" can contain "w" of writer, "r" of reader, "c" of creating, "t" of truncating, "e" of no locking, and "f" of non\-blocking lock.  The default mode is relevant to "wc".  "opts" can contains "l" of large option, "d" of Deflate option, "b" of BZIP2 option, and "t" of TCBS option.  For example, "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is "casket.tch", and the bucket number is 1000000, and the options are large and Deflate.
+`\fIname\fR' specifies the name of the database.  If it is "*", the database will be an on\-memory hash database.  If it is "+", the database will be an on\-memory tree database.  If its suffix is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed\-length database.  If its suffix is ".tct", the database will be a table database.  Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of the name and the value, separated by "=".  On\-memory hash database supports "bnum", "capnum", and "capsiz".  On\-memory tree database supports "capnum" and "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".  Fixed\-length database supports "mode", "width", and "limsiz".  Table database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", "lcnum", "ncnum", "xmsiz", and "idx".
 .RE
 .RS
 If successful, the return value is true, else, it is false.
+.RE
+.RS
+The tuning parameter "capnum" specifies the capacity number of records.  "capsiz" specifies the capacity size of using memory.  Records spilled the capacity are removed by the storing order.  "mode" can contain "w" of writer, "r" of reader, "c" of creating, "t" of truncating, "e" of no locking, and "f" of non\-blocking lock.  The default mode is relevant to "wc".  "opts" can contains "l" of large option, "d" of Deflate option, "b" of BZIP2 option, and "t" of TCBS option.  "idx" specifies the column name of an index and its type separated by ":".  For example, "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is "casket.tch", and the bucket number is 1000000, and the options are large and Deflate.
 .RE
 .RE
 .PP
@@ -572,7 +575,7 @@ The function `tcadbmisc' is used in order to call a versatile function for misce
 `\fIadb\fR' specifies the abstract database object.
 .RE
 .RS
-`\fIname\fR' specifies the name of the function.
+`\fIname\fR' specifies the name of the function.  All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Table database supports "setindex", "search", "searchget", "searchout", and "genuid".
 .RE
 .RS
 `\fIargs\fR' specifies a list object containing arguments.
@@ -581,7 +584,7 @@ The function `tcadbmisc' is used in order to call a versatile function for misce
 If successful, the return value is a list object of the result.  `NULL' is returned on failure.
 .RE
 .RS
-All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.
+Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.
 .RE
 .RE
 

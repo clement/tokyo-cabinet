@@ -92,7 +92,7 @@ static void usage(void){
   fprintf(stderr, "usage:\n");
   fprintf(stderr, "  %s create path [width [limsiz]]\n", g_progname);
   fprintf(stderr, "  %s inform [-nl|-nb] path\n", g_progname);
-  fprintf(stderr, "  %s put [-nl|-nb] [-sx] [-dk|-dc] path key value\n", g_progname);
+  fprintf(stderr, "  %s put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] path key value\n", g_progname);
   fprintf(stderr, "  %s out [-nl|-nb] [-sx] path key\n", g_progname);
   fprintf(stderr, "  %s get [-nl|-nb] [-sx] [-px] [-pz] path key\n", g_progname);
   fprintf(stderr, "  %s list [-nl|-nb] [-m num] [-pv] [-px] [-rb lkey ukey] [-ri str] path\n",
@@ -226,6 +226,10 @@ static int runput(int argc, char **argv){
         dmode = -1;
       } else if(!strcmp(argv[i], "-dc")){
         dmode = 1;
+      } else if(!strcmp(argv[i], "-dai")){
+        dmode = 10;
+      } else if(!strcmp(argv[i], "-dad")){
+        dmode = 11;
       } else if(!strcmp(argv[i], "-sx")){
         sx = true;
       } else {
@@ -553,6 +557,18 @@ static int procput(const char *path, const char *kbuf, int ksiz, const char *vbu
     break;
   case 1:
     if(!tcfdbputcat2(fdb, kbuf, ksiz, vbuf, vsiz)){
+      printerr(fdb);
+      err = true;
+    }
+    break;
+  case 10:
+    if(tcfdbaddint(fdb, tcfdbkeytoid(kbuf, ksiz), tcatoi(vbuf)) == INT_MIN){
+      printerr(fdb);
+      err = true;
+    }
+    break;
+  case 11:
+    if(isnan(tcfdbadddouble(fdb, tcfdbkeytoid(kbuf, ksiz), tcatof(vbuf)))){
       printerr(fdb);
       err = true;
     }

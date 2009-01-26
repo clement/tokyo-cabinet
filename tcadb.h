@@ -36,6 +36,7 @@ __TCADB_CLINKAGEBEGIN
 #include <tchdb.h>
 #include <tcbdb.h>
 #include <tcfdb.h>
+#include <tctdb.h>
 
 
 
@@ -52,6 +53,7 @@ typedef struct {                         /* type of structure for an abstract da
   TCHDB *hdb;                            /* hash database object */
   TCBDB *bdb;                            /* B+ tree database object */
   TCFDB *fdb;                            /* fixed-length databae object */
+  TCTDB *tdb;                            /* table database object */
   int64_t capnum;                        /* capacity number of records */
   int64_t capsiz;                        /* capacity size of using memory */
   uint32_t capcnt;                       /* count for capacity check */
@@ -64,7 +66,8 @@ enum {                                   /* enumeration for open modes */
   ADBONDB,                               /* on-memory tree database */
   ADBOHDB,                               /* hash database */
   ADBOBDB,                               /* B+ tree database */
-  ADBOFDB                                /* fixed-length database */
+  ADBOFDB,                               /* fixed-length database */
+  ADBOTDB                                /* table database */
 };
 
 
@@ -84,20 +87,23 @@ void tcadbdel(TCADB *adb);
    hash database.  If it is "+", the database will be an on-memory tree database.  If its suffix
    is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will
    be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed-length database.
-   Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each
-   parameter is composed of the name and the number, separated by "=".  On-memory hash database
-   supports "bnum", "capnum", and "capsiz".  On-memory tree database supports "capnum" and
-   "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".
-   B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum",
-   "ncnum", and "xmsiz".  Fixed-length database supports "mode", "width", and "limsiz".  "capnum"
-   specifies the capacity number of records.  "capsiz" specifies the capacity size of using
-   memory.  Records spilled the capacity are removed by the storing order.  "mode" can contain
-   "w" of writer, "r" of reader, "c" of creating, "t" of truncating, "e" of no locking, and "f"
-   of non-blocking lock.  The default mode is relevant to "wc".  "opts" can contains "l" of large
-   option, "d" of Deflate option, "b" of BZIP2 option, and "t" of TCBS option.  For example,
-   "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is "casket.tch",
-   and the bucket number is 1000000, and the options are large and Deflate.
-   If successful, the return value is true, else, it is false. */
+   If its suffix is ".tct", the database will be a table database.  Otherwise, this function
+   fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of
+   the name and the value, separated by "=".  On-memory hash database supports "bnum", "capnum",
+   and "capsiz".  On-memory tree database supports "capnum" and "capsiz".  Hash database supports
+   "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports
+   "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".
+   Fixed-length database supports "mode", "width", and "limsiz".  Table database supports "mode",
+   "bnum", "apow", "fpow", "opts", "rcnum", "lcnum", "ncnum", "xmsiz", and "idx".
+   If successful, the return value is true, else, it is false.
+   The tuning parameter "capnum" specifies the capacity number of records.  "capsiz" specifies
+   the capacity size of using memory.  Records spilled the capacity are removed by the storing
+   order.  "mode" can contain "w" of writer, "r" of reader, "c" of creating, "t" of truncating,
+   "e" of no locking, and "f" of non-blocking lock.  The default mode is relevant to "wc".
+   "opts" can contains "l" of large option, "d" of Deflate option, "b" of BZIP2 option, and "t"
+   of TCBS option.  "idx" specifies the column name of an index and its type separated by ":".
+   For example, "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is
+   "casket.tch", and the bucket number is 1000000, and the options are large and Deflate. */
 bool tcadbopen(TCADB *adb, const char *name);
 
 
@@ -352,14 +358,15 @@ uint64_t tcadbsize(TCADB *adb);
 
 /* Call a versatile function for miscellaneous operations of an abstract database object.
    `adb' specifies the abstract database object.
-   `name' specifies the name of the function.
+   `name' specifies the name of the function.  All databases support "putlist", "outlist", and
+   "getlist".  "putlist" is to store records.  It receives keys and values one after the other,
+   and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an
+   empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values
+   of corresponding records one after the other.  Table database supports "setindex", "search",
+   "searchget", "searchout", and "genuid".
    `args' specifies a list object containing arguments.
    If successful, the return value is a list object of the result.  `NULL' is returned on failure.
-   All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It
-   receives keys and values one after the other, and returns an empty list.  "outlist" is to
-   remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve
-   records.  It receives keys, and returns keys and values of corresponding records one after the
-   other.  Because the object of the return value is created with the function `tclistnew', it
+   Because the object of the return value is created with the function `tclistnew', it
    should be deleted with the function `tclistdel' when it is no longer in use. */
 TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args);
 

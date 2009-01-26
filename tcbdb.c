@@ -2090,12 +2090,12 @@ static bool tcbdbleafaddrec(TCBDB *bdb, BDBLEAF *leaf, int dmode,
         dbuf[rec->ksiz+psiz+rec->vsiz] = '\0';
         break;
       case BDBPDDUP:
-        if(!rec->rest) rec->rest = tclistnew();
+        if(!rec->rest) rec->rest = tclistnew2(1);
         TCLISTPUSH(rec->rest, vbuf, vsiz);
         bdb->rnum++;
         break;
       case BDBPDDUPB:
-        if(!rec->rest) rec->rest = tclistnew();
+        if(!rec->rest) rec->rest = tclistnew2(1);
         tclistunshift(rec->rest, dbuf + rec->ksiz + psiz, rec->vsiz);
         if(vsiz > rec->vsiz){
           TCREALLOC(rec, rec, sizeof(*rec) + rec->ksiz + psiz + vsiz + 1);
@@ -3582,7 +3582,7 @@ static bool tcbdbcurputimpl(BDBCUR *cur, const char *vbuf, int vsiz, int cpmode)
     break;
   case BDBCPBEFORE:
     if(cur->vidx < 1){
-      if(!rec->rest) rec->rest = tclistnew();
+      if(!rec->rest) rec->rest = tclistnew2(1);
       tclistunshift(rec->rest, dbuf + rec->ksiz + psiz, rec->vsiz);
       if(vsiz > rec->vsiz){
         TCREALLOC(rec, rec, sizeof(*rec) + rec->ksiz + psiz + vsiz + 1);
@@ -3600,7 +3600,7 @@ static bool tcbdbcurputimpl(BDBCUR *cur, const char *vbuf, int vsiz, int cpmode)
     bdb->rnum++;
     break;
   case BDBCPAFTER:
-    if(!rec->rest) rec->rest = tclistnew();
+    if(!rec->rest) rec->rest = tclistnew2(1);
     TCLISTINSERT(rec->rest, cur->vidx, vbuf, vsiz);
     cur->vidx++;
     bdb->rnum++;

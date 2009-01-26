@@ -89,7 +89,8 @@ enum {                                   /* enumeration for open modes */
 enum {                                   /* enumeration for index types */
   TDBITLEXICAL,                          /* lexical string */
   TDBITDECIMAL,                          /* decimal string */
-  TDBITVOID = 9999                       /* void */
+  TDBITVOID = 9999,                      /* void */
+  TDBITKEEP = 1 << 24                    /* keep existing index */
 };
 
 typedef struct {                         /* type of structure for a condition */
@@ -221,7 +222,7 @@ bool tctdbtune(TCTDB *tdb, int64_t bnum, int8_t apow, int8_t fpow, uint8_t opts)
    `rcnum' specifies the maximum number of records to be cached.  If it is not more than 0, the
    record cache is disabled.  It is disabled by default.
    `lcnum' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0,
-   the default value is specified.  The default value is 1024.
+   the default value is specified.  The default value is 2048.
    `ncnum' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0,
    the default value is specified.  The default value is 512.
    If successful, the return value is true, else, it is false.
@@ -608,7 +609,8 @@ uint64_t tctdbfsiz(TCTDB *tdb);
    `name' specifies the name of a column.  If the name of an existing index is specified, the
    index is rebuilt.  An empty string means the primary key.
    `type' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal
-   string.  If it is `TDBITVOID', the index is removed.
+   string.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise or
+   and the index exists, this function merely returns failure.
    If successful, the return value is true, else, it is false.
    Note that the setting indexes should be set after the database is opened. */
 bool tctdbsetindex(TCTDB *tdb, const char *name, int type);
@@ -674,14 +676,19 @@ void tctdbqrysetmax(TDBQRY *qry, int max);
 TCLIST *tctdbqrysearch(TDBQRY *qry);
 
 
-/* Process each corresponding record of a query object.
+/* Process each record corresponding to a query object.
    `qry' specifies the query object of the database connected as a writer.
    `proc' specifies the pointer to the iterator function called for each record.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
-   If successful, the return value is true, else, it is false.
-   The function `tctdbqryprocout' is built-in and answers to remove each record. */
+   If successful, the return value is true, else, it is false. */
 bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op);
+
+
+/* Remove each record corresponding to a query object.
+   `qry' specifies the query object of the database connected as a writer.
+   If successful, the return value is true, else, it is false. */
+bool tctdbqryprocout(TDBQRY *qry);
 
 
 /* Get the hint of a query object.
@@ -826,13 +833,22 @@ bool tctdbsetcodecfunc(TCTDB *tdb, TCCODEC enc, void *encop, TCCODEC dec, void *
 bool tctdbforeach(TCTDB *tdb, TCITER iter, void *op);
 
 
-/* Answer to remove for each record of a query.
-   `pkbuf' is ignored.
-   `pksiz' is ignored.
-   `op' specifies the string of thename of a column to be removed partially.  If it is `NULL',
-   the record itself is removed.
-   The return value is according to the operation. */
-int tctdbqryprocout(const void *pkbuf, int pksiz, TCMAP *cols, void *op);
+/* Convert a string into the index type number.
+   `str' specifies a string.
+   The return value is the index type number or -1 on failure. */
+int tctdbstrtoindextype(const char *str);
+
+
+/* Convert a string into the query operation number.
+   `str' specifies a string.
+   The return value is the query operation number or -1 on failure. */
+int tctdbqrystrtocondop(const char *str);
+
+
+/* Convert a string into the query order type number.
+   `str' specifies a string.
+   The return value is the query order type or -1 on failure. */
+int tctdbqrystrtoordertype(const char *str);
 
 
 

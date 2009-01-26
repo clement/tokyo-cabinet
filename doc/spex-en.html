@@ -21,7 +21,7 @@
 
 <body>
 
-<h1>Fundamental Specifications of Tokyo Cabinet Version 1</h1>
+<h1 id="headline">Fundamental Specifications of Tokyo Cabinet Version 1</h1>
 
 <div class="note">Copyright (C) 2006-2009 Mikio Hirabayashi</div>
 <div class="note">Last Update: Wed, 07 Jan 2009 01:03:53 +0900</div>
@@ -66,7 +66,7 @@
 
 <p>Tokyo Cabinet is the successor of QDBM and improves time and space efficiency.  This section describes the features of Tokyo Cabinet.</p>
 
-<h3>The Dinosaur Wing of the DBM Forks</h3>
+<h3 id="features_dinosaur">The Dinosaur Wing of the DBM Forks</h3>
 
 <p>Tokyo Cabinet is developed as the successor of GDBM and QDBM on the following purposes.  They are achieved and Tokyo Cabinet replaces conventional DBM products.</p>
 
@@ -83,7 +83,7 @@
 
 <p>Tokyo Cabinet runs very fast.  For example, elapsed time to store 1 million records is 0.7 seconds for hash database, and 1.6 seconds for B+ tree database.  Moreover, the size of database of Tokyo Cabinet is very small.  For example, overhead for a record is 16 bytes for hash database, and 5 bytes for B+ tree database.  Furthermore, scalability of Tokyo Cabinet is great.  The database size can be up to 8EB (9.22e18 bytes).</p>
 
-<h3>Effective Implementation of Hash Database</h3>
+<h3 id="features_tchdb">Effective Implementation of Hash Database</h3>
 
 <p>Tokyo Cabinet uses hash algorithm to retrieve records.  If a bucket array has sufficient number of elements, the time complexity of retrieval is `O(1)'.  That is, time required for retrieving a record is constant, regardless of the scale of a database.  It is also the same about storing and deleting.  Collision of hash values is managed by separate chaining.  Data structure of the chains is binary search tree.  Even if a bucket array has unusually scarce elements, the time complexity of retrieval is `O(log n)'.</p>
 
@@ -95,7 +95,7 @@
 
 <p>Generally speaking, while succession of updating, fragmentation of available regions occurs, and the size of a database grows rapidly.  Tokyo Cabinet deal with this problem by coalescence of dispensable regions and reuse of them, and featuring of optimization of a database.  When overwriting a record with a value whose size is greater than the existing one, it is necessary to remove the region to another position of the file.  Because the time complexity of the operation depends on the size of the region of a record, extending values successively is inefficient.  However, Tokyo Cabinet deal with this problem by alignment.  If increment can be put in padding, it is not necessary to remove the region.</p>
 
-<h3>Useful Implementation of B+ Tree Database</h3>
+<h3 id="features_tcbdb">Useful Implementation of B+ Tree Database</h3>
 
 <p>Although B+ tree database is slower than hash database, it features ordering access to each record.  The order can be assigned by users.  Records of B+ tree are sorted and arranged in logical pages.  Sparse index organized in B tree that is multiway balanced tree are maintained for each page.  Thus, the time complexity of retrieval and so on is `O(log n)'.  Cursor is provided to access each record in order.  The cursor can jump to a position specified by a key and can step forward or backward from the current position.  Because each page is arranged as double linked list, the time complexity of stepping cursor is `O(1)'.</p>
 
@@ -103,7 +103,7 @@
 
 <p>Each pages of B+ tree can be stored with compressed.  Two compression method; Deflate of ZLIB and Block Sorting of BZIP2, are supported.  Because each record in a page has similar patterns, high efficiency of compression is expected due to the Lempel-Ziv or the BWT algorithms.  In case handling text data, the size of a database is reduced to about 25%.  If the scale of a database is large and disk I/O is the bottleneck, featuring compression makes the processing speed improved to a large extent.</p>
 
-<h3>Naive Implementation of Fixed-length Database</h3>
+<h3 id="features_tcfdb">Naive Implementation of Fixed-length Database</h3>
 
 <p>Fixed-length database has restrictions that each key should be a natural number and that the length of each value is limited.  However, time efficiency and space efficiency are higher than the other data structures as long as the use case is within the restriction.</p>
 
@@ -111,7 +111,7 @@
 
 <p>The size of the database is proportional to the range of keys and the limit size of each value.  That is, the smaller the range of keys is or the smaller the length of each value is, the higher the space efficiency is.  For example, if the maximum key is 1000000 and the limit size of the value is 100 bytes, the size of the database will be about 100MB.  Because regions around referred records are only loaded on the RAM, you can increase the size of the database to the size of the virtual memory.</p>
 
-<h3>Flexible Implementation of Table Database</h3>
+<h3 id="features_tctdb">Flexible Implementation of Table Database</h3>
 
 <p>Table database does not express simple key/value structure but expresses a structure like a table of relational database.  Each record is identified by the primary key and has a set of multiple columns named with arbitrary strings.  For example, a stuff in your company can be expressed by a record identified by the primary key of the employee ID number and structured by columns of his name, division, salary, and so on.  Unlike relational database, table database does not need to define any data schema and can contain records of various structures different from each other.</p>
 
@@ -119,7 +119,7 @@
 
 <p>You can create indexes for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indexes have types for strings or numbers.  The query optimizer uses indexes in suitable way according to each query.  Indexes are implemented as different files of B+ tree database.</p>
 
-<h3>Practical Functionality</h3>
+<h3 id="features_practical">Practical Functionality</h3>
 
 <p>Hash database and B+ tree database feature transaction mechanisms.  It is possible to commit a series of operations between the beginning and the end of the transaction in a lump, or to abort the transaction and perform rollback to the state before the transaction.  Two isolation levels are supported; serializable and read uncommitted.  Durability is secured by write ahead logging and shadow paging.</p>
 
@@ -127,13 +127,13 @@
 
 <p>Functions of API of Tokyo cabinet are reentrant and available in multi-thread environment.  Discrete database object can be operated in parallel entirely.  For simultaneous operations of the same database object, read-write lock is used for exclusion control.  That is, while a writing thread is operating the database, other reading threads and writing threads are blocked.  However, while a reading thread is operating the database, reading threads are not blocked.</p>
 
-<h3>Simple but Various Interfaces</h3>
+<h3 id="features_simple">Simple but Various Interfaces</h3>
 
-<p>Tokyo Cabinet provides simple API based on the object oriented design.  Every operation for database is encapsulated and published as lucid methods as `open' (connect), `close' (disconnect), `put' (insert), `out' (remove), `get' (retrieve), and so on.  Because the three of hash, B+ tree, and fixed-length array database APIs are very similar with each other, porting an application from one to the other is easy.</p>
+<p>Tokyo Cabinet provides simple API based on the object oriented design.  Every operation for database is encapsulated and published as lucid methods as `open' (connect), `close' (disconnect), `put' (insert), `out' (remove), `get' (retrieve), and so on.  Because the three of hash, B+ tree, and fixed-length array database APIs are very similar with each other, porting an application from one to the other is easy.  Moreover, the abstract API is provided to handle these databases with the same interface.  Applications of the abstract API can determine the type of the database in runtime.</p>
 
 <p>The utility API is also provided.  Such fundamental data structure as list and map are included.  And, some useful features; memory pool, string processing, encoding, are also included.</p>
 
-<p>Six kinds of API; the utility API, the hash database API, the B+ tree database API, the fixed-length database API, the table database API, and the abstract database API, are provided for the C language.  Command line interfaces are also provided corresponding to each API.  They are useful for prototyping, test, and debugging.  Except for C, Tokyo Cabinet provides APIs for Perl, Ruby, Java, and Lua.  The Perl API has methods calling the hash database API, the B+ tree database API, and the fixed-length database API with XS language.  The Ruby API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Ruby.  The Java API has native methods calling the hash database API, the B+ tree database API, and the fixed-length database API with Java Native Interface.  The Lua API has methods calling the hash database API, the B+ tree database API, and the fixed length database API as modules of Lua.  APIs for other languages will hopefully be provided by third party.</p>
+<p>Six kinds of API; the utility API, the hash database API, the B+ tree database API, the fixed-length database API, the table database API, and the abstract database API, are provided for the C language.  Command line interfaces are also provided corresponding to each API.  They are useful for prototyping, test, and debugging.  Except for C, Tokyo Cabinet provides APIs for Perl, Ruby, Java, and Lua.  APIs for other languages will hopefully be provided by third party.</p>
 
 <p>In cases that multiple processes access a database at the same time or some processes access a database on a remote host, the remote service is useful.  The remote service is composed of a database server and its access library.  Applications can access the database server by using the remote database API.  The server implements HTTP and the memcached protocol partly so that client programs on almost all platforms can access the server easily.</p>
 
@@ -143,7 +143,7 @@
 
 <p>This section describes how to install Tokyo Cabinet with the source package.  As for a binary package, see its installation manual.</p>
 
-<h3>Preparation</h3>
+<h3 id="installation_preparation">Preparation</h3>
 
 <p>Tokyo Cabinet is available on UNIX-like systems.  At least, the following environments are supported.</p>
 
@@ -161,7 +161,7 @@
 <li><a href="http://www.bzip.org/">bzip2</a> : for loss-less data compression.  1.0.5 or later is suggested.</li>
 </ul>
 
-<h3>Installation</h3>
+<h3 id="installation_installation">Installation</h3>
 
 <p>When an archive file of Tokyo Cabinet is extracted, change the current working directory to the generated directory and perform installation.</p>
 
@@ -185,7 +185,7 @@
 <pre>make install
 </pre>
 
-<h3>Result</h3>
+<h3 id="installation_result">Result</h3>
 
 <p>When a series of work finishes, the following files will be installed.</p>
 
@@ -223,7 +223,7 @@
 /usr/local/man/man3/...
 </pre>
 
-<h3>Options of Configure</h3>
+<h3 id="installation_option">Options of Configure</h3>
 
 <p>The following options can be specified with `<code>./configure</code>'.</p>
 
@@ -244,7 +244,7 @@
 
 <p>`<code>--prefix</code>' and other options are also available as with usual UNIX software packages.  If you want to install Tokyo Cabinet under `<code>/usr</code>' not `<code>/usr/local</code>', specify `<code>--prefix=/usr</code>'.  As well, the library search path does not include `<code>/usr/local/lib</code>', it is necessary to set the environment variable `<code>LD_LIBRARY_PATH</code>' to include `<code>/usr/local/lib</code>' before running applications of Tokyo Cabinet.</p>
 
-<h3>How to Use the Library</h3>
+<h3 id="installation_library">How to Use the Library</h3>
 
 <p>Tokyo Cabinet provides API of the C language and it is available by programs conforming to the C89 (ANSI C) standard or the C99 standard.  As the header files of Tokyo Cabinet are provided as `<code>tcutil.h</code>', `<code>tchdb.h</code>', `<code>tcbdb.h</code>', and `<code>tcadb.h</code>', applications should include one or more of them accordingly to use the API.  As the library is provided as `<code>libtokyocabinet.a</code>' and `<code>libtokyocabinet.so</code>' and they depends `<code>libz.so</code>', `<code>libpthread.so</code>', `<code>libm.so</code>', and `<code>libc.so</code>', linker options `<code>-ltokyocabinet</code>', `<code>-lz</code>', `<code>-lbz2</code>', `<code>-lpthread</code>', `<code>-lm</code>', and `<code>-lc</code>' are required for build command.  A typical build command is the following.</p>
 
@@ -260,7 +260,7 @@
 
 <p>The utility API is a set of routines to handle records on memory easily.  Especially, extensible string, array list, hash map, and ordered tree are useful.  See `<code>tcutil.h</code>' for entire specification.</p>
 
-<h3>Description</h3>
+<h3 id="tcutilapi_description">Description</h3>
 
 <p>To use the utility API, include `<code>tcutil.h</code>' and related standard header files.  Usually, write the following description near the front of a source file.</p>
 
@@ -273,7 +273,7 @@
 
 <p>Objects whose type is pointer to `<code>TCXSTR</code>' are used for extensible string.  An extensible string object is created with the function `<code>tcxstrnew</code>' and is deleted with the function `<code>tcxstrdel</code>'.  Objects whose type is pointer to `<code>TCLIST</code>' are used for array list.  A list object is created with the function `<code>tclistnew</code>' and is deleted with the function `<code>tclistdel</code>'.  Objects whose type is pointer to `<code>TCMAP</code>' are used for hash map.  A map object is created with the function `<code>tcmapnew</code>' and is deleted with the function `<code>tcmapdel</code>'.  Objects whose type is pointer to `<code>TCTREE</code>' are used for ordered tree.  A tree object is created with the function `<code>tctreenew</code>' and is deleted with the function `<code>tctreedel</code>'.  To avoid memory leak, it is important to delete every object when it is no longer in use.</p>
 
-<h3>API of Basic Utilities</h3>
+<h3 id="tcutilapi_basicapi">API of Basic Utilities</h3>
 
 <p>The constant `tcversion' is the string containing the version information.</p>
 
@@ -345,7 +345,7 @@
 <dd>Although this function is just a wrapper of `free' call, this is useful in applications using another package of the `malloc' series.</dd>
 </dl>
 
-<h3>API of Extensible String</h3>
+<h3 id="tcutilapi_xstrapi">API of Extensible String</h3>
 
 <p>The function `tcxstrnew' is used in order to create an extensible string object.</p>
 
@@ -447,7 +447,7 @@
 <dd>Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.</dd>
 </dl>
 
-<h3>API of Array List</h3>
+<h3 id="tcutilapi_listapi">API of Array List</h3>
 
 <p>The function `tclistnew' is used in order to create a list object.</p>
 
@@ -710,7 +710,7 @@
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>API of Hash Map</h3>
+<h3 id="tcutilapi_mapapi">API of Hash Map</h3>
 
 <p>The function `tcmapnew' is used in order to create a map object.</p>
 
@@ -1003,7 +1003,7 @@
 <dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>API of Ordered Tree</h3>
+<h3 id="tcutilapi_treeapi">API of Ordered Tree</h3>
 
 <p>The function `tctreenew' is used in order to create a tree object.</p>
 
@@ -1289,7 +1289,7 @@
 <dd>Because the object of the return value is created with the function `tctreenew', it should be deleted with the function `tctreedel' when it is no longer in use.</dd>
 </dl>
 
-<h3>API of On-memory Hash Database</h3>
+<h3 id="tcutilapi_mdbapi">API of On-memory Hash Database</h3>
 
 <p>The function `tcmdbnew' is used in order to create an on-memory hash database object.</p>
 
@@ -1550,7 +1550,7 @@
 <dd>`<var>num</var>' specifies the number of records to be removed.</dd>
 </dl>
 
-<h3>API of On-memory Tree Database</h3>
+<h3 id="tcutilapi_ndbapi">API of On-memory Tree Database</h3>
 
 <p>The function `tcndbnew' is used in order to create an on-memory tree database object.</p>
 
@@ -1830,7 +1830,7 @@
 <dd>`<var>num</var>' specifies the number of records to be removed.</dd>
 </dl>
 
-<h3>API of Memory Pool</h3>
+<h3 id="tcutilapi_mpoolapi">API of Memory Pool</h3>
 
 <p>The function `tcmpoolnew' is used in order to create a memory pool object.</p>
 
@@ -1945,7 +1945,7 @@
 <dd>The global memory pool object is a singleton and assured to be deleted when the process is terminating normally.</dd>
 </dl>
 
-<h3>API of Miscellaneous Utilities</h3>
+<h3 id="tcutilapi_miscapi">API of Miscellaneous Utilities</h3>
 
 <p>The function `tclmax' is used in order to get the larger value of two integers.</p>
 
@@ -2168,6 +2168,15 @@
 <dd>The return value is the integer.  If the string does not contain numeric expression, 0 is returned.  If the integer overflows the domain, `INT64_MAX' or `INT64_MIN' is returned according to the sign.</dd>
 </dl>
 
+<p>The function `tcatof' is used in order to convert a string to a real number.</p>
+
+<dl class="api">
+<dt><code>double tcatof(const char *<var>str</var>);</code></dt>
+<dd>`<var>str</var>' specifies a string.</dd>
+<dd>The return value is the real number.  If the string does not contain numeric expression, 0.0 is returned.</dd>
+<dd>This function is equivalent to `atof' except that it does not depend on the locale.</dd>
+</dl>
+
 <p>The function `tcregexmatch' is used in order to check whether a string matches a regular expression.</p>
 
 <dl class="api">
@@ -2289,7 +2298,7 @@
 <dd>The return value is the day of week of the date.  0 means Sunday and 6 means Saturday.</dd>
 </dl>
 
-<h3>API of Filesystem Utilities</h3>
+<h3 id="tcutilapi_fsapi">API of Filesystem Utilities</h3>
 
 <p>The function `tcrealpath' is used in order to get the canonicalized absolute path of a file.</p>
 
@@ -2415,7 +2424,7 @@
 <dd>The command name and the arguments are quoted and meta characters are escaped.</dd>
 </dl>
 
-<h3>API of Encoding Utilities</h3>
+<h3 id="tcutilapi_encapi">API of Encoding Utilities</h3>
 
 <p>The function `tcurlencode' is used in order to encode a serial object with URL encoding.</p>
 
@@ -2738,7 +2747,7 @@
 <dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>Example Code</h3>
+<h3 id="tcutilapi_example">Example Code</h3>
 
 <p>The following code is an example using extensible string, array list, and hash map.</p>
 
@@ -2821,7 +2830,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tcutilapi_cli">CLI</h3>
 
 <p>To use the utility API easily, the commands `<code>tcutest</code>', `<code>tcumttest</code>', and `<code>tcucodec</code>' are provided.</p>
 
@@ -2874,7 +2883,7 @@ int main(int argc, char **argv){
 <ul class="options">
 <li><code>-rnd</code> : select keys at random.</li>
 <li><code>-nc</code> : omit the comparison test.</li>
-<li><code>-rr <var>num</var></code> : specifiy the ratio of reading operation by percentage.</li>
+<li><code>-rr <var>num</var></code> : specify the ratio of reading operation by percentage.</li>
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
@@ -2946,7 +2955,7 @@ int main(int argc, char **argv){
 
 <p>Hash database is a file containing a hash table and is handled with the hash database API.  See `<code>tchdb.h</code>' for entire specification.</p>
 
-<h3>Description</h3>
+<h3 id="tchdbapi_description">Description</h3>
 
 <p>To use the hash database API, include `<code>tcutil.h</code>', `<code>tchdb.h</code>', and related standard header files.  Usually, write the following description near the front of a source file.</p>
 
@@ -2962,7 +2971,7 @@ int main(int argc, char **argv){
 
 <p>Before operations to store or retrieve records, it is necessary to open a database file and connect the hash database object to it.  The function `<code>tchdbopen</code>' is used to open a database file and the function `<code>tchdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
 
-<h3>API</h3>
+<h3 id="tchdbapi_api">API</h3>
 
 <p>The function `tchdberrmsg' is used in order to get the message string corresponding to an error code.</p>
 
@@ -3402,7 +3411,7 @@ int main(int argc, char **argv){
 <dd>The return value is the size of the database file or 0 if the object does not connect to any database file.</dd>
 </dl>
 
-<h3>Example Code</h3>
+<h3 id="tchdbapi_example">Example Code</h3>
 
 <p>The following code is an example to use a hash database.</p>
 
@@ -3468,7 +3477,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tchdbapi_cli">CLI</h3>
 
 <p>To use the hash database API easily, the commands `<code>tchtest</code>', `<code>tchmttest</code>', and `<code>tchmgr</code>' are provided.</p>
 
@@ -3545,7 +3554,7 @@ int main(int argc, char **argv){
 <li><code>-rnd</code> : select keys at random.</li>
 <li><code>-wb</code> : use the function `tchdbget3' instead of `tchdbget'.</li>
 <li><code>-nc</code> : omit the comparison test.</li>
-<li><code>-rr <var>num</var></code> : specifiy the ratio of reading operation by percentage.</li>
+<li><code>-rr <var>num</var></code> : specify the ratio of reading operation by percentage.</li>
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
@@ -3557,7 +3566,7 @@ int main(int argc, char **argv){
 <dd>Create a database file.</dd>
 <dt><code>tchmgr inform [-nl|-nb] <var>path</var></code></dt>
 <dd>Print miscellaneous information to the standard output.</dd>
-<dt><code>tchmgr put [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>key</var> <var>value</var></code></dt>
+<dt><code>tchmgr put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] <var>path</var> <var>key</var> <var>value</var></code></dt>
 <dd>Store a record.</dd>
 <dt><code>tchmgr out [-nl|-nb] [-sx] <var>path</var> <var>key</var></code></dt>
 <dd>Remove a record.</dd>
@@ -3583,10 +3592,12 @@ int main(int argc, char **argv){
 <li><code>-tx</code> : enable the option `HDBTEXCODEC'.</li>
 <li><code>-nl</code> : enable the option `HDBNOLCK'.</li>
 <li><code>-nb</code> : enable the option `HDBLCKNB'.</li>
-<li><code>-sx</code> : input data is evaluated as a hexadecimal data string.</li>
+<li><code>-sx</code> : the input data is evaluated as a hexadecimal data string.</li>
 <li><code>-dk</code> : use the function `tchdbputkeep' instead of `tchdbput'.</li>
 <li><code>-dc</code> : use the function `tchdbputcat' instead of `tchdbput'.</li>
-<li><code>-px</code> : output data is converted into a hexadecimal data string.</li>
+<li><code>-dai</code> : use the function `tchdbaddint' instead of `tchdbput'.</li>
+<li><code>-dad</code> : use the function `tchdbadddouble' instead of `tchdbput'.</li>
+<li><code>-px</code> : the output data is converted into a hexadecimal data string.</li>
 <li><code>-pz</code> : do not append line feed at the end of the output.</li>
 <li><code>-m <var>num</var></code> : specify the maximum number of the output.</li>
 <li><code>-pv</code> : print values of records also.</li>
@@ -3603,7 +3614,7 @@ int main(int argc, char **argv){
 
 <p>B+ tree database is a file containing a B+ tree and is handled with the B+ tree database API.  See `<code>tcbdb.h</code>' for entire specification.</p>
 
-<h3>Description</h3>
+<h3 id="tcbdbapi_description">Description</h3>
 
 <p>To use the B+ tree database API, include `<code>tcutil.h</code>', `<code>tcbdb.h</code>', and related standard header files.  Usually, write the following description near the front of a source file.</p>
 
@@ -3619,7 +3630,7 @@ int main(int argc, char **argv){
 
 <p>Before operations to store or retrieve records, it is necessary to open a database file and connect the B+ tree database object to it.  The function `<code>tcbdbopen</code>' is used to open a database file and the function `<code>tcbdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
 
-<h3>API</h3>
+<h3 id="tcbdbapi_api">API</h3>
 
 <p>The function `tcbdberrmsg' is used in order to get the message string corresponding to an error code.</p>
 
@@ -4292,7 +4303,7 @@ int main(int argc, char **argv){
 <dd>If successful, the return value is true, else, it is false.  False is returned when the cursor is at invalid position.</dd>
 </dl>
 
-<h3>Example Code</h3>
+<h3 id="tcbdbapi_example">Example Code</h3>
 
 <p>The following code is an example to use a B+ tree database.</p>
 
@@ -4362,7 +4373,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tcbdbapi_cli">CLI</h3>
 
 <p>To use the B+ tree database API easily, the commands `<code>tcbtest</code>', `<code>tcbmttest</code>', and `<code>tcbmgr</code>' are provided.</p>
 
@@ -4443,7 +4454,7 @@ int main(int argc, char **argv){
 <li><code>-rnd</code> : select keys at random.</li>
 <li><code>-wb</code> : use the function `tchdbget3' instead of `tchdbget'.</li>
 <li><code>-nc</code> : omit the comparison test.</li>
-<li><code>-rr <var>num</var></code> : specifiy the ratio of reading operation by percentage.</li>
+<li><code>-rr <var>num</var></code> : specify the ratio of reading operation by percentage.</li>
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
@@ -4455,7 +4466,7 @@ int main(int argc, char **argv){
 <dd>Create a database file.</dd>
 <dt><code>tcbmgr inform [-nl|-nb] <var>path</var></code></dt>
 <dd>Print miscellaneous information to the standard output.</dd>
-<dt><code>tcbmgr put [-cd|-ci|-cj] [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>key</var> <var>value</var></code></dt>
+<dt><code>tcbmgr put [-cd|-ci|-cj] [-nl|-nb] [-sx] [-dk|-dc|-dd|-db|-dai|-dad] <var>path</var> <var>key</var> <var>value</var></code></dt>
 <dd>Store a record.</dd>
 <dt><code>tcbmgr out [-cd|-ci|-cj] [-nl|-nb] [-sx] <var>path</var> <var>key</var></code></dt>
 <dd>Remove a record.</dd>
@@ -4484,10 +4495,14 @@ int main(int argc, char **argv){
 <li><code>-tx</code> : enable the option `BDBTEXCODEC'.</li>
 <li><code>-nl</code> : enable the option `BDBNOLCK'.</li>
 <li><code>-nb</code> : enable the option `BDBLCKNB'.</li>
-<li><code>-sx</code> : input data is evaluated as a hexadecimal data string.</li>
-<li><code>-dk</code> : use the function `tchdbputkeep' instead of `tchdbput'.</li>
-<li><code>-dc</code> : use the function `tchdbputcat' instead of `tchdbput'.</li>
-<li><code>-px</code> : output data is converted into a hexadecimal data string.</li>
+<li><code>-sx</code> : the input data is evaluated as a hexadecimal data string.</li>
+<li><code>-dk</code> : use the function `tcbdbputkeep' instead of `tcbdbput'.</li>
+<li><code>-dc</code> : use the function `tcbdbputcat' instead of `tcbdbput'.</li>
+<li><code>-dd</code> : use the function `tcbdbputdup' instead of `tcbdbput'.</li>
+<li><code>-db</code> : use the function `tcbdbputdupback' instead of `tcbdbput'.</li>
+<li><code>-dai</code> : use the function `tcbdbaddint' instead of `tcbdbput'.</li>
+<li><code>-dad</code> : use the function `tcbdbadddouble' instead of `tcbdbput'.</li>
+<li><code>-px</code> : the output data is converted into a hexadecimal data string.</li>
 <li><code>-pz</code> : do not append line feed at the end of the output.</li>
 <li><code>-m <var>num</var></code> : specify the maximum number of the output.</li>
 <li><code>-bk</code> : perform backword scanning.</li>
@@ -4507,7 +4522,7 @@ int main(int argc, char **argv){
 
 <p>Fixed-length database is a file containing an array of fixed-length elements and is handled with the fixed-length database API.  See `<code>tcfdb.h</code>' for entire specification.</p>
 
-<h3>Description</h3>
+<h3 id="tcfdbapi_description">Description</h3>
 
 <p>To use the fixed-length database API, include `<code>tcutil.h</code>', `<code>tcfdb.h</code>', and related standard header files.  Usually, write the following description near the front of a source file.</p>
 
@@ -4523,7 +4538,7 @@ int main(int argc, char **argv){
 
 <p>Before operations to store or retrieve records, it is necessary to open a database file and connect the fixed-length database object to it.  The function `<code>tcfdbopen</code>' is used to open a database file and the function `<code>tcfdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
 
-<h3>API</h3>
+<h3 id="tcfdbapi_api">API</h3>
 
 <p>The function `tcfdberrmsg' is used in order to get the message string corresponding to an error code.</p>
 
@@ -4987,7 +5002,7 @@ int main(int argc, char **argv){
 <dd>The return value is the size of the database file or 0 if the object does not connect to any database file.</dd>
 </dl>
 
-<h3>Example Code</h3>
+<h3 id="tcfdbapi_example">Example Code</h3>
 
 <p>The following code is an example to use a hash database.</p>
 
@@ -5053,7 +5068,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tcfdbapi_cli">CLI</h3>
 
 <p>To use the fixed-length database API easily, the commands `<code>tcftest</code>', `<code>tcfmttest</code>', and `<code>tcfmgr</code>' are provided.</p>
 
@@ -5113,7 +5128,7 @@ int main(int argc, char **argv){
 <li><code>-rnd</code> : select keys at random.</li>
 <li><code>-wb</code> : use the function `tcfdbget4' instead of `tcfdbget2'.</li>
 <li><code>-nc</code> : omit the comparison test.</li>
-<li><code>-rr <var>num</var></code> : specifiy the ratio of reading operation by percentage.</li>
+<li><code>-rr <var>num</var></code> : specify the ratio of reading operation by percentage.</li>
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
@@ -5125,7 +5140,7 @@ int main(int argc, char **argv){
 <dd>Create a database file.</dd>
 <dt><code>tcfmgr inform [-nl|-nb] <var>path</var></code></dt>
 <dd>Print miscellaneous information to the standard output.</dd>
-<dt><code>tcfmgr put [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>key</var> <var>value</var></code></dt>
+<dt><code>tcfmgr put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] <var>path</var> <var>key</var> <var>value</var></code></dt>
 <dd>Store a record.</dd>
 <dt><code>tcfmgr out [-nl|-nb] [-sx] <var>path</var> <var>key</var></code></dt>
 <dd>Remove a record.</dd>
@@ -5146,10 +5161,12 @@ int main(int argc, char **argv){
 <ul class="options">
 <li><code>-nl</code> : enable the option `FDBNOLCK'.</li>
 <li><code>-nb</code> : enable the option `FDBLCKNB'.</li>
-<li><code>-sx</code> : input data is evaluated as a hexadecimal data string.</li>
-<li><code>-dk</code> : use the function `tcfdbputkeep2' instead of `tcfdbput2'.</li>
-<li><code>-dc</code> : use the function `tcfdbputcat2' instead of `tcfdbput2'.</li>
-<li><code>-px</code> : output data is converted into a hexadecimal data string.</li>
+<li><code>-sx</code> : the input data is evaluated as a hexadecimal data string.</li>
+<li><code>-dk</code> : use the function `tcfdbputkeep' instead of `tcfdbput'.</li>
+<li><code>-dc</code> : use the function `tcfdbputcat' instead of `tcfdbput'.</li>
+<li><code>-dai</code> : use the function `tcfdbaddint' instead of `tcfdbput'.</li>
+<li><code>-dad</code> : use the function `tcfdbadddouble' instead of `tcfdbput'.</li>
+<li><code>-px</code> : the output data is converted into a hexadecimal data string.</li>
 <li><code>-pz</code> : do not append line feed at the end of the output.</li>
 <li><code>-m <var>num</var></code> : specify the maximum number of the output.</li>
 <li><code>-pv</code> : print values of records also.</li>
@@ -5166,7 +5183,7 @@ int main(int argc, char **argv){
 
 <p>Table database is a file containing records composed of the primary keys and arbitrary columns and is handled with the table database API.  See `<code>tctdb.h</code>' for entire specification.</p>
 
-<h3>Description</h3>
+<h3 id="tctdbapi_description">Description</h3>
 
 <p>To use the table database API, include `<code>tcutil.h</code>', `<code>tctdb.h</code>', and related standard header files.  Usually, write the following description near the front of a source file.</p>
 
@@ -5182,7 +5199,7 @@ int main(int argc, char **argv){
 
 <p>Before operations to store or retrieve records, it is necessary to open a database file and connect the table database object to it.  The function `<code>tctdbopen</code>' is used to open a database file and the function `<code>tctdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
 
-<h3>API</h3>
+<h3 id="tctdbapi_api">API</h3>
 
 <p>The function `tctdberrmsg' is used in order to get the message string corresponding to an error code.</p>
 
@@ -5244,7 +5261,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetcache(TCTDB *<var>tdb</var>, int32_t <var>rcnum</var>, int32_t <var>lcnum</var>, int32_t <var>ncnum</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
 <dd>`<var>rcnum</var>' specifies the maximum number of records to be cached.  If it is not more than 0, the record cache is disabled.  It is disabled by default.</dd>
-<dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 1024.</dd>
+<dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 2048.</dd>
 <dd>`<var>ncnum</var>' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 512.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the caching parameters should be set before the database is opened.  Leaf nodes and non-leaf nodes are used in column indexes.</dd>
@@ -5630,7 +5647,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetindex(TCTDB *<var>tdb</var>, const char *<var>name</var>, int <var>type</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
 <dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
-<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITVOID', the index is removed.</dd>
+<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise or and the index exists, this function merely returns failure.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the setting indexes should be set after the database is opened.</dd>
 </dl>
@@ -5695,7 +5712,7 @@ int main(int argc, char **argv){
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<p>The function `tctdbqryproc' is used in order to process each corresponding record of a query object.</p>
+<p>The function `tctdbqryproc' is used in order to process each record corresponding to a query object.</p>
 
 <dl class="api">
 <dt><code>bool tctdbqryproc(TDBQRY *<var>qry</var>, TDBQRYPROC <var>proc</var>, void *<var>op</var>);</code></dt>
@@ -5703,7 +5720,14 @@ int main(int argc, char **argv){
 <dd>`<var>proc</var>' specifies the pointer to the iterator function called for each record.</dd>
 <dd>`<var>op</var>' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>The function `tctdbqryprocout' is built-in and answers to remove each record.</dd>
+</dl>
+
+<p>The function `tctdbqryprocout' is used in order to remove each record corresponding to a query object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbqryprocout(TDBQRY *<var>qry</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
 <p>The function `tctdbqryhint' is used in order to get the hint of a query object.</p>
@@ -5714,7 +5738,7 @@ int main(int argc, char **argv){
 <dd>The return value is the hint string.</dd>
 </dl>
 
-<h3>Example Code</h3>
+<h3 id="tctdbapi_example">Example Code</h3>
 
 <p>The following code is an example to use a table database.</p>
 
@@ -5804,7 +5828,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tctdbapi_cli">CLI</h3>
 
 <p>To use the table database API easily, the commands `<code>tcttest</code>', `<code>tctmttest</code>', and `<code>tctmgr</code>' are provided.</p>
 
@@ -5891,7 +5915,7 @@ int main(int argc, char **argv){
 <li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
 <li><code>-rnd</code> : select keys at random.</li>
 <li><code>-nc</code> : omit the comparison test.</li>
-<li><code>-rr <var>num</var></code> : specifiy the ratio of reading operation by percentage.</li>
+<li><code>-rr <var>num</var></code> : specify the ratio of reading operation by percentage.</li>
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
@@ -5903,7 +5927,7 @@ int main(int argc, char **argv){
 <dd>Create a database file.</dd>
 <dt><code>tctmgr inform [-nl|-nb] <var>path</var></code></dt>
 <dd>Print miscellaneous information to the standard output.</dd>
-<dt><code>tctmgr put [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>pkey</var> [<var>cols</var> ...]</code></dt>
+<dt><code>tctmgr put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] <var>path</var> <var>pkey</var> [<var>cols</var> ...]</code></dt>
 <dd>Store a record.</dd>
 <dt><code>tctmgr out [-nl|-nb] [-sx] <var>path</var> <var>pkey</var></code></dt>
 <dd>Remove a record.</dd>
@@ -5911,11 +5935,11 @@ int main(int argc, char **argv){
 <dd>Print the value of a record.</dd>
 <dt><code>tctmgr list [-nl|-nb] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>path</var></code></dt>
 <dd>Print the primary keys of all records, separated by line feeds.</dd>
-<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
+<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
 <dd>Print records matching conditions, separated by line feeds.</dd>
 <dt><code>tctmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Optimize a database file.</dd>
-<dt><code>tctmgr setindex [-nl|-nb] [-cd|-cv] <var>path</var> <var>name</var></code></dt>
+<dt><code>tctmgr setindex [-nl|-nb] [-it <var>type</var>] <var>path</var> <var>name</var></code></dt>
 <dd>Set the index of a column.</dd>
 <dt><code>tctmgr importtsv [-nl|-nb] [-sc] <var>path</var> [<var>file</var>]</code></dt>
 <dd>Store records of TSV in each line of a file.</dd>
@@ -5933,18 +5957,22 @@ int main(int argc, char **argv){
 <li><code>-tx</code> : enable the option `TDBTEXCODEC'.</li>
 <li><code>-nl</code> : enable the option `TDBNOLCK'.</li>
 <li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
-<li><code>-sx</code> : input data is evaluated as a hexadecimal data string.</li>
+<li><code>-sx</code> : the input data is evaluated as a hexadecimal data string.</li>
 <li><code>-dk</code> : use the function `tctdbputkeep' instead of `tctdbput'.</li>
 <li><code>-dc</code> : use the function `tctdbputcat' instead of `tctdbput'.</li>
-<li><code>-px</code> : output data is converted into a hexadecimal data string.</li>
+<li><code>-dai</code> : use the function `tctdbaddint' instead of `tctdbput'.</li>
+<li><code>-dad</code> : use the function `tctdbadddouble' instead of `tctdbput'.</li>
+<li><code>-px</code> : the output data is converted into a hexadecimal data string.</li>
 <li><code>-pz</code> : do not append line feed at the end of the output.</li>
 <li><code>-m <var>num</var></code> : specify the maximum number of the output.</li>
 <li><code>-pv</code> : print values of records also.</li>
 <li><code>-fm <var>str</var></code> : specify the prefix of keys.</li>
 <li><code>-ord <var>name</var> <var>type</var></code> : specify the order of the result.</li>
 <li><code>-ph</code> : print hint information also.</li>
-<li><code>-bt</code> : specifies the number of benchmark tests.</li>
+<li><code>-bt</code> : specify the number of benchmark tests.</li>
+<li><code>-rm</code> : remove every record in the result.</li>
 <li><code>-tz</code> : enable the option `UINT8_MAX'.</li>
+<li><code>-it <var>type</var></code> : specify the index type among "lexical", "decimal", and "void".</li>
 <li><code>-cd</code> : create the number index instead of the string index.</li>
 <li><code>-cv</code> : remove the existing index.</li>
 <li><code>-sc</code> : normalize keys as lower cases.</li>
@@ -5956,9 +5984,9 @@ int main(int argc, char **argv){
 
 <h2 id="tcadbapi">The Abstract Database API</h2>
 
-<p>Abstract database is a set of interfaces to use on-memory hash database, on-memory tree database, hash database, B+ tree database, and fixed-length database with the same API.  See `<code>tcadb.h</code>' for entire specification.</p>
+<p>Abstract database is a set of interfaces to use on-memory hash database, on-memory tree database, hash database, B+ tree database, fixed-length database, and table database with the same API.  See `<code>tcadb.h</code>' for entire specification.</p>
 
-<h3>Description</h3>
+<h3 id="tcadbapi_description">Description</h3>
 
 <p>To use the abstract database API, include `<code>tcutil.h</code>', `<code>tcadb.h</code>', and related standard header files.  Usually, write the following description near the front of a source file.</p>
 
@@ -5974,7 +6002,7 @@ int main(int argc, char **argv){
 
 <p>Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `<code>tcadbopen</code>' is used to open a concrete database and the function `<code>tcadbclose</code>' is used to close the database.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
 
-<h3>API</h3>
+<h3 id="tcadbapi_api">API</h3>
 
 <p>The function `tcadbnew' is used in order to create an abstract database object.</p>
 
@@ -5995,8 +6023,9 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>bool tcadbopen(TCADB *<var>adb</var>, const char *<var>name</var>);</code></dt>
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
-<dd>`<var>name</var>' specifies the name of the database.  If it is "*", the database will be an on-memory hash database.  If it is "+", the database will be an on-memory tree database.  If its suffix is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed-length database.  Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of the name and the value, separated by "=".  On-memory hash database supports "bnum", "capnum", and "capsiz".  On-memory tree database supports "capnum" and "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".  Fixed-length database supports "mode", "width", and "limsiz".  "capnum" specifies the capacity number of records.  "capsiz" specifies the capacity size of using memory.  Records spilled the capacity are removed by the storing order.  "mode" can contain "w" of writer, "r" of reader, "c" of creating, "t" of truncating, "e" of no locking, and "f" of non-blocking lock.  The default mode is relevant to "wc".  "opts" can contains "l" of large option, "d" of Deflate option, "b" of BZIP2 option, and "t" of TCBS option.  For example, "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is "casket.tch", and the bucket number is 1000000, and the options are large and Deflate.</dd>
+<dd>`<var>name</var>' specifies the name of the database.  If it is "*", the database will be an on-memory hash database.  If it is "+", the database will be an on-memory tree database.  If its suffix is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed-length database.  If its suffix is ".tct", the database will be a table database.  Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of the name and the value, separated by "=".  On-memory hash database supports "bnum", "capnum", and "capsiz".  On-memory tree database supports "capnum" and "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".  Fixed-length database supports "mode", "width", and "limsiz".  Table database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", "lcnum", "ncnum", "xmsiz", and "idx".</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The tuning parameter "capnum" specifies the capacity number of records.  "capsiz" specifies the capacity size of using memory.  Records spilled the capacity are removed by the storing order.  "mode" can contain "w" of writer, "r" of reader, "c" of creating, "t" of truncating, "e" of no locking, and "f" of non-blocking lock.  The default mode is relevant to "wc".  "opts" can contains "l" of large option, "d" of Deflate option, "b" of BZIP2 option, and "t" of TCBS option.  "idx" specifies the column name of an index and its type separated by ":".  For example, "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is "casket.tch", and the bucket number is 1000000, and the options are large and Deflate.</dd>
 </dl>
 
 <p>The function `tcadbclose' is used in order to close an abstract database object.</p>
@@ -6262,13 +6291,13 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>TCLIST *tcadbmisc(TCADB *<var>adb</var>, const char *<var>name</var>, const TCLIST *<var>args</var>);</code></dt>
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
-<dd>`<var>name</var>' specifies the name of the function.</dd>
+<dd>`<var>name</var>' specifies the name of the function.  All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Table database supports "setindex", "search", "searchget", "searchout", and "genuid".</dd>
 <dd>`<var>args</var>' specifies a list object containing arguments.</dd>
 <dd>If successful, the return value is a list object of the result.  `NULL' is returned on failure.</dd>
-<dd>All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
+<dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>Example Code</h3>
+<h3 id="tcadbapi_example">Example Code</h3>
 
 <p>The following code is an example to use an abstract database.</p>
 
@@ -6329,7 +6358,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tcadbapi_cli">CLI</h3>
 
 <p>To use the abstract database API easily, the commands `<code>tcatest</code>' and `<code>tcamgr</code>' are provided.</p>
 
@@ -6361,15 +6390,15 @@ int main(int argc, char **argv){
 <dd>Create a database file.</dd>
 <dt><code>tcamgr inform <var>name</var></code></dt>
 <dd>Print miscellaneous information to the standard output.</dd>
-<dt><code>tcamgr put [-sx] [-dk|-dc] <var>name</var> <var>key</var> <var>value</var></code></dt>
+<dt><code>tcamgr put [-sx] [-sep <var>chr</var>] [-dk|-dc|-dai|-dad] <var>name</var> <var>key</var> <var>value</var></code></dt>
 <dd>Store a record.</dd>
-<dt><code>tcamgr out [-sx] <var>name</var> <var>key</var></code></dt>
+<dt><code>tcamgr out [-sx] [-sep <var>chr</var>] <var>name</var> <var>key</var></code></dt>
 <dd>Remove a record.</dd>
-<dt><code>tcamgr get [-sx] [-px] [-pz] <var>name</var> <var>key</var></code></dt>
+<dt><code>tcamgr get [-sx] [-sep <var>chr</var>] [-px] [-pz] <var>name</var> <var>key</var></code></dt>
 <dd>Print the value of a record.</dd>
-<dt><code>tcamgr list [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>name</var></code></dt>
+<dt><code>tcamgr list [-sep <var>chr</var>] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>name</var></code></dt>
 <dd>Print keys of all records, separated by line feeds.</dd>
-<dt><code>tcamgr misc [-sx] [-px] <var>name</var> <var>func</var> [<var>arg</var>...]</code></dt>
+<dt><code>tcamgr misc [-sx] [-sep <var>chr</var>] [-px] <var>name</var> <var>func</var> [<var>arg</var>...]</code></dt>
 <dd>Call a versatile function for miscellaneous operations.</dd>
 <dt><code>tcamgr version</code></dt>
 <dd>Print the version information of Tokyo Cabinet.</dd>
@@ -6378,10 +6407,13 @@ int main(int argc, char **argv){
 <p>Options feature the following.</p>
 
 <ul class="options">
-<li><code>-sx</code> : input data is evaluated as a hexadecimal data string.</li>
+<li><code>-sx</code> : the input data is evaluated as a hexadecimal data string.</li>
+<li><code>-sep <var>chr</var></code> : specify the separator of the input data.</li>
 <li><code>-dk</code> : use the function `tcadbputkeep' instead of `tcadbput'.</li>
 <li><code>-dc</code> : use the function `tcadbputcat' instead of `tcadbput'.</li>
-<li><code>-px</code> : output data is converted into a hexadecimal data string.</li>
+<li><code>-dai</code> : use the function `tcadbaddint' instead of `tcadbput'.</li>
+<li><code>-dad</code> : use the function `tcadbadddouble' instead of `tcadbput'.</li>
+<li><code>-px</code> : the output data is converted into a hexadecimal data string.</li>
 <li><code>-pz</code> : do not append line feed at the end of the output.</li>
 <li><code>-m <var>num</var></code> : specify the maximum number of the output.</li>
 <li><code>-pv</code> : print values of records also.</li>
@@ -6390,7 +6422,7 @@ int main(int argc, char **argv){
 
 <p>This command returns 0 on success, another on failure.</p>
 
-<h3>CGI</h3>
+<h3 id="tcadbapi_cgi">CGI</h3>
 
 <p>To use the abstract database API easily, the CGI script `<code>tcawmgr.cgi</code>' is provided.</p>
 

@@ -88,7 +88,7 @@ all : $(LIBRARYFILES) $(COMMANDFILES) $(CGIFILES)
 
 clean :
 	rm -rf $(LIBRARYFILES) $(LIBOBJFILES) $(COMMANDFILES) $(CGIFILES) \
-	  *.o a.out check.in check.out gmon.out leak.log words.tsv \
+	  *.o a.out tokyocabinet_all.c check.in check.out gmon.out leak.log words.tsv \
 	  casket casket-* casket.* *.wal *~ hoge moge
 
 
@@ -464,7 +464,7 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket \
 	  name STRBW mi birth NUMBT 19700101,19791231 lang STRAND ja,en > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket name
-	$(RUNENV) $(RUNCMD) ./tctmgr setindex -cd casket birth
+	$(RUNENV) $(RUNCMD) ./tctmgr setindex -it dec casket birth
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket lang
 	$(RUNENV) $(RUNCMD) ./tctmgr list -pv casket > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr optimize casket
@@ -520,6 +520,14 @@ check-adb :
 	$(RUNENV) $(RUNCMD) ./tcamgr misc casket.tch outlist six
 	$(RUNENV) $(RUNCMD) ./tcamgr misc casket.tch getlist three four five six > check.out
 	$(RUNENV) $(RUNCMD) ./tcamgr list -pv casket.tch > check.out
+	$(RUNENV) $(RUNCMD) ./tcamgr create 'casket.tct#mode=wct#idx=name:lex#idx=age:dec'
+	$(RUNENV) $(RUNCMD) ./tcamgr put -sep '|' casket.tct 1 "name|mikio|age|30"
+	$(RUNENV) $(RUNCMD) ./tcamgr put -sep '|' casket.tct 2 "name|fal|age|31"
+	$(RUNENV) $(RUNCMD) ./tcamgr put -sep '|' casket.tct 3 "name|lupin|age|29"
+	$(RUNENV) $(RUNCMD) ./tcamgr get -sep '\t' casket.tct 1 > check.out
+	$(RUNENV) $(RUNCMD) ./tcamgr list -sep '\t' -pv casket.tct > check.out
+	$(RUNENV) $(RUNCMD) ./tcamgr misc -sep '|' casket.tct searchget \
+	  "addcond|name|STRINC|i" "setorder|age|NUMASC" "setmax|1" > check.out
 
 
 check-valgrind :
@@ -587,7 +595,7 @@ wordtable :
 	    -e 's/$$/\txxx\tabc\tyyy\t123/' > words.tsv
 	./tctmgr create casket
 	./tctmgr setindex casket word
-	./tctmgr setindex -cd casket num
+	./tctmgr setindex -it dec casket num
 	./tctmgr importtsv casket words.tsv
 
 
@@ -735,6 +743,12 @@ tcftest.o tcfmttest.o tcfmgr.o : myconf.h tcutil.h tcfdb.h
 tcttest.o tctmttest.o tctmgr.o : myconf.h tcutil.h tchdb.h tcbdb.h tctdb.h
 
 tcatest.o tcamgr.o tcawmgr.o : myconf.h tcutil.h tchdb.h tcbdb.h tcfdb.h tctdb.h tcadb.h
+
+
+tokyocabinet_all.c : myconf.c tcutil.c md5.c tchdb.c tcbdb.c tcfdb.c tctdb.c tcadb.c
+	cat myconf.c tcutil.c md5.c tchdb.c tcbdb.c tcfdb.c tctdb.c tcadb.c > $@
+
+tokyocabinet_all.o : myconf.h tcutil.h tchdb.h tcbdb.h tcfdb.h tctdb.h tcadb.h
 
 
 

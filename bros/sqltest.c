@@ -203,6 +203,11 @@ int dowrite(char *name, int rnum){
     fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
     sqlite3_free(errmsg);
   }
+  sprintf(sql, "PRAGMA cache_size = %d;", rnum);
+  if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
+    fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
+    sqlite3_free(errmsg);
+  }
   sprintf(sql, "BEGIN TRANSACTION;");
   if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
     fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
@@ -216,6 +221,7 @@ int dowrite(char *name, int rnum){
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
       fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
       sqlite3_free(errmsg);
+      err = TRUE;
     }
     /* print progression */
     if(showprgr && rnum > 250 && i % (rnum / 250) == 0){
@@ -250,6 +256,11 @@ int doread(char *name, int rnum){
     fprintf(stderr, "sqlite3_open failed\n");
     return 1;
   }
+  sprintf(sql, "PRAGMA cache_size = %d;", rnum);
+  if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
+    fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
+    sqlite3_free(errmsg);
+  }
   err = FALSE;
   /* loop for each record */
   for(i = 1; i <= rnum; i++){
@@ -258,6 +269,7 @@ int doread(char *name, int rnum){
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
       fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
       sqlite3_free(errmsg);
+      err = TRUE;
     }
     /* print progression */
     if(showprgr && rnum > 250 && i % (rnum / 250) == 0){
@@ -300,6 +312,11 @@ int dotblwrite(char *name, int rnum){
     sqlite3_free(errmsg);
   }
   sprintf(sql, "CREATE INDEX tbl_n ON tbl ( n );");
+  if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
+    fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
+    sqlite3_free(errmsg);
+  }
+  sprintf(sql, "PRAGMA cache_size = %d;", rnum);
   if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
     fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
     sqlite3_free(errmsg);
@@ -351,6 +368,11 @@ int dotblread(char *name, int rnum){
   if(sqlite3_open(name, &db) != 0){
     fprintf(stderr, "sqlite3_open failed\n");
     return 1;
+  }
+  sprintf(sql, "PRAGMA cache_size = %d;", rnum);
+  if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
+    fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
+    sqlite3_free(errmsg);
   }
   err = FALSE;
   /* loop for each record */

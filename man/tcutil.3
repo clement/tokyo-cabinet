@@ -3473,6 +3473,22 @@ The return value is the integer.  If the string does not contain numeric express
 .RE
 .RE
 .PP
+The function `tcatof' is used in order to convert a string to a real number.
+.PP
+.RS
+.br
+\fBdouble tcatof(const char *\fIstr\fB);\fR
+.RS
+`\fIstr\fR' specifies a string.
+.RE
+.RS
+The return value is the real number.  If the string does not contain numeric expression, 0.0 is returned.
+.RE
+.RS
+This function is equivalent to `atof' except that it does not depend on the locale.
+.RE
+.RE
+.PP
 The function `tcregexmatch' is used in order to check whether a string matches a regular expression.
 .PP
 .RS

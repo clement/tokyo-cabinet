@@ -19,7 +19,7 @@ Create a database file.
 Print miscellaneous information to the standard output.
 .RE
 .br
-\fBtcfmgr put \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-sx\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR]\fB \fIpath\fB \fIkey\fB \fIvalue\fB\fR
+\fBtcfmgr put \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-sx\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR]\fB \fIpath\fB \fIkey\fB \fIvalue\fB\fR
 .RS
 Store a record.
 .RE
@@ -62,23 +62,27 @@ Options feature the following.
 .br
 \fB\-nb\fR : enable the option `FDBLCKNB'.
 .br
-\fB\-sx\fR : input data is evaluated as a hexadecimal data string.
+\fB\-sx\fR : the input data is evaluated as a hexadecimal data string.
 .br
-\fB\-dk\fR : use the function `tcfdbputkeep2' instead of `tcfdbput2'.
+\fB\-dk\fR : use the function `tcfdbputkeep' instead of `tcfdbput'.
 .br
-\fB\-dc\fR : use the function `tcfdbputcat2' instead of `tcfdbput2'.
+\fB\-dc\fR : use the function `tcfdbputcat' instead of `tcfdbput'.
 .br
-\fB\-px\fR : output data is converted into a hexadecimal data string.
+\fB\-dai\fR : use the function `tcfdbaddint' instead of `tcfdbput'.
+.br
+\fB\-dad\fR : use the function `tcfdbadddouble' instead of `tcfdbput'.
+.br
+\fB\-px\fR : the output data is converted into a hexadecimal data string.
 .br
 \fB\-pz\fR : do not append line feed at the end of the output.
 .br
-\fB\-m\fR \fInum\fR : specify the maximum number of the output.
+\fB\-m \fInum\fR\fR : specify the maximum number of the output.
 .br
 \fB\-pv\fR : print values of records also.
 .br
-\fB\-rb\fR \fIlkey\fR \fIukey\fR : specify the range of keys.
+\fB\-rb \fIlkey\fR \fIukey\fR\fR : specify the range of keys.
 .br
-\fB\-ri\fR \fIstr\fR : specify the interval notation of keys.
+\fB\-ri \fIstr\fR\fR : specify the interval notation of keys.
 .br
 \fB\-sc\fR : normalize keys as lower cases.
 .br

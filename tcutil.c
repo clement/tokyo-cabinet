@@ -334,13 +334,13 @@ static void tcvxstrprintf(TCXSTR *xstr, const char *format, va_list ap){
       case 'b':
         if(lnum >= 2){
           tlen = tcnumtostrbin(va_arg(ap, unsigned long long), tbuf,
-                               atoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
+                               tcatoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
         } else if(lnum >= 1){
           tlen = tcnumtostrbin(va_arg(ap, unsigned long), tbuf,
-                               atoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
+                               tcatoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
         } else {
           tlen = tcnumtostrbin(va_arg(ap, unsigned int), tbuf,
-                               atoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
+                               tcatoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
         }
         TCXSTRCAT(xstr, tbuf, tlen);
         break;
@@ -4683,7 +4683,7 @@ int64_t tcatoi(const char *str){
     num = num * 10 + *str - '0';
     str++;
   }
-  return num *= sign;
+  return num * sign;
 }
 
 
@@ -4711,6 +4711,44 @@ int64_t tcatoix(const char *str){
   if(val > INT64_MAX) return INT64_MAX;
   if(val < INT64_MIN) return INT64_MIN;
   return val;
+}
+
+
+/* Convert a string to a real number. */
+double tcatof(const char *str){
+  assert(str);
+  while(*str > '\0' && *str <= ' '){
+    str++;
+  }
+  int sign = 1;
+  int64_t inum = 0;
+  if(*str == '-'){
+    str++;
+    sign = -1;
+  }
+  if(tcstrifwm(str, "inf")) return HUGE_VAL * sign;
+  if(tcstrifwm(str, "nan")) return nan("");
+  while(*str != '\0'){
+    if(*str < '0' || *str > '9') break;
+    inum = inum * 10 + *str - '0';
+    str++;
+  }
+  long double dnum = inum;
+  if(*str == '.'){
+    str++;
+    long double base = 10;
+    while(*str != '\0'){
+      if(*str < '0' || *str > '9') break;
+      dnum += (*str - '0') / base;
+      str++;
+      base *= 10;
+    }
+  }
+  if(*str == 'e' || *str == 'E'){
+    str++;
+    dnum *= pow(10, tcatoi(str));
+  }
+  return dnum * sign;
 }
 
 
@@ -4995,56 +5033,56 @@ int64_t tcstrmktime(const char *str){
   if((pv[0] == 'd' || pv[0] == 'D') && ((signed char *)pv)[1] >= '\0' && pv[1] <= ' ')
     return (int64_t)t * 60 * 60 * 24;
   if(len > 4 && str[4] == '-'){
-    ts.tm_year = atoi(str) - 1900;
+    ts.tm_year = tcatoi(str) - 1900;
     if((pv = strchr(str, '-')) != NULL && pv - str == 4){
       char *rp = pv + 1;
-      ts.tm_mon = atoi(rp) - 1;
+      ts.tm_mon = tcatoi(rp) - 1;
       if((pv = strchr(rp, '-')) != NULL && pv - str == 7){
         rp = pv + 1;
-        ts.tm_mday = atoi(rp);
+        ts.tm_mday = tcatoi(rp);
         if((pv = strchr(rp, 'T')) != NULL && pv - str == 10){
           rp = pv + 1;
-          ts.tm_hour = atoi(rp);
+          ts.tm_hour = tcatoi(rp);
           if((pv = strchr(rp, ':')) != NULL && pv - str == 13){
             rp = pv + 1;
-            ts.tm_min = atoi(rp);
+            ts.tm_min = tcatoi(rp);
           }
           if((pv = strchr(rp, ':')) != NULL && pv - str == 16){
             rp = pv + 1;
-            ts.tm_sec = atoi(rp);
+            ts.tm_sec = tcatoi(rp);
           }
           if((pv = strchr(rp, '.')) != NULL && pv - str >= 19) rp = pv + 1;
           strtol(rp, &pv, 10);
           if((*pv == '+' || *pv == '-') && strlen(pv) >= 6 && pv[3] == ':')
-            ts.tm_sec -= (atoi(pv + 1) * 3600 + atoi(pv + 4) * 60) * (pv[0] == '+' ? 1 : -1);
+            ts.tm_sec -= (tcatoi(pv + 1) * 3600 + tcatoi(pv + 4) * 60) * (pv[0] == '+' ? 1 : -1);
         }
       }
     }
     return (int64_t)tcmkgmtime(&ts);
   }
   if(len > 4 && str[4] == '/'){
-    ts.tm_year = atoi(str) - 1900;
+    ts.tm_year = tcatoi(str) - 1900;
     if((pv = strchr(str, '/')) != NULL && pv - str == 4){
       char *rp = pv + 1;
-      ts.tm_mon = atoi(rp) - 1;
+      ts.tm_mon = tcatoi(rp) - 1;
       if((pv = strchr(rp, '/')) != NULL && pv - str == 7){
         rp = pv + 1;
-        ts.tm_mday = atoi(rp);
+        ts.tm_mday = tcatoi(rp);
         if((pv = strchr(rp, ' ')) != NULL && pv - str == 10){
           rp = pv + 1;
-          ts.tm_hour = atoi(rp);
+          ts.tm_hour = tcatoi(rp);
           if((pv = strchr(rp, ':')) != NULL && pv - str == 13){
             rp = pv + 1;
-            ts.tm_min = atoi(rp);
+            ts.tm_min = tcatoi(rp);
           }
           if((pv = strchr(rp, ':')) != NULL && pv - str == 16){
             rp = pv + 1;
-            ts.tm_sec = atoi(rp);
+            ts.tm_sec = tcatoi(rp);
           }
           if((pv = strchr(rp, '.')) != NULL && pv - str >= 19) rp = pv + 1;
           strtol(rp, &pv, 10);
           if((*pv == '+' || *pv == '-') && strlen(pv) >= 6 && pv[3] == ':')
-            ts.tm_sec -= (atoi(pv + 1) * 3600 + atoi(pv + 4) * 60) * (pv[0] == '+' ? 1 : -1);
+            ts.tm_sec -= (tcatoi(pv + 1) * 3600 + tcatoi(pv + 4) * 60) * (pv[0] == '+' ? 1 : -1);
         }
       }
     }
@@ -5055,7 +5093,7 @@ int64_t tcstrmktime(const char *str){
   while(*crp == ' '){
     crp++;
   }
-  ts.tm_mday = atoi(crp);
+  ts.tm_mday = tcatoi(crp);
   while((*crp >= '0' && *crp <= '9') || *crp == ' '){
     crp++;
   }
@@ -5090,7 +5128,7 @@ int64_t tcstrmktime(const char *str){
   while(*crp == ' '){
     crp++;
   }
-  ts.tm_year = atoi(crp);
+  ts.tm_year = tcatoi(crp);
   if(ts.tm_year >= 1969) ts.tm_year -= 1900;
   while(*crp >= '0' && *crp <= '9'){
     crp++;
@@ -5101,9 +5139,9 @@ int64_t tcstrmktime(const char *str){
   if(ts.tm_mday > 0 && ts.tm_mon >= 0 && ts.tm_year >= 0){
     int clen = strlen(crp);
     if(clen >= 8 && crp[2] == ':' && crp[5] == ':'){
-      ts.tm_hour = atoi(crp + 0);
-      ts.tm_min = atoi(crp + 3);
-      ts.tm_sec = atoi(crp + 6);
+      ts.tm_hour = tcatoi(crp + 0);
+      ts.tm_min = tcatoi(crp + 3);
+      ts.tm_sec = tcatoi(crp + 6);
       if(clen >= 14 && crp[8] == ' ' && (crp[9] == '+' || crp[9] == '-')){
         ts.tm_sec -= ((crp[10] - '0') * 36000 + (crp[11] - '0') * 3600 +
                       (crp[12] - '0') * 600 + (crp[13] - '0') * 60) * (crp[9] == '+' ? 1 : -1);
@@ -5396,7 +5434,7 @@ void *tcstrjoin4(const TCMAP *map, int *sp){
 /* Get the canonicalized absolute path of a file. */
 char *tcrealpath(const char *path){
   assert(path);
-  char buf[PATH_MAX];
+  char buf[PATH_MAX+1];
   if(!realpath(path, buf)) return NULL;
   return tcstrdup(buf);
 }
@@ -5938,7 +5976,7 @@ char *tcurlresolve(const char *base, const char *target){
   }
   int num;
   char numbuf[TCNUMBUFSIZ];
-  if((vbuf = tcmapget2(belems, "port")) != NULL && (num = atoi(vbuf)) != port && num > 0){
+  if((vbuf = tcmapget2(belems, "port")) != NULL && (num = tcatoi(vbuf)) != port && num > 0){
     sprintf(numbuf, ":%d", num);
     tcxstrcat2(rbuf, numbuf);
   }

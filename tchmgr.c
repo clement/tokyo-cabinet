@@ -91,7 +91,7 @@ static void usage(void){
   fprintf(stderr, "usage:\n");
   fprintf(stderr, "  %s create [-tl] [-td|-tb|-tt|-tx] path [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "  %s inform [-nl|-nb] path\n", g_progname);
-  fprintf(stderr, "  %s put [-nl|-nb] [-sx] [-dk|-dc] path key value\n", g_progname);
+  fprintf(stderr, "  %s put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] path key value\n", g_progname);
   fprintf(stderr, "  %s out [-nl|-nb] [-sx] path key\n", g_progname);
   fprintf(stderr, "  %s get [-nl|-nb] [-sx] [-px] [-pz] path key\n", g_progname);
   fprintf(stderr, "  %s list [-nl|-nb] [-m num] [-pv] [-px] [-fm str] path\n", g_progname);
@@ -242,6 +242,10 @@ static int runput(int argc, char **argv){
         dmode = -1;
       } else if(!strcmp(argv[i], "-dc")){
         dmode = 1;
+      } else if(!strcmp(argv[i], "-dai")){
+        dmode = 10;
+      } else if(!strcmp(argv[i], "-dad")){
+        dmode = 11;
       } else if(!strcmp(argv[i], "-sx")){
         sx = true;
       } else {
@@ -595,6 +599,18 @@ static int procput(const char *path, const char *kbuf, int ksiz, const char *vbu
     break;
   case 1:
     if(!tchdbputcat(hdb, kbuf, ksiz, vbuf, vsiz)){
+      printerr(hdb);
+      err = true;
+    }
+    break;
+  case 10:
+    if(tchdbaddint(hdb, kbuf, ksiz, tcatoi(vbuf)) == INT_MIN){
+      printerr(hdb);
+      err = true;
+    }
+    break;
+  case 11:
+    if(isnan(tchdbadddouble(hdb, kbuf, ksiz, tcatof(vbuf)))){
       printerr(hdb);
       err = true;
     }

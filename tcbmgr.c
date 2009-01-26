@@ -97,7 +97,7 @@ static void usage(void){
   fprintf(stderr, "  %s create [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] path"
           " [lmemb [nmemb [bnum [apow [fpow]]]]]\n", g_progname);
   fprintf(stderr, "  %s inform [-nl|-nb] path\n", g_progname);
-  fprintf(stderr, "  %s put [-cd|-ci|-cj] [-nl|-nb] [-sx] [-dk|-dc|-dd|-db] path"
+  fprintf(stderr, "  %s put [-cd|-ci|-cj] [-nl|-nb] [-sx] [-dk|-dc|-dd|-db|-dai|-dad] path"
           " key value\n", g_progname);
   fprintf(stderr, "  %s out [-cd|-ci|-cj] [-nl|-nb] [-sx] path key\n", g_progname);
   fprintf(stderr, "  %s get [-cd|-ci|-cj] [-nl|-nb] [-sx] [-px] [-pz] path key\n", g_progname);
@@ -282,6 +282,10 @@ static int runput(int argc, char **argv){
         dmode = 2;
       } else if(!strcmp(argv[i], "-db")){
         dmode = 3;
+      } else if(!strcmp(argv[i], "-dai")){
+        dmode = 10;
+      } else if(!strcmp(argv[i], "-dad")){
+        dmode = 11;
       } else if(!strcmp(argv[i], "-sx")){
         sx = true;
       } else {
@@ -712,6 +716,18 @@ static int procput(const char *path, const char *kbuf, int ksiz, const char *vbu
     break;
   case 3:
     if(!tcbdbputdupback(bdb, kbuf, ksiz, vbuf, vsiz)){
+      printerr(bdb);
+      err = true;
+    }
+    break;
+  case 10:
+    if(tcbdbaddint(bdb, kbuf, ksiz, tcatoi(vbuf)) == INT_MIN){
+      printerr(bdb);
+      err = true;
+    }
+    break;
+  case 11:
+    if(isnan(tcbdbadddouble(bdb, kbuf, ksiz, tcatof(vbuf)))){
       printerr(bdb);
       err = true;
     }

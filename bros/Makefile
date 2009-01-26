@@ -11,7 +11,8 @@
 SHELL = /bin/sh
 
 # Targets
-MYBINS = tctest qdbmtest ndbmtest sdbmtest gdbmtest tdbtest cdbtest bdbtest maptest sqltest
+MYBINS = tctest qdbmtest ndbmtest sdbmtest gdbmtest tdbtest cdbtest bdbtest \
+  maptest sqltest cmpsqltctest
 
 
 
@@ -116,6 +117,16 @@ sqltest : sqltest.c
 	gcc -I/usr/local/include -D_GNU_SOURCE=1 \
 	  -Wall -O3 -o $@ sqltest.c \
 	  -static -L/usr/local/lib -lsqlite3 -lpthread -ldl -lc
+
+
+cmpsqltctest : cmpsqltctest.c
+	LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):.:.." ; PATH="$(PATH):.:.." ; \
+	  export LD_LIBRARY_PATH PATH ; ldflags=`tcucodec conf -l` ; \
+	  [ -z "$$ldflags" ] && \
+	    ldflags="-L/usr/local/lib -ltokyocabinet -lz -lpthread -lm -lc" ; \
+	  gcc -std=c99 -I.. -I/usr/local/include -D_GNU_SOURCE=1 \
+	    -Wall -pedantic -O3 -o $@ cmpsqltctest.c \
+	    -static -L. -L.. -lsqlite3 -lpthread -ldl $$ldflags
 
 
 

@@ -19,7 +19,7 @@ Create a database file.
 Print miscellaneous information to the standard output.
 .RE
 .br
-\fBtcbmgr put \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-sx\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR]\fB \fIpath\fB \fIkey\fB \fIvalue\fB\fR
+\fBtcbmgr put \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-sx\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dd\fR|\fB\-db\fR|\fB\-dai\fR|\fB\-dad\fR]\fB \fIpath\fB \fIkey\fB \fIvalue\fB\fR
 .RS
 Store a record.
 .RE
@@ -78,13 +78,21 @@ Options feature the following.
 .br
 \fB\-nb\fR : enable the option `BDBLCKNB'.
 .br
-\fB\-sx\fR : input data is evaluated as a hexadecimal data string.
+\fB\-sx\fR : the input data is evaluated as a hexadecimal data string.
 .br
-\fB\-dk\fR : use the function `tchdbputkeep' instead of `tchdbput'.
+\fB\-dk\fR : use the function `tcbdbputkeep' instead of `tcbdbput'.
 .br
-\fB\-dc\fR : use the function `tchdbputcat' instead of `tchdbput'.
+\fB\-dc\fR : use the function `tcbdbputcat' instead of `tcbdbput'.
 .br
-\fB\-px\fR : output data is converted into a hexadecimal data string.
+\fB\-dd\fR : use the function `tcbdbputdup' instead of `tcbdbput'.
+.br
+\fB\-db\fR : use the function `tcbdbputdupback' instead of `tcbdbput'.
+.br
+\fB\-dai\fR : use the function `tcbdbaddint' instead of `tcbdbput'.
+.br
+\fB\-dad\fR : use the function `tcbdbadddouble' instead of `tcbdbput'.
+.br
+\fB\-px\fR : the output data is converted into a hexadecimal data string.
 .br
 \fB\-pz\fR : do not append line feed at the end of the output.
 .br

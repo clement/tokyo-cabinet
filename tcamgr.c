@@ -27,7 +27,9 @@ const char *g_progname;                  // program name
 int main(int argc, char **argv);
 static void usage(void);
 static void printerr(TCADB *adb);
-static int printdata(const char *ptr, int size, bool px);
+static int sepstrtochr(const char *str);
+static char *strtozsv(const char *str, int sep, int *sp);
+static int printdata(const char *ptr, int size, bool px, int sep);
 static int runcreate(int argc, char **argv);
 static int runinform(int argc, char **argv);
 static int runput(int argc, char **argv);
@@ -41,9 +43,9 @@ static int procinform(const char *name);
 static int procput(const char *name, const char *kbuf, int ksiz, const char *vbuf, int vsiz,
                    int dmode);
 static int procout(const char *name, const char *kbuf, int ksiz);
-static int procget(const char *name, const char *kbuf, int ksiz, bool px, bool pz);
-static int proclist(const char *name, int max, bool pv, bool px, const char *fmstr);
-static int procmisc(const char *name, const char *func, const TCLIST *args, bool px);
+static int procget(const char *name, const char *kbuf, int ksiz, int sep, bool px, bool pz);
+static int proclist(const char *name, int sep, int max, bool pv, bool px, const char *fmstr);
+static int procmisc(const char *name, const char *func, const TCLIST *args, int sep, bool px);
 static int procversion(void);
 
 
@@ -82,14 +84,35 @@ static void usage(void){
   fprintf(stderr, "usage:\n");
   fprintf(stderr, "  %s create name\n", g_progname);
   fprintf(stderr, "  %s inform name\n", g_progname);
-  fprintf(stderr, "  %s put [-sx] [-dk|-dc] name key value\n", g_progname);
-  fprintf(stderr, "  %s out [-sx] name key\n", g_progname);
-  fprintf(stderr, "  %s get [-sx] [-px] [-pz] name key\n", g_progname);
-  fprintf(stderr, "  %s list [-m num] [-pv] [-px] [-fm str] name\n", g_progname);
-  fprintf(stderr, "  %s misc [-sx] [-px] name func [arg...]\n", g_progname);
+  fprintf(stderr, "  %s put [-sx] [-sep chr] [-dk|-dc|-dai|-dad] name key value\n", g_progname);
+  fprintf(stderr, "  %s out [-sx] [-sep chr] name key\n", g_progname);
+  fprintf(stderr, "  %s get [-sx] [-sep chr] [-px] [-pz] name key\n", g_progname);
+  fprintf(stderr, "  %s list [-sep chr] [-m num] [-pv] [-px] [-fm str] name\n", g_progname);
+  fprintf(stderr, "  %s misc [-sx] [-sep chr] [-px] name func [arg...]\n", g_progname);
   fprintf(stderr, "  %s version\n", g_progname);
   fprintf(stderr, "\n");
   exit(1);
+}
+
+
+/* get the character of separation string */
+static int sepstrtochr(const char *str){
+  if(!strcmp(str, "\\t")) return '\t';
+  if(!strcmp(str, "\\r")) return '\r';
+  if(!strcmp(str, "\\n")) return '\n';
+  return *(unsigned char *)str;
+}
+
+
+/* encode a string as a zero separaterd string */
+static char *strtozsv(const char *str, int sep, int *sp){
+ int size = strlen(str);
+ char *buf = tcmemdup(str, size);
+ for(int i = 0; i < size; i++){
+   if(buf[i] == sep) buf[i] = '\0';
+ }
+ *sp = size;
+ return buf;
 }
 
 
@@ -100,12 +123,19 @@ static void printerr(TCADB *adb){
 
 
 /* print record data */
-static int printdata(const char *ptr, int size, bool px){
+static int printdata(const char *ptr, int size, bool px, int sep){
   int len = 0;
   while(size-- > 0){
     if(px){
       if(len > 0) putchar(' ');
       len += printf("%02X", *(unsigned char *)ptr);
+    } else if(sep > 0){
+      if(*ptr == '\0'){
+        putchar(sep);
+      } else {
+        putchar(*ptr);
+      }
+      len++;
     } else {
       putchar(*ptr);
       len++;
@@ -161,14 +191,22 @@ static int runput(int argc, char **argv){
   char *value = NULL;
   int dmode = 0;
   bool sx = false;
+  int sep = -1;
   for(int i = 2; i < argc; i++){
     if(!name && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-dk")){
         dmode = -1;
       } else if(!strcmp(argv[i], "-dc")){
         dmode = 1;
+      } else if(!strcmp(argv[i], "-dai")){
+        dmode = 10;
+      } else if(!strcmp(argv[i], "-dad")){
+        dmode = 11;
       } else if(!strcmp(argv[i], "-sx")){
         sx = true;
+      } else if(!strcmp(argv[i], "-sep")){
+        if(++i >= argc) usage();
+        sep = sepstrtochr(argv[i]);
       } else {
         usage();
       }
@@ -188,6 +226,9 @@ static int runput(int argc, char **argv){
   if(sx){
     kbuf = tchexdecode(key, &ksiz);
     vbuf = tchexdecode(value, &vsiz);
+  } else if(sep > 0){
+    kbuf = strtozsv(key, sep, &ksiz);
+    vbuf = strtozsv(value, sep, &vsiz);
   } else {
     ksiz = strlen(key);
     kbuf = tcmemdup(key, ksiz);
@@ -206,10 +247,14 @@ static int runout(int argc, char **argv){
   char *name = NULL;
   char *key = NULL;
   bool sx = false;
+  int sep = -1;
   for(int i = 2; i < argc; i++){
     if(!name && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-sx")){
         sx = true;
+      } else if(!strcmp(argv[i], "-sep")){
+        if(++i >= argc) usage();
+        sep = sepstrtochr(argv[i]);
       } else {
         usage();
       }
@@ -226,6 +271,8 @@ static int runout(int argc, char **argv){
   char *kbuf;
   if(sx){
     kbuf = tchexdecode(key, &ksiz);
+  } else if(sep > 0){
+    kbuf = strtozsv(key, sep, &ksiz);
   } else {
     ksiz = strlen(key);
     kbuf = tcmemdup(key, ksiz);
@@ -241,12 +288,16 @@ static int runget(int argc, char **argv){
   char *name = NULL;
   char *key = NULL;
   bool sx = false;
+  int sep = -1;
   bool px = false;
   bool pz = false;
   for(int i = 2; i < argc; i++){
     if(!name && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-sx")){
         sx = true;
+      } else if(!strcmp(argv[i], "-sep")){
+        if(++i >= argc) usage();
+        sep = sepstrtochr(argv[i]);
       } else if(!strcmp(argv[i], "-px")){
         px = true;
       } else if(!strcmp(argv[i], "-pz")){
@@ -267,12 +318,14 @@ static int runget(int argc, char **argv){
   char *kbuf;
   if(sx){
     kbuf = tchexdecode(key, &ksiz);
+  } else if(sep > 0){
+    kbuf = strtozsv(key, sep, &ksiz);
   } else {
     ksiz = strlen(key);
     kbuf = tcmemdup(key, ksiz);
   }
   name = tcsprintf("%s#mode=r", name);
-  int rv = procget(name, kbuf, ksiz, px, pz);
+  int rv = procget(name, kbuf, ksiz, sep, px, pz);
   tcfree(name);
   tcfree(kbuf);
   return rv;
@@ -282,13 +335,17 @@ static int runget(int argc, char **argv){
 /* parse arguments of list command */
 static int runlist(int argc, char **argv){
   char *name = NULL;
+  int sep = -1;
   int max = -1;
   bool pv = false;
   bool px = false;
   char *fmstr = NULL;
   for(int i = 2; i < argc; i++){
     if(!name && argv[i][0] == '-'){
-      if(!strcmp(argv[i], "-m")){
+      if(!strcmp(argv[i], "-sep")){
+        if(++i >= argc) usage();
+        sep = sepstrtochr(argv[i]);
+      } else if(!strcmp(argv[i], "-m")){
         if(++i >= argc) usage();
         max = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-pv")){
@@ -309,7 +366,7 @@ static int runlist(int argc, char **argv){
   }
   if(!name) usage();
   name = tcsprintf("%s#mode=r", name);
-  int rv = proclist(name, max, pv, px, fmstr);
+  int rv = proclist(name, sep, max, pv, px, fmstr);
   tcfree(name);
   return rv;
 }
@@ -321,11 +378,15 @@ static int runmisc(int argc, char **argv){
   char *func = NULL;
   TCLIST *args = tcmpoollistnew(tcmpoolglobal());
   bool sx = false;
+  int sep = -1;
   bool px = false;
   for(int i = 2; i < argc; i++){
     if(!name && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-sx")){
         sx = true;
+      } else if(!strcmp(argv[i], "-sep")){
+        if(++i >= argc) usage();
+        sep = sepstrtochr(argv[i]);
       } else if(!strcmp(argv[i], "-px")){
         px = true;
       } else {
@@ -341,13 +402,18 @@ static int runmisc(int argc, char **argv){
         char *buf = tchexdecode(argv[i], &size);
         tclistpush(args, buf, size);
         tcfree(buf);
+      } else if(sep > 0){
+        int size;
+        char *buf = strtozsv(argv[i], sep, &size);
+        tclistpush(args, buf, size);
+        tcfree(buf);
       } else {
         tclistpush2(args, argv[i]);
       }
     }
   }
   if(!name || !func) usage();
-  int rv = procmisc(name, func, args, px);
+  int rv = procmisc(name, func, args, sep, px);
   return rv;
 }
 
@@ -430,6 +496,18 @@ static int procput(const char *name, const char *kbuf, int ksiz, const char *vbu
       err = true;
     }
     break;
+  case 10:
+    if(tcadbaddint(adb, kbuf, ksiz, tcatoi(vbuf)) == INT_MIN){
+      printerr(adb);
+      err = true;
+    }
+    break;
+  case 11:
+    if(isnan(tcadbadddouble(adb, kbuf, ksiz, tcatof(vbuf)))){
+      printerr(adb);
+      err = true;
+    }
+    break;
   default:
     if(!tcadbput(adb, kbuf, ksiz, vbuf, vsiz)){
       printerr(adb);
@@ -469,7 +547,7 @@ static int procout(const char *name, const char *kbuf, int ksiz){
 
 
 /* perform get command */
-static int procget(const char *name, const char *kbuf, int ksiz, bool px, bool pz){
+static int procget(const char *name, const char *kbuf, int ksiz, int sep, bool px, bool pz){
   TCADB *adb = tcadbnew();
   if(!tcadbopen(adb, name)){
     printerr(adb);
@@ -480,7 +558,7 @@ static int procget(const char *name, const char *kbuf, int ksiz, bool px, bool p
   int vsiz;
   char *vbuf = tcadbget(adb, kbuf, ksiz, &vsiz);
   if(vbuf){
-    printdata(vbuf, vsiz, px);
+    printdata(vbuf, vsiz, px, sep);
     if(!pz) putchar('\n');
     tcfree(vbuf);
   } else {
@@ -497,7 +575,7 @@ static int procget(const char *name, const char *kbuf, int ksiz, bool px, bool p
 
 
 /* perform list command */
-static int proclist(const char *name, int max, bool pv, bool px, const char *fmstr){
+static int proclist(const char *name, int sep, int max, bool pv, bool px, const char *fmstr){
   TCADB *adb = tcadbnew();
   if(!tcadbopen(adb, name)){
     printerr(adb);
@@ -510,13 +588,13 @@ static int proclist(const char *name, int max, bool pv, bool px, const char *fms
     for(int i = 0; i < tclistnum(keys); i++){
       int ksiz;
       const char *kbuf = tclistval(keys, i, &ksiz);
-      printdata(kbuf, ksiz, px);
+      printdata(kbuf, ksiz, px, sep);
       if(pv){
         int vsiz;
         char *vbuf = tcadbget(adb, kbuf, ksiz, &vsiz);
         if(vbuf){
           putchar('\t');
-          printdata(vbuf, vsiz, px);
+          printdata(vbuf, vsiz, px, sep);
           tcfree(vbuf);
         }
       }
@@ -532,13 +610,13 @@ static int proclist(const char *name, int max, bool pv, bool px, const char *fms
     char *kbuf;
     int cnt = 0;
     while((kbuf = tcadbiternext(adb, &ksiz)) != NULL){
-      printdata(kbuf, ksiz, px);
+      printdata(kbuf, ksiz, px, sep);
       if(pv){
         int vsiz;
         char *vbuf = tcadbget(adb, kbuf, ksiz, &vsiz);
         if(vbuf){
           putchar('\t');
-          printdata(vbuf, vsiz, px);
+          printdata(vbuf, vsiz, px, sep);
           tcfree(vbuf);
         }
       }
@@ -557,7 +635,7 @@ static int proclist(const char *name, int max, bool pv, bool px, const char *fms
 
 
 /* perform misc command */
-static int procmisc(const char *name, const char *func, const TCLIST *args, bool px){
+static int procmisc(const char *name, const char *func, const TCLIST *args, int sep, bool px){
   TCADB *adb = tcadbnew();
   if(!tcadbopen(adb, name)){
     printerr(adb);
@@ -570,7 +648,7 @@ static int procmisc(const char *name, const char *func, const TCLIST *args, bool
     for(int i = 0; i < tclistnum(res); i++){
       int rsiz;
       const char *rbuf = tclistval(res, i, &rsiz);
-      printdata(rbuf, rsiz, px);
+      printdata(rbuf, rsiz, px, sep);
       printf("\n");
     }
     tclistdel(res);

@@ -100,7 +100,8 @@ static void usage(void){
   fprintf(stderr, "usage:\n");
   fprintf(stderr, "  %s create [-tl] [-td|-tb|-tt|-tx] path [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "  %s inform [-nl|-nb] path\n", g_progname);
-  fprintf(stderr, "  %s put [-nl|-nb] [-sx] [-dk|-dc] path pkey [cols...]\n", g_progname);
+  fprintf(stderr, "  %s put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] path pkey [cols...]\n",
+          g_progname);
   fprintf(stderr, "  %s out [-nl|-nb] [-sx] path pkey\n", g_progname);
   fprintf(stderr, "  %s get [-nl|-nb] [-sx] [-px] [-pz] path pkey\n", g_progname);
   fprintf(stderr, "  %s list [-nl|-nb] [-m num] [-pv] [-px] [-fm str] path\n", g_progname);
@@ -108,7 +109,7 @@ static void usage(void){
           " [-rm] path [name op expr ...]\n", g_progname);
   fprintf(stderr, "  %s optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] path"
           " [bnum [apow [fpow]]]\n", g_progname);
-  fprintf(stderr, "  %s setindex [-nl|-nb] [-cd|-cv] path name\n", g_progname);
+  fprintf(stderr, "  %s setindex [-nl|-nb] [-it type] path name\n", g_progname);
   fprintf(stderr, "  %s importtsv [-nl|-nb] [-sc] path [file]\n", g_progname);
   fprintf(stderr, "  %s version\n", g_progname);
   fprintf(stderr, "\n");
@@ -258,6 +259,10 @@ static int runput(int argc, char **argv){
         dmode = -1;
       } else if(!strcmp(argv[i], "-dc")){
         dmode = 1;
+      } else if(!strcmp(argv[i], "-dai")){
+        dmode = 10;
+      } else if(!strcmp(argv[i], "-dad")){
+        dmode = 11;
       } else if(!strcmp(argv[i], "-sx")){
         sx = true;
       } else {
@@ -549,12 +554,9 @@ static int runsetindex(int argc, char **argv){
         omode |= TDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
         omode |= TDBOLCKNB;
-      } else if(!strcmp(argv[i], "-nb")){
-        omode |= TDBOLCKNB;
-      } else if(!strcmp(argv[i], "-cd")){
-        type = TDBITDECIMAL;
-      } else if(!strcmp(argv[i], "-cv")){
-        type = TDBITVOID;
+      } else if(!strcmp(argv[i], "-it")){
+        if(++i >= argc) usage();
+        type = tctdbstrtoindextype(argv[i]);
       } else {
         usage();
       }
@@ -567,6 +569,7 @@ static int runsetindex(int argc, char **argv){
     }
   }
   if(!path || !name) usage();
+  if(type < 0) usage();
   int rv = procsetindex(path, name, omode, type);
   return rv;
 }
@@ -717,6 +720,7 @@ static int procput(const char *path, const char *pkbuf, int pksiz, TCMAP *cols,
     pksiz = sprintf(pknumbuf, "%lld", (long long)tctdbgenuid(tdb));
     pkbuf = pknumbuf;
   }
+  const char *vbuf;
   switch(dmode){
   case -1:
     if(!tctdbputkeep(tdb, pkbuf, pksiz, cols)){
@@ -726,6 +730,22 @@ static int procput(const char *path, const char *pkbuf, int pksiz, TCMAP *cols,
     break;
   case 1:
     if(!tctdbputcat(tdb, pkbuf, pksiz, cols)){
+      printerr(tdb);
+      err = true;
+    }
+    break;
+  case 10:
+    vbuf = tcmapget2(cols, "_num");
+    if(!vbuf) vbuf = "1";
+    if(tctdbaddint(tdb, pkbuf, pksiz, tcatoi(vbuf)) == INT_MIN){
+      printerr(tdb);
+      err = true;
+    }
+    break;
+  case 11:
+    vbuf = tcmapget2(cols, "_num");
+    if(!vbuf) vbuf = "1.0";
+    if(isnan(tctdbadddouble(tdb, pkbuf, pksiz, tcatof(vbuf)))){
       printerr(tdb);
       err = true;
     }
@@ -904,66 +924,17 @@ static int procsearch(const char *path, TCLIST *conds, const char *oname, const 
     const char *name = tclistval2(conds, i);
     const char *opstr = tclistval2(conds, i + 1);
     const char *expr  = tclistval2(conds, i + 2);
-    int op = -1;
-    int flags = 0;
-    if(*opstr == '~' || *opstr == '!'){
-      flags |= TDBQCNEGATE;
-      opstr++;
-    }
-    if(*opstr == '+'){
-      flags |= TDBQCNOIDX;
-      opstr++;
-    }
-    if(!tcstricmp(opstr, "STREQ")){
-      op = TDBQCSTREQ;
-    } else if(!tcstricmp(opstr, "STRINC")){
-      op = TDBQCSTRINC;
-    } else if(!tcstricmp(opstr, "STRBW")){
-      op = TDBQCSTRBW;
-    } else if(!tcstricmp(opstr, "STREW")){
-      op = TDBQCSTREW;
-    } else if(!tcstricmp(opstr, "STRAND")){
-      op = TDBQCSTRAND;
-    } else if(!tcstricmp(opstr, "STROR")){
-      op = TDBQCSTROR;
-    } else if(!tcstricmp(opstr, "STROREQ")){
-      op = TDBQCSTROREQ;
-    } else if(!tcstricmp(opstr, "STRRX")){
-      op = TDBQCSTRRX;
-    } else if(!tcstricmp(opstr, "NUMEQ")){
-      op = TDBQCNUMEQ;
-    } else if(!tcstricmp(opstr, "NUMGT")){
-      op = TDBQCNUMGT;
-    } else if(!tcstricmp(opstr, "NUMGE")){
-      op = TDBQCNUMGE;
-    } else if(!tcstricmp(opstr, "NUMLT")){
-      op = TDBQCNUMLT;
-    } else if(!tcstricmp(opstr, "NUMLE")){
-      op = TDBQCNUMLE;
-    } else if(!tcstricmp(opstr, "NUMBT")){
-      op = TDBQCNUMBT;
-    } else if(!tcstricmp(opstr, "NUMOREQ")){
-      op = TDBQCNUMOREQ;
-    }
-    if(op >= 0) tctdbqryaddcond(qry, name, op | flags, expr);
+    int op = tctdbqrystrtocondop(opstr);
+    if(op >= 0) tctdbqryaddcond(qry, name, op, expr);
   }
   if(oname){
-    int type = -1;
-    if(!tcstricmp(otype, "STRASC")){
-      type = TDBQOSTRASC;
-    } else if(!tcstricmp(otype, "STRDESC")){
-      type = TDBQOSTRDESC;
-    } else if(!tcstricmp(otype, "NUMASC")){
-      type = TDBQONUMASC;
-    } else if(!tcstricmp(otype, "NUMDESC")){
-      type = TDBQONUMDESC;
-    }
+    int type = tctdbqrystrtoordertype(otype);
     if(type >= 0) tctdbqrysetorder(qry, oname, type);
   }
   if(max >= 0) tctdbqrysetmax(qry, max);
   if(rm){
     double stime = tctime();
-    if(!tctdbqryproc(qry, tctdbqryprocout, NULL)){
+    if(!tctdbqryprocout(qry)){
       printerr(tdb);
       err = true;
     }

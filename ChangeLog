@@ -1,3 +1,13 @@
+2009-01-21  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcatof): new function.
+
+	* tcbdb.c (tcbdbleafaddrec): allocation tuning of duplicated records was modified.
+
+	* tcadb.c: all methods now support the table database API.
+
+	- Release: 1.4.2
+
 2009-01-19  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tctdbsearchimpl): optimized with macros.

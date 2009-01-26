@@ -2272,6 +2272,14 @@ int64_t tcatoi(const char *str);
 int64_t tcatoix(const char *str);
 
 
+/* Convert a string to a real number.
+   `str' specifies a string.
+   The return value is the real number.  If the string does not contain numeric expression, 0.0
+   is returned.
+   This function is equivalent to `atof' except that it does not depend on the locale. */
+double tcatof(const char *str);
+
+
 /* Check whether a string matches a regular expression.
    `str' specifies the target string.
    `regex' specifies the regular expression string.  If it begins with `*', the trailing
@@ -3155,8 +3163,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.1"
-#define _TC_LIBVER     706
+#define _TC_VERSION    "1.4.2"
+#define _TC_LIBVER     707
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

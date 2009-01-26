@@ -27,6 +27,8 @@
 #define TDBDEFBNUM     131071            // default bucket number
 #define TDBDEFAPOW     4                 // default alignment power
 #define TDBDEFFPOW     10                // default free block pool power
+#define TDBDEFLCNUM    2048              // default number of leaf cache
+#define TDBDEFNCNUM    512               // default number of node cache
 #define TDBDEFXMSIZ    ((1LL<<20)*64)    // default size of the extra mapped memory
 #define TDBIDXSUFFIX   "idx"             // suffix of column index file
 #define TDBNUMCNTCOL   "_num"            // column name of number counting
@@ -88,6 +90,7 @@ static int tdbcmpsortkeynumdesc(const TDBSORTKEY *a, const TDBSORTKEY *b);
 static bool tctdbidxput(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols);
 static bool tctdbidxout(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols);
 static bool tctdbforeachimpl(TCTDB *tdb, TCITER iter, void *op);
+static int tctdbqryprocoutcb(const void *pkbuf, int pksiz, TCMAP *cols, void *op);
 static bool tctdblockmethod(TCTDB *tdb, bool wr);
 static bool tctdbunlockmethod(TCTDB *tdb);
 
@@ -188,9 +191,9 @@ bool tctdbsetcache(TCTDB *tdb, int32_t rcnum, int32_t lcnum, int32_t ncnum){
     tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
     return false;
   }
-  tdb->lcnum = lcnum;
-  tdb->ncnum = ncnum;
-  return tchdbsetxmsiz(tdb->hdb, rcnum);
+  if(lcnum > 0) tdb->lcnum = lcnum;
+  if(ncnum > 0) tdb->ncnum = ncnum;
+  return tchdbsetcache(tdb->hdb, rcnum);
 }
 
 
@@ -820,7 +823,7 @@ TCLIST *tctdbqrysearch(TDBQRY *qry){
 }
 
 
-/* Process each corresponding record of a query object. */
+/* Process each record corresponding to a query object. */
 bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op){
   assert(qry && proc);
   TCTDB *tdb = qry->tdb;
@@ -868,6 +871,13 @@ bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op){
                (long long)getnum, (long long)putnum, (long long)outnum);
   TDBUNLOCKMETHOD(tdb);
   return !err;
+}
+
+
+/* Remove each record corresponding to a query object. */
+bool tctdbqryprocout(TDBQRY *qry){
+  assert(qry);
+  return tctdbqryproc(qry, tctdbqryprocoutcb, NULL);
 }
 
 
@@ -1091,13 +1101,90 @@ bool tctdbforeach(TCTDB *tdb, TCITER iter, void *op){
 }
 
 
-/* Answer to remove for each record of a query. */
-int tctdbqryprocout(const void *pkbuf, int pksiz, TCMAP *cols, void *op){
-  assert(pkbuf && pksiz >= 0 && cols);
-  if(!op || *(char *)op == '\0') return TDBQPOUT;
-  if(tcmapout(cols, op, strlen(op))) return TDBQPPUT;
-  return 0;
+/* Convert a string into the index type number. */
+int tctdbstrtoindextype(const char *str){
+  assert(str);
+  int type = -1;
+  int flags = 0;
+  if(*str == '+'){
+    flags |= TDBITKEEP;
+    str++;
+  }
+  if(!tcstricmp(str, "LEX") || !tcstricmp(str, "LEXICAL") || !tcstricmp(str, "STR")){
+    type = TDBITLEXICAL;
+  } else if(!tcstricmp(str, "DEC") || !tcstricmp(str, "DECIMAL") || !tcstricmp(str, "NUM")){
+    type = TDBITDECIMAL;
+  } else if(!tcstricmp(str, "VOID") || !tcstricmp(str, "NULL")){
+    type = TDBITVOID;
+  }
+  return type | flags;
 }
+
+
+/* Convert a string into the query operation number. */
+int tctdbqrystrtocondop(const char *str){
+  assert(str);
+  int op = -1;
+  int flags = 0;
+  if(*str == '~' || *str == '!'){
+    flags |= TDBQCNEGATE;
+    str++;
+  }
+  if(*str == '+'){
+    flags |= TDBQCNOIDX;
+    str++;
+  }
+  if(!tcstricmp(str, "STREQ")){
+    op = TDBQCSTREQ;
+  } else if(!tcstricmp(str, "STRINC")){
+    op = TDBQCSTRINC;
+  } else if(!tcstricmp(str, "STRBW")){
+    op = TDBQCSTRBW;
+  } else if(!tcstricmp(str, "STREW")){
+    op = TDBQCSTREW;
+  } else if(!tcstricmp(str, "STRAND")){
+    op = TDBQCSTRAND;
+  } else if(!tcstricmp(str, "STROR")){
+    op = TDBQCSTROR;
+  } else if(!tcstricmp(str, "STROREQ")){
+    op = TDBQCSTROREQ;
+  } else if(!tcstricmp(str, "STRRX")){
+    op = TDBQCSTRRX;
+  } else if(!tcstricmp(str, "NUMEQ")){
+    op = TDBQCNUMEQ;
+  } else if(!tcstricmp(str, "NUMGT")){
+    op = TDBQCNUMGT;
+  } else if(!tcstricmp(str, "NUMGE")){
+    op = TDBQCNUMGE;
+  } else if(!tcstricmp(str, "NUMLT")){
+    op = TDBQCNUMLT;
+  } else if(!tcstricmp(str, "NUMLE")){
+    op = TDBQCNUMLE;
+  } else if(!tcstricmp(str, "NUMBT")){
+    op = TDBQCNUMBT;
+  } else if(!tcstricmp(str, "NUMOREQ")){
+    op = TDBQCNUMOREQ;
+  }
+  return op | flags;
+}
+
+
+/* Convert a string into the query order type number. */
+int tctdbqrystrtoordertype(const char *str){
+  assert(str);
+  int type = -1;
+  if(!tcstricmp(str, "STRASC") || !tcstricmp(str, "STR")){
+    type = TDBQOSTRASC;
+  } else if(!tcstricmp(str, "STRDESC")){
+    type = TDBQOSTRDESC;
+  } else if(!tcstricmp(str, "NUMASC") || !tcstricmp(str, "NUM")){
+    type = TDBQONUMASC;
+  } else if(!tcstricmp(str, "NUMDESC")){
+    type = TDBQONUMDESC;
+  }
+  return type;
+}
+
 
 
 
@@ -1115,8 +1202,8 @@ static void tctdbclear(TCTDB *tdb){
   tdb->open = false;
   tdb->wmode = false;
   tdb->opts = 0;
-  tdb->lcnum = 0;
-  tdb->ncnum = 0;
+  tdb->lcnum = TDBDEFLCNUM;
+  tdb->ncnum = TDBDEFNCNUM;
   tdb->idxs = NULL;
   tdb->inum = 0;
   tdb->tran = false;
@@ -1356,13 +1443,13 @@ static TCMAP *tctdbgetimpl(TCTDB *tdb, const void *pkbuf, int pksiz){
    `num' specifies the additional value.
    If successful, the return value is the summation value, else, it is Not-a-Number. */
 static double tctdbaddnumber(TCTDB *tdb, const void *pkbuf, int pksiz, double num){
-  assert(tdb && pkbuf && pksiz);
+  assert(tdb && pkbuf && pksiz >= 0);
   int csiz;
   char *cbuf = tchdbget(tdb->hdb, pkbuf, pksiz, &csiz);
   TCMAP *cols = cbuf ? tcmapload(cbuf, csiz) : tcmapnew2(1);
   if(cbuf){
     const char *vbuf = tcmapget2(cols, TDBNUMCNTCOL);
-    if(vbuf) num += strtod(vbuf, NULL);
+    if(vbuf) num += tcatof(vbuf);
     TCFREE(cbuf);
   }
   char numbuf[TDBCNTBUFSIZ];
@@ -1643,6 +1730,11 @@ static bool tctdbtranabortimpl(TCTDB *tdb){
 static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
   assert(tdb && name);
   bool err = false;
+  bool keep = false;
+  if(type & TDBITKEEP){
+    type &= ~TDBITKEEP;
+    keep = true;
+  }
   bool del = false;
   TDBIDX *idxs = tdb->idxs;
   int inum = tdb->inum;
@@ -1650,6 +1742,10 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
     TDBIDX *idx = idxs + i;
     const char *path;
     if(!strcmp(idx->name, name)){
+      if(keep){
+        tctdbsetecode(tdb, TCEKEEP, __FILE__, __LINE__, __func__);
+        return false;
+      }
       switch(idx->type){
       case TDBITLEXICAL:
       case TDBITDECIMAL:
@@ -2979,7 +3075,7 @@ static int tdbcmpsortkeynumdesc(const TDBSORTKEY *a, const TDBSORTKEY *b){
    `cols' specifies a map object containing columns.
    If successful, the return value is true, else, it is false. */
 static bool tctdbidxput(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols){
-  assert(tdb && pkbuf && pksiz && cols);
+  assert(tdb && pkbuf && pksiz >= 0 && cols);
   bool err = false;
   TDBIDX *idxs = tdb->idxs;
   int inum = tdb->inum;
@@ -3027,7 +3123,7 @@ static bool tctdbidxput(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols){
    `cols' specifies a map object containing columns.
    If successful, the return value is true, else, it is false. */
 static bool tctdbidxout(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols){
-  assert(tdb && pkbuf && pksiz && cols);
+  assert(tdb && pkbuf && pksiz >= 0 && cols);
   bool err = false;
   TDBIDX *idxs = tdb->idxs;
   int inum = tdb->inum;
@@ -3125,6 +3221,17 @@ static bool tctdbforeachimpl(TCTDB *tdb, TCITER iter, void *op){
   }
   TCFREE(lkbuf);
   return true;
+}
+
+
+/* Answer to remove for each record of a query.
+   `pkbuf' is ignored.
+   `pksiz' is ignored.
+   `op' is ignored.
+   The return value is always `TDBQPOUT'. */
+static int tctdbqryprocoutcb(const void *pkbuf, int pksiz, TCMAP *cols, void *op){
+  assert(pkbuf && pksiz >= 0 && cols);
+  return TDBQPOUT;
 }
 
 

@@ -136,7 +136,7 @@ The function `tctdbsetcache' is set the caching parameters of a table database o
 `\fIrcnum\fR' specifies the maximum number of records to be cached.  If it is not more than 0, the record cache is disabled.  It is disabled by default.
 .RE
 .RS
-`\fIlcnum\fR' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 1024.
+`\fIlcnum\fR' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 2048.
 .RE
 .RS
 `\fIncnum\fR' specifies the maximum number of non\-leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 512.
@@ -887,7 +887,7 @@ The function `tctdbsetindex' is used in order to set a column index to a table d
 `\fIname\fR' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.
 .RE
 .RS
-`\fItype\fR' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITVOID', the index is removed.
+`\fItype\fR' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise or and the index exists, this function merely returns failure.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -997,7 +997,7 @@ Because the object of the return value is created with the function `tclistnew',
 .RE
 .RE
 .PP
-The function `tctdbqryproc' is used in order to process each corresponding record of a query object.
+The function `tctdbqryproc' is used in order to process each record corresponding to a query object.
 .PP
 .RS
 .br
@@ -1014,8 +1014,18 @@ The function `tctdbqryproc' is used in order to process each corresponding recor
 .RS
 If successful, the return value is true, else, it is false.
 .RE
+.RE
+.PP
+The function `tctdbqryprocout' is used in order to remove each record corresponding to a query object.
+.PP
 .RS
-The function `tctdbqryprocout' is built\-in and answers to remove each record.
+.br
+\fBbool tctdbqryprocout(TDBQRY *\fIqry\fB);\fR
+.RS
+`\fIqry\fR' specifies the query object of the database connected as a writer.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
 .RE
 .RE
 .PP

@@ -19,27 +19,27 @@ Create a database file.
 Print miscellaneous information to the standard output.
 .RE
 .br
-\fBtcamgr put \fR[\fB\-sx\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR]\fB \fIname\fB \fIkey\fB \fIvalue\fB\fR
+\fBtcamgr put \fR[\fB\-sx\fR]\fB \fR[\fB\-sep \fIchr\fB\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR]\fB \fIname\fB \fIkey\fB \fIvalue\fB\fR
 .RS
 Store a record.
 .RE
 .br
-\fBtcamgr out \fR[\fB\-sx\fR]\fB \fIname\fB \fIkey\fB\fR
+\fBtcamgr out \fR[\fB\-sx\fR]\fB \fR[\fB\-sep \fIchr\fB\fR]\fB \fIname\fB \fIkey\fB\fR
 .RS
 Remove a record.
 .RE
 .br
-\fBtcamgr get \fR[\fB\-sx\fR]\fB \fR[\fB\-px\fR]\fB \fR[\fB\-pz\fR]\fB \fIname\fB \fIkey\fB\fR
+\fBtcamgr get \fR[\fB\-sx\fR]\fB \fR[\fB\-sep \fIchr\fB\fR]\fB \fR[\fB\-px\fR]\fB \fR[\fB\-pz\fR]\fB \fIname\fB \fIkey\fB\fR
 .RS
 Print the value of a record.
 .RE
 .br
-\fBtcamgr list \fR[\fB\-m \fInum\fB\fR]\fB \fR[\fB\-pv\fR]\fB \fR[\fB\-px\fR]\fB \fR[\fB\-fm \fIstr\fB\fR]\fB \fIname\fB\fR
+\fBtcamgr list \fR[\fB\-sep \fIchr\fB\fR]\fB \fR[\fB\-m \fInum\fB\fR]\fB \fR[\fB\-pv\fR]\fB \fR[\fB\-px\fR]\fB \fR[\fB\-fm \fIstr\fB\fR]\fB \fIname\fB\fR
 .RS
 Print keys of all records, separated by line feeds.
 .RE
 .br
-\fBtcamgr misc \fR[\fB\-sx\fR]\fB \fR[\fB\-px\fR]\fB \fIname\fB \fIfunc\fB \fR[\fB\fIarg\fB...\fR]\fB\fR
+\fBtcamgr misc \fR[\fB\-sx\fR]\fB \fR[\fB\-sep \fIchr\fB\fR]\fB \fR[\fB\-px\fR]\fB \fIname\fB \fIfunc\fB \fR[\fB\fIarg\fB...\fR]\fB\fR
 .RS
 Call a versatile function for miscellaneous operations.
 .RE
@@ -53,13 +53,19 @@ Print the version information of Tokyo Cabinet.
 Options feature the following.
 .PP
 .RS
-\fB\-sx\fR : input data is evaluated as a hexadecimal data string.
+\fB\-sx\fR : the input data is evaluated as a hexadecimal data string.
+.br
+\fB\-sep \fIchr\fR\fR : specify the separator of the input data.
 .br
 \fB\-dk\fR : use the function `tcadbputkeep' instead of `tcadbput'.
 .br
 \fB\-dc\fR : use the function `tcadbputcat' instead of `tcadbput'.
 .br
-\fB\-px\fR : output data is converted into a hexadecimal data string.
+\fB\-dai\fR : use the function `tcadbaddint' instead of `tcadbput'.
+.br
+\fB\-dad\fR : use the function `tcadbadddouble' instead of `tcadbput'.
+.br
+\fB\-px\fR : the output data is converted into a hexadecimal data string.
 .br
 \fB\-pz\fR : do not append line feed at the end of the output.
 .br

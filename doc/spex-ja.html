@@ -21,7 +21,7 @@
 
 <body>
 
-<h1>Tokyo Cabinet第1版基本仕様書</h1>
+<h1 id="headline">Tokyo Cabinet第1版基本仕様書</h1>
 
 <div class="note">Copyright (C) 2006-2009 Mikio Hirabayashi</div>
 <div class="note">Last Update: Wed, 07 Jan 2009 01:03:53 +0900</div>
@@ -69,7 +69,7 @@
 
 <p>Tokyo CabinetはQDBMの後継であり、空間効率と時間効率と使いやすさを向上させた製品です。この節ではTokyo Cabinetの特徴について説明します。</p>
 
-<h3>DBM一族の最右翼</h3>
+<h3 id="features_dinosaur">DBM一族の最右翼</h3>
 
 <p>Tokyo CabinetはGDBMやQDBMの後継として次の点を目標として開発されました。これらの目標は達成されており、Tokyo Cabinetは従来のDBMを置き換える製品だと言えます。</p>
 
@@ -86,7 +86,7 @@
 
 <p>Tokyo Cabinetは高速に動作します。例えば100万件のレコードの登録にかかる時間は、ハッシュデータベースで0.7秒ほど、B+木データベースで1.6秒ほどです。そしてTokyo Cabinetのデータベースは小さいです。例えば1レコードあたりのオーバーヘッドは、ハッシュデータベースで16バイトほど、B+木データベースで5バイトほどです。さらにTokyo Cabinetで扱えるデータの規模は莫大です。最大8EB（9.22e18バイト）までのデータベースファイルを扱うことができます。</p>
 
-<h3>効率的なハッシュデータベースの実装</h3>
+<h3 id="features_tchdb">効率的なハッシュデータベースの実装</h3>
 
 <p>Tokyo Cabinetはレコードの探索にハッシュアルゴリズムを用います。バケット配列に十分な要素数があれば、レコードの探索にかかる時間計算量は O(1) です。すなわち、レコードの探索に必要な時間はデータベースの規模に関わらず一定です。追加や削除に関しても同様です。ハッシュ値の衝突はセパレートチェーン法で管理します。チェーンのデータ構造は二分探索木です。したがって、バケット配列の要素数が著しく少ない場合でも、探索等の時間計算量は O(log n) に抑えられます。</p>
 
@@ -98,7 +98,7 @@
 
 <p>一般的に、データベースの更新処理を続けるとファイル内の利用可能領域の断片化が起き、ファイルのサイズが肥大化してしまいます。Tokyo Cabinetは隣接する不要領域を連結して再利用し、またデータベースの最適化機能を備えることによってこの問題に対処します。既存のレコードの値をより大きなサイズの値に上書きする場合、そのレコードの領域をファイル中の別の位置に移動させる必要があります。この処理の時間計算量はレコードのサイズに依存するので、値を拡張していく場合には効率が悪くなります。しかし、Tokyo Cabinetはアラインメントによってこの問題に対処します。増分がパディングに収まれば領域を移動させる必要はありません。</p>
 
-<h3>便利なB+木データベースの実装</h3>
+<h3 id="features_tcbdb">便利なB+木データベースの実装</h3>
 
 <p>B+木データベースはハッシュデータベースより遅いのですが、ユーザが定義した順序に基づいて各レコードを参照できることが特長です。B+木は複数のレコードを整列させた状態で論理的なページにまとめて管理します。各ページに対してはB木すなわち多進平衡木によって階層化された疎インデックスが維持されます。したがって、各レコードの探索等にかかる時間計算量は O(log n) です。各レコードを順番に参照するためにカーソルが提供されます。カーソルの場所はキーを指定して飛ばすことができ、また現在の場所から次のレコードに進めたり前のレコードに戻したりすることができます。各ページは双方向リンクリストで編成されるので、カーソルを前後に移動させる操作の時間計算量は O(1) です。</p>
 
@@ -106,7 +106,7 @@
 
 <p>各ページを圧縮して保存する機能も提供されます。圧縮方式はZLIBのDeflateとBZIP2のブロックソーティングの2種類をサポートしています。同一ページ内の各レコードは似たようなパターンを持つため、Lempel-ZivやBWTなどのアルゴリズムを適用すると高い圧縮効率が期待できます。テキストデータを扱う場合、データベースのサイズが元の25%程度になります。データベースの規模が大きくディスクI/Oがボトルネックとなる場合は、圧縮機能を有効化すると処理速度が大幅に改善されます。</p>
 
-<h3>素朴な固定長データベースの実装</h3>
+<h3 id="features_tcfdb">素朴な固定長データベースの実装</h3>
 
 <p>固定長データベースは、キーが自然数でなくてはならず、また値のサイズが制限されますが、その条件を受諾できる場合には最も効率的です。レコード群は固定長の要素の配列として保持され、各レコードはキーの倍数から算出されるオフセットの位置に格納されます。したがって、各レコードの探索等にかかる時間計算量は O(1) です。提供される操作群はハッシュデータベースとほぼ同じです。</p>
 
@@ -114,7 +114,7 @@
 
 <p>データベースのサイズは、キーの変域と値の制限長に比例します。すなわち、キーの変域が小さく、値のサイズが小さいほど、空間効率は向上します。例えば、キーの最大値が100万で、値の制限長が100バイトの場合、データベースのサイズは100MBほどになります。RAM上に読み込まれるのは実際に参照されたレコードの周辺の領域のみなので、データベースのサイズは仮想メモリのサイズまで大きくすることができます。</p>
 
-<h3>柔軟なテーブルデータベースの実装</h3>
+<h3 id="features_tctdb">柔軟なテーブルデータベースの実装</h3>
 
 <p>テーブルデータベースは、単純なキーと値の構造ではなく、リレーショナルデータベースの表のような構造を表現します。各レコードは主キーで識別されるとともに、任意の文字列で名前を付けられたカラムの集合を値として持ちます。例えば、社員番号を主キーにして、名前や部署や給与などのコラムを構造化して格納することができます。リレーショナルデータベースと違ってデータスキーマを事前に定義する必要はなく、レコード毎に異なる種類のコラムを持たせることができます。</p>
 
@@ -122,7 +122,7 @@
 
 <p>コラムを使った検索やソートを高速化するために、コラム毎のインデックスを作成することができます。コラムには型の概念はありませんが、インデックスには文字列型もしくは数値型の区別があります。クエリオプティマイザは検索条件やソート条件に応じた最適な順序でインデックスを利用します。インデックスはB+木データベースの外部ファイルとして実装されます。</p>
 
-<h3>実用的な機能性</h3>
+<h3 id="features_practical">実用的な機能性</h3>
 
 <p>ハッシュデータベースとB+木データベースはトランザクション機構を提供します。トランザクションを開始してから終了するまでの一連の操作を一括してデータベースにコミットしたり、一連の更新操作を破棄してデータベースの状態をトランザクションの開始前の状態にロールバックしたりすることができます。トランザクションの分離レベルは2種類あります。データベースに対する全ての操作をトランザクション内で行うと直列化可能（serializable）トランザクションとなり、トランザクション外の操作を同時に行うと非コミット読み取り（read uncommitted）トランザクションとなります。耐久性はログ先行書き込みとシャドウページングによって担保されます。</p>
 
@@ -130,13 +130,13 @@
 
 <p>Tokyo CabinetのAPIの各関数はリエントラントであり、マルチスレッド環境で安全に利用することができます。別個のデータベースオブジェクトに対しては全ての操作を完全に並列に行うことができます。同一のデータベースオブジェクトに対しては、リードライトロックで排他制御を行います。すなわち、読み込みを行うスレッド同士は並列に実行でき、書き込みを行うスレッドは他の読み込みや書き込みをブロックします。</p>
 
-<h3>単純だが多様なインタフェース群</h3>
+<h3 id="features_simple">単純だが多様なインタフェース群</h3>
 
-<p>Tokyo Cabinetはオブジェクト指向に基づいた簡潔なAPIを提供します。データベースに対する全ての操作はデータベースオブジェクトにカプセル化され、開く（open）、閉じる（close）、挿入する（put）、削除する（out）、取得する（get）といった関数（メソッド）を呼ぶことでプログラミングを進めていけます。ハッシュデータベースとB+木データベースと固定長データベースのAPIは互いに酷似しているので、アプリケーションを一方から他方に移植することも簡単です。</p>
+<p>Tokyo Cabinetはオブジェクト指向に基づいた簡潔なAPIを提供します。データベースに対する全ての操作はデータベースオブジェクトにカプセル化され、開く（open）、閉じる（close）、挿入する（put）、削除する（out）、取得する（get）といった関数（メソッド）を呼ぶことでプログラミングを進めていけます。ハッシュデータベースとB+木データベースと固定長データベースのAPIは互いに酷似しているので、アプリケーションを一方から他方に移植することも簡単です。さらに、それらのAPI群を全く同じインターフェイスで操作するための抽象APIも提供されます。抽象APIを用いると実行時にデータベースの種類を決定することができます。</p>
 
 <p>メモリ上でレコードを簡単に扱うために、ユーティリティAPIが提供されます。リストやマップといった基本的なデータ構造をはじめ、メモリプールや文字列処理や符号処理など、プログラミングで良く使う機能を詰め込んでいます。</p>
 
-<p>C言語のAPIには、ユーティリティAPI、ハッシュデータベースAPI、B+木データベースAPI、固定長データベースAPI、テーブルデータベースAPI、抽象データベースAPIの6種類があります。各APIに対応したコマンドラインインタフェースも用意されています。それらはプロトタイピングやテストやデバッグなどで活躍するでしょう。Tokyo CabinetはC言語の他にも、PerlとRubyとJavaとLuaのAPIを提供します。Perl用APIはXS言語を用いてハッシュデータベースAPIとB+木データベースAPIと固定長データベースAPIを呼び出すものです。Ruby用APIはRubyのモジュールとしてハッシュデータベースAPIとB+木データベースAPIと固定長データベースAPIを呼び出すものです。Java用APIはJava Native Interfaceを用いてハッシュデータベースAPIとB+木データベースAPIと固定長データベースAPIを呼び出すものです。Lua用APIはLuaのモジュールとしてハッシュデータベースAPIとB+木データベースAPIと固定長データベースAPIを呼び出すものです。その他の言語のインターフェイスも第三者によって提供されるでしょう。</p>
+<p>C言語のAPIには、ユーティリティAPI、ハッシュデータベースAPI、B+木データベースAPI、固定長データベースAPI、テーブルデータベースAPI、抽象データベースAPIの6種類があります。各APIに対応したコマンドラインインタフェースも用意されています。それらはプロトタイピングやテストやデバッグなどで活躍するでしょう。Tokyo CabinetはC言語の他にも、PerlとRubyとJavaとLuaのAPIを提供します。その他の言語のインターフェイスも第三者によって提供されるでしょう。</p>
 
 <p>複数のプロセスが同時にデータベースを操作したい場合やリモートホストにあるデータベースを操作したい場合には、リモートサービスを使うと便利です。リモートサービスはデータベースサーバとそのアクセスライブラリからなり、アプリケーションはリモートデータベースAPIを介してデータベースサーバを操作することができます。HTTPやmemcachedプロトコルもサポートするので、ほぼ全てのプラットフォームからデータベースサーバを簡単に操作することができます。</p>
 
@@ -146,7 +146,7 @@
 
 <p>Tokyo Cabinetのソースパッケージからのインストール方法を説明します。バイナリパッケージのインストール方法についてはそれぞれのパッケージの説明書をご覧ください。</p>
 
-<h3>前提</h3>
+<h3 id="installation_preparation">前提</h3>
 
 <p>Tokyo Cabinetの現在バージョンは、UNIX系のOSで利用することができます。少なくとも、以下の環境では動作するはずです。</p>
 
@@ -164,7 +164,7 @@
 <li><a href="http://www.bzip.org/">bzip2</a> : 可逆データ圧縮。バージョン1.0.5以降推奨。</li>
 </ul>
 
-<h3>ビルドとインストール</h3>
+<h3 id="installation_installation">ビルドとインストール</h3>
 
 <p>Tokyo Cabinetの配布用アーカイブファイルを展開したら、作成されたディレクトリに入ってインストール作業を行います。</p>
 
@@ -188,7 +188,7 @@
 <pre>make install
 </pre>
 
-<h3>結果</h3>
+<h3 id="installation_result">結果</h3>
 
 <p>一連の作業が終ると、以下のファイルがインストールされます。</p>
 
@@ -226,7 +226,7 @@
 /usr/local/man/man3/...
 </pre>
 
-<h3>configureのオプション</h3>
+<h3 id="installation_option">configureのオプション</h3>
 
 <p>「<code>./configure</code>」を実行する際には、以下のオプションを指定することができます。</p>
 
@@ -247,7 +247,7 @@
 
 <p>`<code>--prefix</code>' などのオプションも一般的なUNIXソフトウェアのパッケージと同様に利用可能です。`<code>/usr/local</code>' 以下ではなく '<code>/usr</code>' 以下にインストールしたい場合は `<code>--prefix=/usr</code>' を指定してください。なお、ライブラリ検索パスに `<code>/usr/local/lib</code>' が入っていない環境では、Tokyo Cabinetのアプリケーションを実行する際に環境変数 `<code>LD_LIBRARY_PATH</code>' の値に `<code>/usr/local/lib</code>' を含めておくようにしてください。</p>
 
-<h3>ライブラリの使い方</h3>
+<h3 id="installation_library">ライブラリの使い方</h3>
 
 <p>Tokyo CabinetはC言語のAPIを提供し、それはC89標準（ANSI C）またはC99標準に準拠したプログラムから利用することができます。Tokyo Cabinetヘッダは `<code>tcutil.h</code>'、`<code>tchdb.h</code>'、`<code>tcbdb.h</code>'、`<code>tcadb.h</code>' として提供されますので、適宜それらをアプリケーションのソースコード中でインクルードした上で、APIの各種機能を利用してください。ライブラリは `<code>libtokyocabinet.a</code>' および `<code>libtokyocabinet.so</code>' として提供され、それらは `<code>libz.so</code>'、`<code>libpthread.so</code>'、`<code>libm.so</code>'、`<code>libc.so</code>' に依存しますので、アプリケーションプログラムをビルドする際のリンカオプションには `<code>-ltokyocabinet</code>'、`<code>-lz</code>'、`<code>-lbz2</code>'、`<code>-lpthread</code>'、`<code>-lm</code>'、`<code>-lc</code>' を加えてください。最も典型的なビルド手順は以下のようになります。</p>
 
@@ -263,7 +263,7 @@
 
 <p>ユーティリティAPIは、メモリ上で簡単にレコードを扱うためのルーチン集です。特に拡張可能文字列と配列リストがハッシュマップと順序木が便利です。`<code>tcutil.h</code>' にAPIの仕様の完全な記述があります。</p>
 
-<h3>概要</h3>
+<h3 id="tcutilapi_description">概要</h3>
 
 <p>ユーティリティAPIを使うためには、`<code>tcutil.h</code>' および関連する標準ヘッダファイルをインクルードしてください。通常、ソースファイルの冒頭付近で以下の記述を行います。</p>
 
@@ -276,7 +276,7 @@
 
 <p>拡張可能文字列を扱う際には、`<code>TCXSTR</code>' 型へのポインタをオブジェクトとして用います。拡張可能文字列オブジェクトは、関数 `<code>tcxstrnew</code>' で作成し、関数 `<code>tcxstrdel</code>' で破棄します。配列リストを扱う際には、`<code>TCLIST</code>' 型へのポインタをオブジェクトとして用います。リストオブジェクトは、関数 `<code>tclistnew</code>' で作成し、関数 `<code>tclistdel</code>' で破棄します。ハッシュマップを扱う際には、`<code>TCMAP</code>' 型へのポインタをオブジェクトとして用います。マップオブジェクトは、関数 `<code>tcmapopen</code>' で作成し、関数 `<code>tcmapdel</code>' で破棄します。順序木を扱う際には、`<code>TCTREE</code>' 型へのポインタをオブジェクトとして用います。ツリーオブジェクトは、関数 `<code>tctreeopen</code>' で作成し、関数 `<code>tctreedel</code>' で破棄します。作成したオブジェクトを使い終わったら必ず破棄してください。そうしないとメモリリークが発生します。</p>
 
-<h3>基礎的なユーティリティのAPI（英語御免）</h3>
+<h3 id="tcutilapi_basicapi">基礎的なユーティリティのAPI（英語御免）</h3>
 
 <p>The constant `tcversion' is the string containing the version information.</p>
 
@@ -348,7 +348,7 @@
 <dd>Although this function is just a wrapper of `free' call, this is useful in applications using another package of the `malloc' series.</dd>
 </dl>
 
-<h3>拡張可能文字列のAPI（英語御免）</h3>
+<h3 id="tcutilapi_xstrapi">拡張可能文字列のAPI（英語御免）</h3>
 
 <p>The function `tcxstrnew' is used in order to create an extensible string object.</p>
 
@@ -450,7 +450,7 @@
 <dd>Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.</dd>
 </dl>
 
-<h3>配列リストのAPI（英語御免）</h3>
+<h3 id="tcutilapi_listapi">配列リストのAPI（英語御免）</h3>
 
 <p>The function `tclistnew' is used in order to create a list object.</p>
 
@@ -713,7 +713,7 @@
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>ハッシュマップのAPI（英語御免）</h3>
+<h3 id="tcutilapi_mapapi">ハッシュマップのAPI（英語御免）</h3>
 
 <p>The function `tcmapnew' is used in order to create a map object.</p>
 
@@ -1006,7 +1006,7 @@
 <dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>順序木のAPI（英語御免）</h3>
+<h3 id="tcutilapi_treeapi">順序木のAPI（英語御免）</h3>
 
 <p>The function `tctreenew' is used in order to create a tree object.</p>
 
@@ -1292,7 +1292,7 @@
 <dd>Because the object of the return value is created with the function `tctreenew', it should be deleted with the function `tctreedel' when it is no longer in use.</dd>
 </dl>
 
-<h3>オンメモリハッシュデータベースのAPI（英語御免）</h3>
+<h3 id="tcutilapi_mdbapi">オンメモリハッシュデータベースのAPI（英語御免）</h3>
 
 <p>The function `tcmdbnew' is used in order to create an on-memory hash database object.</p>
 
@@ -1553,7 +1553,7 @@
 <dd>`<var>num</var>' specifies the number of records to be removed.</dd>
 </dl>
 
-<h3>オンメモリツリーデータベースのAPI（英語御免）</h3>
+<h3 id="tcutilapi_ndbapi">オンメモリツリーデータベースのAPI（英語御免）</h3>
 
 <p>The function `tcndbnew' is used in order to create an on-memory tree database object.</p>
 
@@ -1833,7 +1833,7 @@
 <dd>`<var>num</var>' specifies the number of records to be removed.</dd>
 </dl>
 
-<h3>メモリプールのAPI（英語御免）</h3>
+<h3 id="tcutilapi_mpoolapi">メモリプールのAPI（英語御免）</h3>
 
 <p>The function `tcmpoolnew' is used in order to create a memory pool object.</p>
 
@@ -1948,7 +1948,7 @@
 <dd>The global memory pool object is a singleton and assured to be deleted when the process is terminating normally.</dd>
 </dl>
 
-<h3>雑多なユーティリティのAPI（英語御免）</h3>
+<h3 id="tcutilapi_miscapi">雑多なユーティリティのAPI（英語御免）</h3>
 
 <p>The function `tclmax' is used in order to get the larger value of two integers.</p>
 
@@ -2171,6 +2171,15 @@
 <dd>The return value is the integer.  If the string does not contain numeric expression, 0 is returned.  If the integer overflows the domain, `INT64_MAX' or `INT64_MIN' is returned according to the sign.</dd>
 </dl>
 
+<p>The function `tcatof' is used in order to convert a string to a real number.</p>
+
+<dl class="api">
+<dt><code>double tcatof(const char *<var>str</var>);</code></dt>
+<dd>`<var>str</var>' specifies a string.</dd>
+<dd>The return value is the real number.  If the string does not contain numeric expression, 0.0 is returned.</dd>
+<dd>This function is equivalent to `atof' except that it does not depend on the locale.</dd>
+</dl>
+
 <p>The function `tcregexmatch' is used in order to check whether a string matches a regular expression.</p>
 
 <dl class="api">
@@ -2292,7 +2301,7 @@
 <dd>The return value is the day of week of the date.  0 means Sunday and 6 means Saturday.</dd>
 </dl>
 
-<h3>ファイルシステム関連ユーティリティのAPI（英語御免）</h3>
+<h3 id="tcutilapi_fsapi">ファイルシステム関連ユーティリティのAPI（英語御免）</h3>
 
 <p>The function `tcrealpath' is used in order to get the canonicalized absolute path of a file.</p>
 
@@ -2418,7 +2427,7 @@
 <dd>The command name and the arguments are quoted and meta characters are escaped.</dd>
 </dl>
 
-<h3>エンコーディング関連ユーティリティののAPI（英語御免）</h3>
+<h3 id="tcutilapi_encapi">エンコーディング関連ユーティリティののAPI（英語御免）</h3>
 
 <p>The function `tcurlencode' is used in order to encode a serial object with URL encoding.</p>
 
@@ -2741,7 +2750,7 @@
 <dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>コード例</h3>
+<h3 id="tcutilapi_example">コード例</h3>
 
 <p>拡張可能文字列と配列リストとハッシュマップを使ったコード例を以下に示します。</p>
 
@@ -2824,7 +2833,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tcutilapi_cli">CLI</h3>
 
 <p>ユーティリティAPIを簡単に利用するために、コマンドラインインターフェイスとして `<code>tcutest</code>' と `<code>tcumttest</code>'  と `<code>tcucodec</code>' が提供されます。</p>
 
@@ -2949,7 +2958,7 @@ int main(int argc, char **argv){
 
 <p>ハッシュデータベースは、ハッシュ表を単一のファイルに記録したデータベースです。それを扱うのがハッシュデータベースAPIです。`<code>tchdb.h</code>' にAPIの仕様の完全な記述があります。</p>
 
-<h3>概要</h3>
+<h3 id="tchdbapi_description">概要</h3>
 
 <p>ハッシュデータベースAPIを使うためには、`<code>tcutil.h</code>'、`<code>tchdb.h</code>' および関連する標準ヘッダファイルをインクルードしてください。通常、ソースファイルの冒頭付近で以下の記述を行います。</p>
 
@@ -2965,7 +2974,7 @@ int main(int argc, char **argv){
 
 <p>レコードの格納や探索を行う前提として、ハッシューデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tchdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tchdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。</p>
 
-<h3>API（英語ゴメン）</h3>
+<h3 id="tchdbapi_api">API（英語ゴメン）</h3>
 
 <p>The function `tchdberrmsg' is used in order to get the message string corresponding to an error code.</p>
 
@@ -3405,7 +3414,7 @@ int main(int argc, char **argv){
 <dd>The return value is the size of the database file or 0 if the object does not connect to any database file.</dd>
 </dl>
 
-<h3>コード例</h3>
+<h3 id="tchdbapi_example">コード例</h3>
 
 <p>ハッシュデータベースを使ったコード例を以下に示します。</p>
 
@@ -3471,7 +3480,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tchdbapi_cli">CLI</h3>
 
 <p>ハッシュデータベースAPIを簡単に利用するために、コマンドラインインターフェイスとして `<code>tchtest</code>' と `<code>tchmttest</code>' と `<code>tchmgr</code>' が提供されます。</p>
 
@@ -3560,7 +3569,7 @@ int main(int argc, char **argv){
 <dd>データベースファイルを作成する。</dd>
 <dt><code>tchmgr inform [-nl|-nb] <var>path</var></code></dt>
 <dd>データベースの雑多な情報を出力する。</dd>
-<dt><code>tchmgr put [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>key</var> <var>value</var></code></dt>
+<dt><code>tchmgr put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] <var>path</var> <var>key</var> <var>value</var></code></dt>
 <dd>レコードを追加する。</dd>
 <dt><code>tchmgr out [-nl|-nb] [-sx] <var>path</var> <var>key</var></code></dt>
 <dd>レコードを削除する。</dd>
@@ -3589,6 +3598,8 @@ int main(int argc, char **argv){
 <li><code>-sx</code> : 入力を16進数の文字列で行う。</li>
 <li><code>-dk</code> : 関数 `tchdbput' の代わりに関数 `tchdbputkeep' を用いる。</li>
 <li><code>-dc</code> : 関数 `tchdbput' の代わりに関数 `tchdbputcat' を用いる。</li>
+<li><code>-dai</code> : 関数 `tchdbput' の代わりに関数 `tchdbaddint' を用いる。</li>
+<li><code>-dad</code> : 関数 `tchdbput' の代わりに関数 `tchdbadddouble' を用いる。</li>
 <li><code>-px</code> : 出力を16進数の文字列で行う。</li>
 <li><code>-pz</code> : 出力の末尾に改行を付加しない。</li>
 <li><code>-m <var>num</var></code> : 出力の最大数を指定する。</li>
@@ -3606,7 +3617,7 @@ int main(int argc, char **argv){
 
 <p>B+木データベースは、B+木を単一のファイルに記録したデータベースです。それを扱うのがB+木データベースAPIです。`<code>tcbdb.h</code>' にAPIの仕様の完全な記述があります。</p>
 
-<h3>概要</h3>
+<h3 id="tcbdbapi_description">概要</h3>
 
 <p>ハッシュデータベースAPIを使うためには、`<code>tcutil.h</code>'、`<code>tcbdb.h</code>' および関連する標準ヘッダファイルをインクルードしてください。通常、ソースファイルの冒頭付近で以下の記述を行います。</p>
 
@@ -3622,7 +3633,7 @@ int main(int argc, char **argv){
 
 <p>レコードの格納や探索を行う前提として、B+木ーデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tcbdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcbdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。</p>
 
-<h3>API（英語ゴメソ）</h3>
+<h3 id="tcbdbapi_api">API（英語ゴメソ）</h3>
 
 <p>The function `tcbdberrmsg' is used in order to get the message string corresponding to an error code.</p>
 
@@ -4295,7 +4306,7 @@ int main(int argc, char **argv){
 <dd>If successful, the return value is true, else, it is false.  False is returned when the cursor is at invalid position.</dd>
 </dl>
 
-<h3>コード例</h3>
+<h3 id="tcbdbapi_example">コード例</h3>
 
 <p>B+木データベースを使ったコード例を以下に示します。</p>
 
@@ -4365,7 +4376,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tcbdbapi_cli">CLI</h3>
 
 <p>B+木データベースAPIを簡単に利用するために、コマンドラインインターフェイスとして `<code>tcbtest</code>' と `<code>tcbmttest</code>' と `<code>tcbmgr</code>' が提供されます。</p>
 
@@ -4458,7 +4469,7 @@ int main(int argc, char **argv){
 <dd>データベースファイルを作成する。</dd>
 <dt><code>tcbmgr inform [-nl|-nb] <var>path</var></code></dt>
 <dd>データベースの雑多な情報を出力する。</dd>
-<dt><code>tcbmgr put [-cd|-ci|-cj] [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>key</var> <var>value</var></code></dt>
+<dt><code>tcbmgr put [-cd|-ci|-cj] [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] <var>path</var> <var>key</var> <var>value</var></code></dt>
 <dd>レコードを追加する。</dd>
 <dt><code>tcbmgr out [-cd|-ci|-cj] [-nl|-nb] [-sx] <var>path</var> <var>key</var></code></dt>
 <dd>レコードを削除する。</dd>
@@ -4488,8 +4499,12 @@ int main(int argc, char **argv){
 <li><code>-nl</code> : オプション `BDBNOLCK' を有効にする。</li>
 <li><code>-nb</code> : オプション `BDBLCKNB' を有効にする。</li>
 <li><code>-sx</code> : 入力を16進数の文字列で行う。</li>
-<li><code>-dk</code> : 関数 `tchdbput' の代わりに関数 `tchdbputkeep' を用いる。</li>
-<li><code>-dc</code> : 関数 `tchdbput' の代わりに関数 `tchdbputcat' を用いる。</li>
+<li><code>-dk</code> : 関数 `tcbdbput' の代わりに関数 `tcbdbputkeep' を用いる。</li>
+<li><code>-dc</code> : 関数 `tcbdbput' の代わりに関数 `tcbdbputcat' を用いる。</li>
+<li><code>-dd</code> : 関数 `tcbdbput' の代わりに関数 `tcbdbputdup' を用いる。</li>
+<li><code>-db</code> : 関数 `tcbdbput' の代わりに関数 `tcbdbputdupback' を用いる。</li>
+<li><code>-dai</code> : 関数 `tcbdbput' の代わりに関数 `tcbdbaddint' を用いる。</li>
+<li><code>-dad</code> : 関数 `tcbdbput' の代わりに関数 `tcbdbadddouble' を用いる。</li>
 <li><code>-px</code> : 出力を16進数の文字列で行う。</li>
 <li><code>-pz</code> : 出力の末尾に改行を付加しない。</li>
 <li><code>-m <var>num</var></code> : 出力の最大数を指定する。</li>
@@ -4510,7 +4525,7 @@ int main(int argc, char **argv){
 
 <p>固定長データベースは、固定長の要素からなる配列を単一のファイルに記録したデータベースです。それを扱うのが固定長データベースAPIです。`<code>tcfdb.h</code>' にAPIの仕様の完全な記述があります。</p>
 
-<h3>概要</h3>
+<h3 id="tcfdbapi_description">概要</h3>
 
 <p>固定長データベースAPIを使うためには、`<code>tcutil.h</code>'、`<code>tcfdb.h</code>' および関連する標準ヘッダファイルをインクルードしてください。通常、ソースファイルの冒頭付近で以下の記述を行います。</p>
 
@@ -4526,7 +4541,7 @@ int main(int argc, char **argv){
 
 <p>レコードの格納や探索を行う前提として、固定長データベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tcfdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcfdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。</p>
 
-<h3>API（英語スマソ）</h3>
+<h3 id="tcfdbapi_api">API（英語スマソ）</h3>
 
 <p>The function `tcfdberrmsg' is used in order to get the message string corresponding to an error code.</p>
 
@@ -4990,7 +5005,7 @@ int main(int argc, char **argv){
 <dd>The return value is the size of the database file or 0 if the object does not connect to any database file.</dd>
 </dl>
 
-<h3>コード例</h3>
+<h3 id="tcfdbapi_example">コード例</h3>
 
 <p>固定長データベースを使ったコード例を以下に示します。</p>
 
@@ -5056,7 +5071,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tcfdbapi_cli">CLI</h3>
 
 <p>固定長データベースAPIを簡単に利用するために、コマンドラインインターフェイスとして `<code>tcftest</code>' と `<code>tcfmttest</code>' と `<code>tcfmgr</code>' が提供されます。</p>
 
@@ -5128,7 +5143,7 @@ int main(int argc, char **argv){
 <dd>データベースファイルを作成する。</dd>
 <dt><code>tcfmgr inform [-nl|-nb] <var>path</var></code></dt>
 <dd>データベースの雑多な情報を出力する。</dd>
-<dt><code>tcfmgr put [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>key</var> <var>value</var></code></dt>
+<dt><code>tcfmgr put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] <var>path</var> <var>key</var> <var>value</var></code></dt>
 <dd>レコードを追加する。</dd>
 <dt><code>tcfmgr out [-nl|-nb] [-sx] <var>path</var> <var>key</var></code></dt>
 <dd>レコードを削除する。</dd>
@@ -5152,6 +5167,8 @@ int main(int argc, char **argv){
 <li><code>-sx</code> : 入力を16進数の文字列で行う。</li>
 <li><code>-dk</code> : 関数 `tcfdbput' の代わりに関数 `tcfdbputkeep' を用いる。</li>
 <li><code>-dc</code> : 関数 `tcfdbput' の代わりに関数 `tcfdbputcat' を用いる。</li>
+<li><code>-dai</code> : 関数 `tcfdbput' の代わりに関数 `tcfdbaddint' を用いる。</li>
+<li><code>-dad</code> : 関数 `tcfdbput' の代わりに関数 `tcfdbadddouble' を用いる。</li>
 <li><code>-px</code> : 出力を16進数の文字列で行う。</li>
 <li><code>-pz</code> : 出力の末尾に改行を付加しない。</li>
 <li><code>-m <var>num</var></code> : 出力の最大数を指定する。</li>
@@ -5169,7 +5186,7 @@ int main(int argc, char **argv){
 
 <p>テーブルデータベースは、プライマリキーと任意のカラムを持つレコード群を単一のファイルに記録したデータベースです。それを扱うのがテーブルデータベースAPIです。`<code>tctdb.h</code>' にAPIの仕様の完全な記述があります。</p>
 
-<h3>概要</h3>
+<h3 id="tctdbapi_description">概要</h3>
 
 <p>テーブルデータベースAPIを使うためには、`<code>tcutil.h</code>'、`<code>tctdb.h</code>' および関連する標準ヘッダファイルをインクルードしてください。通常、ソースファイルの冒頭付近で以下の記述を行います。</p>
 
@@ -5185,7 +5202,7 @@ int main(int argc, char **argv){
 
 <p>レコードの格納や探索を行う前提として、テーブルデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tctdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tctdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。</p>
 
-<h3>API（英語スマメ）</h3>
+<h3 id="tctdbapi_api">API（英語スマメ）</h3>
 
 <p>The function `tctdberrmsg' is used in order to get the message string corresponding to an error code.</p>
 
@@ -5247,7 +5264,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetcache(TCTDB *<var>tdb</var>, int32_t <var>rcnum</var>, int32_t <var>lcnum</var>, int32_t <var>ncnum</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
 <dd>`<var>rcnum</var>' specifies the maximum number of records to be cached.  If it is not more than 0, the record cache is disabled.  It is disabled by default.</dd>
-<dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 1024.</dd>
+<dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 2048.</dd>
 <dd>`<var>ncnum</var>' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 512.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the caching parameters should be set before the database is opened.  Leaf nodes and non-leaf nodes are used in column indexes.</dd>
@@ -5633,7 +5650,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetindex(TCTDB *<var>tdb</var>, const char *<var>name</var>, int <var>type</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
 <dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
-<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITVOID', the index is removed.</dd>
+<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise or and the index exists, this function merely returns failure.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the setting indexes should be set after the database is opened.</dd>
 </dl>
@@ -5698,7 +5715,7 @@ int main(int argc, char **argv){
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<p>The function `tctdbqryproc' is used in order to process each corresponding record of a query object.</p>
+<p>The function `tctdbqryproc' is used in order to process each record corresponding to a query object.</p>
 
 <dl class="api">
 <dt><code>bool tctdbqryproc(TDBQRY *<var>qry</var>, TDBQRYPROC <var>proc</var>, void *<var>op</var>);</code></dt>
@@ -5706,7 +5723,14 @@ int main(int argc, char **argv){
 <dd>`<var>proc</var>' specifies the pointer to the iterator function called for each record.</dd>
 <dd>`<var>op</var>' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>The function `tctdbqryprocout' is built-in and answers to remove each record.</dd>
+</dl>
+
+<p>The function `tctdbqryprocout' is used in order to remove each record corresponding to a query object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbqryprocout(TDBQRY *<var>qry</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
 <p>The function `tctdbqryhint' is used in order to get the hint of a query object.</p>
@@ -5717,7 +5741,7 @@ int main(int argc, char **argv){
 <dd>The return value is the hint string.</dd>
 </dl>
 
-<h3>コード例</h3>
+<h3 id="tctdbapi_example">コード例</h3>
 
 <p>テーブルデータベースを使ったコード例を以下に示します。</p>
 
@@ -5807,7 +5831,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tctdbapi_cli">CLI</h3>
 
 <p>テーブルデータベースAPIを簡単に利用するために、コマンドラインインターフェイスとして `<code>tcttest</code>' と `<code>tctmttest</code>' と `<code>tctmgr</code>' が提供されます。</p>
 
@@ -5905,7 +5929,7 @@ int main(int argc, char **argv){
 <dd>データベースファイルを作成する。</dd>
 <dt><code>tctmgr inform [-nl|-nb] <var>path</var></code></dt>
 <dd>データベースの雑多な情報を出力する。</dd>
-<dt><code>tctmgr put [-nl|-nb] [-sx] [-dk|-dc] <var>path</var> <var>pkey</var> [<var>cols</var> ...]</code></dt>
+<dt><code>tctmgr put [-nl|-nb] [-sx] [-dk|-dc|-dai|-dad] <var>path</var> <var>pkey</var> [<var>cols</var> ...]</code></dt>
 <dd>レコードを追加する。</dd>
 <dt><code>tctmgr out [-nl|-nb] [-sx] <var>path</var> <var>pkey</var></code></dt>
 <dd>レコードを削除する。</dd>
@@ -5913,11 +5937,11 @@ int main(int argc, char **argv){
 <dd>レコードの値を取得して標準出力する。</dd>
 <dt><code>tctmgr list [-nl|-nb] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>path</var></code></dt>
 <dd>全てのレコードの主キーを改行で区切って標準出力する。</dd>
-<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
+<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
 <dd>検索条件に合致するレコードを改行で区切って標準出力する。</dd>
 <dt><code>tctmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>データベースを最適化する。</dd>
-<dt><code>tctmgr setindex [-nl|-nb] [-cd|-cv] <var>path</var> <var>name</var></code></dt>
+<dt><code>tctmgr setindex [-nl|-nb] [-it <var>type</var>] <var>path</var> <var>name</var></code></dt>
 <dd>インデックスを設定する。</dd>
 <dt><code>tctmgr importtsv [-nl|-nb] [-sc] <var>path</var> [<var>file</var>]</code></dt>
 <dd>TSVファイルの各行をキーと値とみなしてレコードを登録する。</dd>
@@ -5938,6 +5962,8 @@ int main(int argc, char **argv){
 <li><code>-sx</code> : 入力を16進数の文字列で行う。</li>
 <li><code>-dk</code> : 関数 `tctdbput' の代わりに関数 `tctdbputkeep' を用いる。</li>
 <li><code>-dc</code> : 関数 `tctdbput' の代わりに関数 `tctdbputcat' を用いる。</li>
+<li><code>-dai</code> : 関数 `tctdbput' の代わりに関数 `tctdbaddint' を用いる。</li>
+<li><code>-dad</code> : 関数 `tctdbput' の代わりに関数 `tctdbadddouble' を用いる。</li>
 <li><code>-px</code> : 出力を16進数の文字列で行う。</li>
 <li><code>-pz</code> : 出力の末尾に改行を付加しない。</li>
 <li><code>-m <var>num</var></code> : 出力の最大数を指定する。</li>
@@ -5946,8 +5972,9 @@ int main(int argc, char **argv){
 <li><code>-ord <var>name</var> <var>type</var></code> : 結果の並び順を指定する。</li>
 <li><code>-ph</code> : ヒント情報も出力する。</li>
 <li><code>-bt</code> : ベンチマークテストの回数を指定する。</li>
+<li><code>-rm</code> : 結果のレコードを全て削除する。</li>
 <li><code>-tz</code> : オプション `UINT8_MAX' を有効にする。</li>
-<li><code>-cd</code> : インデックスを文字列型でなく数値型にする。</li>
+<li><code>-it</code> : インデックスの型を "lexical" か "decimal" か "void" で指定する。</li>
 <li><code>-cv</code> : 既存のインデックスを削除する。</li>
 <li><code>-sc</code> : キーを小文字に正規化する。</li>
 </ul>
@@ -5958,9 +5985,9 @@ int main(int argc, char **argv){
 
 <h2 id="tcadbapi">抽象データベースAPI</h2>
 
-<p>抽象データベースは、オンメモリハッシュデータベースとオンメモリツリーデータベースとハッシュデータベースとB+木データベースと固定長データベースを同一のAPIで抽象化したデータベースです。それを扱うのが抽象データベースAPIです。`<code>tcadb.h</code>' にAPIの仕様の完全な記述があります。</p>
+<p>抽象データベースは、オンメモリハッシュデータベースとオンメモリツリーデータベースとハッシュデータベースとB+木データベースと固定長データベースとテーブルデータベースを同一のAPIで抽象化したデータベースです。それを扱うのが抽象データベースAPIです。`<code>tcadb.h</code>' にAPIの仕様の完全な記述があります。</p>
 
-<h3>概要</h3>
+<h3 id="tcadbapi_description">概要</h3>
 
 <p>抽象データベースAPIを使うためには、`<code>tcutil.h</code>'、`<code>tcadb.h</code>' および関連する標準ヘッダファイルをインクルードしてください。通常、ソースファイルの冒頭付近で以下の記述を行います。</p>
 
@@ -5976,7 +6003,7 @@ int main(int argc, char **argv){
 
 <p>レコードの格納や探索を行う前提として、抽象データベースオブジェクトを具象データベースと接続させる必要があります。具象データベースを開いて接続するには関数 `<code>tcadbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcadbclose</code>' を用います。開いた具象データベースは必ず閉じてください。そうしないと具象データベースが壊れたり格納したデータが失われたりする可能性があります。</p>
 
-<h3>API（英語ごめんね）</h3>
+<h3 id="tcadbapi_api">API（英語ごめんね）</h3>
 
 <p>The function `tcadbnew' is used in order to create an abstract database object.</p>
 
@@ -5997,8 +6024,9 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>bool tcadbopen(TCADB *<var>adb</var>, const char *<var>name</var>);</code></dt>
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
-<dd>`<var>name</var>' specifies the name of the database.  If it is "*", the database will be an on-memory hash database.  If it is "+", the database will be an on-memory tree database.  If its suffix is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed-length database.  Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of the name and the value, separated by "=".  On-memory hash database supports "bnum", "capnum", and "capsiz".  On-memory tree database supports "capnum" and "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".  Fixed-length database supports "mode", "width", and "limsiz".  "capnum" specifies the capacity number of records.  "capsiz" specifies the capacity size of using memory.  Records spilled the capacity are removed by the storing order.  "mode" can contain "w" of writer, "r" of reader, "c" of creating, "t" of truncating, "e" of no locking, and "f" of non-blocking lock.  The default mode is relevant to "wc".  "opts" can contains "l" of large option, "d" of Deflate option, "b" of BZIP2 option, and "t" of TCBS option.  For example, "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is "casket.tch", and the bucket number is 1000000, and the options are large and Deflate.</dd>
+<dd>`<var>name</var>' specifies the name of the database.  If it is "*", the database will be an on-memory hash database.  If it is "+", the database will be an on-memory tree database.  If its suffix is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed-length database.  If its suffix is ".tct", the database will be a table database.  Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of the name and the value, separated by "=".  On-memory hash database supports "bnum", "capnum", and "capsiz".  On-memory tree database supports "capnum" and "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".  Fixed-length database supports "mode", "width", and "limsiz".  Table database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", "lcnum", "ncnum", "xmsiz", and "idx".</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The tuning parameter "capnum" specifies the capacity number of records.  "capsiz" specifies the capacity size of using memory.  Records spilled the capacity are removed by the storing order.  "mode" can contain "w" of writer, "r" of reader, "c" of creating, "t" of truncating, "e" of no locking, and "f" of non-blocking lock.  The default mode is relevant to "wc".  "opts" can contains "l" of large option, "d" of Deflate option, "b" of BZIP2 option, and "t" of TCBS option.  "idx" specifies the column name of an index and its type separated by ":".  For example, "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is "casket.tch", and the bucket number is 1000000, and the options are large and Deflate.</dd>
 </dl>
 
 <p>The function `tcadbclose' is used in order to close an abstract database object.</p>
@@ -6264,13 +6292,13 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>TCLIST *tcadbmisc(TCADB *<var>adb</var>, const char *<var>name</var>, const TCLIST *<var>args</var>);</code></dt>
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
-<dd>`<var>name</var>' specifies the name of the function.</dd>
+<dd>`<var>name</var>' specifies the name of the function.  All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Table database supports "setindex", "search", "searchget", "searchout", and "genuid".</dd>
 <dd>`<var>args</var>' specifies a list object containing arguments.</dd>
 <dd>If successful, the return value is a list object of the result.  `NULL' is returned on failure.</dd>
-<dd>All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
+<dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<h3>コード例</h3>
+<h3 id="tcadbapi_example">コード例</h3>
 
 <p>抽象データベースを使ったコード例を以下に示します。</p>
 
@@ -6331,7 +6359,7 @@ int main(int argc, char **argv){
 }
 </pre>
 
-<h3>CLI</h3>
+<h3 id="tcadbapi_cli">CLI</h3>
 
 <p>抽象データベースAPIを簡単に利用するために、コマンドラインインターフェイスとして `<code>tcatest</code>' と `<code>tcamgr</code>' が提供されます。</p>
 
@@ -6363,15 +6391,15 @@ int main(int argc, char **argv){
 <dd>データベースを作成する。</dd>
 <dt><code>tcamgr inform <var>name</var></code></dt>
 <dd>データベースの雑多な情報を出力する。</dd>
-<dt><code>tcamgr put [-sx] [-dk|-dc] <var>name</var> <var>key</var> <var>value</var></code></dt>
+<dt><code>tcamgr put [-sx] [-sep <var>chr</var>] [-dk|-dc|-dai|-dad] <var>name</var> <var>key</var> <var>value</var></code></dt>
 <dd>レコードを追加する。</dd>
-<dt><code>tcamgr out [-sx] <var>name</var> <var>key</var></code></dt>
+<dt><code>tcamgr out [-sx] [-sep <var>chr</var>] <var>name</var> <var>key</var></code></dt>
 <dd>レコードを削除する。</dd>
-<dt><code>tcamgr get [-sx] [-px] [-pz] <var>name</var> <var>key</var></code></dt>
+<dt><code>tcamgr get [-sx] [-sep <var>chr</var>] [-px] [-pz] <var>name</var> <var>key</var></code></dt>
 <dd>レコードの値を取得して標準出力する。</dd>
-<dt><code>tcamgr list [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>name</var></code></dt>
+<dt><code>tcamgr list [-sep <var>chr</var>] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>name</var></code></dt>
 <dd>全てのレコードのキーを改行で区切って標準出力する。</dd>
-<dt><code>tcamgr misc [-sx] [-px] <var>name</var> <var>func</var> [<var>arg</var>...]</code></dt>
+<dt><code>tcamgr misc [-sx] [-sep <var>chr</var>] [-px] <var>name</var> <var>func</var> [<var>arg</var>...]</code></dt>
 <dd>雑多な操作の多目的関数を呼び出す。</dd>
 <dt><code>tcamgr version</code></dt>
 <dd>Tokyo Cabinetのバージョン情報を標準出力する。</dd>
@@ -6381,8 +6409,11 @@ int main(int argc, char **argv){
 
 <ul class="options">
 <li><code>-sx</code> : 入力を16進数の文字列で行う。</li>
+<li><code>-sep <var>chr</var></code> : 入力文字列の区切り文字を指定する。</li>
 <li><code>-dk</code> : 関数 `tcadbput' の代わりに関数 `tcadbputkeep' を用いる。</li>
 <li><code>-dc</code> : 関数 `tcadbput' の代わりに関数 `tcadbputcat' を用いる。</li>
+<li><code>-dai</code> : 関数 `tcadbput' の代わりに関数 `tcadbaddint' を用いる。</li>
+<li><code>-dad</code> : 関数 `tcadbput' の代わりに関数 `tcadbadddouble' を用いる。</li>
 <li><code>-px</code> : 出力を16進数の文字列で行う。</li>
 <li><code>-pz</code> : 出力の末尾に改行を付加しない。</li>
 <li><code>-m <var>num</var></code> : 出力の最大数を指定する。</li>
@@ -6392,7 +6423,7 @@ int main(int argc, char **argv){
 
 <p>このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
 
-<h3>CGI</h3>
+<h3 id="tcadbapi_cgi">CGI</h3>
 
 <p>抽象データベースAPIを簡単に利用するために、コモンゲートウェイインタフェースとして `<code>tcawmgr.cgi</code>' が提供されます。</p>
 
@@ -6404,7 +6435,7 @@ int main(int argc, char **argv){
 
 <p>この節ではTokyo Cabinetの使い方のコツや知っておくと便利な小技を紹介します。</p>
 
-<h3>ユーティリティAPI</h3>
+<h3 id="tips_tcutil">ユーティリティAPI</h3>
 
 <p>C++、Perl、Ruby、Javaといった高水準な言語では必ずといってリストやマップといったデータ構造を簡単に利用できる機能が標準ライブラリとしてついてきます。しかし、C言語にはそれに相当するものはありません。GNOME GlibやApache APRなどの非標準ライブラリを使うのも一興ですが、Tokyo Cabinetにも高機能・高性能なユーティリティが付属しています。STL（C++の標準テンプレートライブラリ）のstringにあたるものがTCXSTRで、listにあたるものがTCLISTで、mapやsetにあたるものがTCMAPとTCTREEです。他にも文字列処理や各種符号処理のユーティリティも提供されます。それらを使いこなすとC言語でもC++やその他の高水準言語並みの直感的なプログラミングができるでしょう。</p>
 
@@ -6433,7 +6464,7 @@ for(i = 0; i &lt; 100; i++){
 }
 </pre>
 
-<h3>ハッシュデータベースのチューニング</h3>
+<h3 id="tips_hashtune">ハッシュデータベースのチューニング</h3>
 
 <p>チューニングをするかしないかでデータベース操作の性能は劇的に変わるので、まじめなユースケースでは、チューニングは必須となるでしょう。関数 `<code>tchdbtune</code>' でそれを行います。この関数では「バケット数」と「アラインメント力」と「フリーブロックプール力」と「オプション」が指定されます。</p>
 
@@ -6458,7 +6489,7 @@ tchdbopen(hdb, "casket.hdb", HDBOWRITER | HDBOCREAT);
 
 <p>ハッシュデータベースはmmapを介してファイル入出力を行うための拡張マップメモリという機構を備えます。これは、デフォルトでmmapによってマップされるバケット配列とは別に、レコード用の領域をmmapでメモリにマップしたものです。mmapを介したファイル入出力はpreadやpwriteを使った入出力よりも高速で、並列処理性能も高いという利点もあります。その反面、データベースを開いた瞬間に拡張マップメモリとして指定したサイズの領域が仮想メモリ空間に確保され、そのサイズが実メモリの利用可能量を上回った場合にはスワップが発生してしまいます。デフォルトでは64MBの拡張マップメモリが利用されますが、想定されるデータベースファイルがそれより大きくて実メモリ容量よりも小さいような場合は、データベースサイズよりも少し大きいくらいの拡張マップメモリを指定するとよいでしょう。拡張マップメモリのサイズは関数 `<code>tchdbsetxmsiz</code>' で指定してください。拡張マップメモリのパラメータの設定はデータベースに接続する前に行う必要があり、また接続する度に毎回行う必要があります。</p>
 
-<h3>B+木データベースのチューニング</h3>
+<h3 id="tips_btreetune">B+木データベースのチューニング</h3>
 
 <p>チューニングをするかしないかで性能が劇的に変わるのはB+木データベースについても同じです。まじめなユースケースではちゃんとチューニングしましょう。チューニングは関数 `<code>tcbdbtune</code>' で行います。この関数では「リーフ内メンバ数」「非リーフ内メンバ数」「バケット数」と「アラインメント力」と「フリーブロックプール力」と「オプション」が指定されます。</p>
 
@@ -6479,7 +6510,7 @@ tcbdbopen(hdb, "casket.bdb", BDBOWRITER | BDBOCREAT);
 
 <p>B+木データベースでも拡張マップメモリを利用することができます。しかし、B+木のキャッシュ機構がファイル入出力のバッファリングの役目を果たしているので、デフォルトでは無効になっています。メモリ利用効率は無視してとにかくスループットを追求したい場合のみ、関数 `<code>tcbdbsetxmsiz</code>' で拡張マップメモリを有効化してください。拡張マップメモリのパラメータの設定はデータベースに接続する前に行う必要があり、また接続する度に毎回行う必要があります。</p>
 
-<h3>マルチスレッド対応</h3>
+<h3 id="tips_multithread">マルチスレッド対応</h3>
 
 <p>Tokyo CabinetのAPIにおける各関数はリエントラントなので、引数として与えるデータが各スレッドで別々のものであれば完全に並列に操作を実行することができます。しかし、データベースオブジェクトは内部状態を持つので、ひとつのデータベースオブジェクトを複数のスレッドで共有する場合には、更新操作に関連して排他制御を行う必要があります。とはいえ、特に難しいことはありません。複数のスレッドで共有するデータベースオブジェクトに対して、作成した直後に関数 `<code>tchdbsetmutex</code>' や `<code>tcbdbsetmutex</code>' を呼び出すだけでOKです。そうすると以後の操作の内部で適切にロックを用いて排他制御が行われるようになります。複数のスレッドを使うが各々が別個のデータベースオブジェクトにアクセスする場合には排他制御は必要ありませんし、排他制御をしない方が高速に動作します。</p>
 
@@ -6492,7 +6523,7 @@ tchdbopen(hdb, "casket.hdb", HDBOWRITER);
 ...
 </pre>
 
-<h3>トランザクション</h3>
+<h3 id="tips_transaction">トランザクション</h3>
 
 <p>ハッシュデータベースとB+木データベースにはトランザクション機構があります。トランザクションを開始してから行った一連の操作は、コミットすることで確定させたり、アボートすることでなかったことにしたりすることができます。トランザクション中にアプリケーションがクラッシュ場合にも、トランザクション中の操作がなかったことになるだけで、データベースの整合性は維持されます。トランザクションは以下のようなコードで用います。</p>
 
@@ -6511,7 +6542,7 @@ if(is_all_ok){
 
 <p>ファイルシステムのdurabilityすらも信用しない場合（突然の電源切断に耐える確率を上げたい場合）には、データベースを開く際に `<code>HDBOTSYNC</code>' または `<code>BDBOTSYNC</code>' オプションをつけてください。そうすると、すべてのトランザクションの前後にfsyncで更新内容とディスクの内容の同期がとられるようになります（めちゃくちゃ遅くなりますが）。とはいえ、いかにトランザクションを使ってもディスクが壊れたらオシマイなので、重要なデータベースに関してはバックアップや冗長化の手法を適用してください。</p>
 
-<h3>カーソル</h3>
+<h3 id="tips_cursor">カーソル</h3>
 
 <p>B+木データベースにはカーソル機構があります。カーソルは指定したキーの場所にジャンプさせることができ、そこから前後にひとつずつずらしながらレコードを参照したり更新したりすることができます。例えば文字列の前方一致検索を行う場合、接頭辞をキーとして指定してカーソルをジャンプさせて、そこから前に進みながらキーを一つ一つ参照していって、前方一致しなかった時点で止めるという処理になります。例えば "tokyo" で始まるキーのレコードを取り出すには以下のようなコードになるでしょう。</p>
 
@@ -6534,7 +6565,7 @@ tcbdbcurdel(cur);
 
 <p>カーソルをジャンプさせてから、他のスレッドが同一のデータベースに対して更新を行った場合、そのカーソルの位置はずれる可能性があります。具体的には、カーソルのあるリーフ上でカーソルより前にレコード挿入された場合、カーソルは小さい方向にひとつずれます。また、カーソルのあるリーフ上でカーソルより前にあるレコードが削除された場合、カーソルは大きい方向にひとつずれます。したがって、検索などの非クリティカルな操作では特別な配慮は必要ありませんが、更新にカーソルを使う場合には、処理中にカーソルの位置がずれないようにトランザクションを使うか、アプリケーション側の責任で排他制御をすることになるでしょう。なお、典型的な検索操作である範囲検索をアトミックに行うために関数 `<code>tcbdbrange</code>' および関数 `<code>tcbdbfwmkeys</code>' が提供されています。</p>
 
-<h3>バックアップ</h3>
+<h3 id="tips_backup">バックアップ</h3>
 
 <p>データベースファイルのバックアップは、通常のファイルと同様に<code>cp</code>や<code>tar</code>や<code>cpio</code>といったコマンドで行うことができます。ただし、ライタとして接続しているプロセスがデータベースを更新中である場合、コピー元のファイルの状態が中途半端になっている可能性があるため、コピー先のファイルに不整合が起きる場合があります。したがって、データベースが更新中でないこと確認してからバックアップ作業を行うことが必要となります。</p>
 
@@ -6551,7 +6582,7 @@ cp -f "$srcpath" "$destpath"
 
 <p>バックアップ用のコマンドを実行している間はそのデータベースの更新はブロックしますので、コピーに時間がかかる場合には留意が必要です。無停止のホットバックアップを望むならば、"cp" などによる単純なファイル複製の代わりにファイルシステム（LVM）のスナップショット機能を使うとよいでしょう。</p>
 
-<h3>ハッシュデータベースとB+木データベースの比較</h3>
+<h3 id="tips_cmphashbtree">ハッシュデータベースとB+木データベースの比較</h3>
 
 <p>キーと値のペアを格納したいというのははっきりしているが、ハッシュデータベースとB+木データベースのどちらを使えばよいかわからないという場合もあるかもしれません。その場合、レコードの検索条件が完全一致だけで済むのなら、ハッシュデータベースを試してください。レコードを順序に基づいて参照したいなら、B+木データベースを試してください。メモリ上だけ保持してファイルに書き出す必要がないならば、ユーティリティAPIのハッシュマップを試してください。</p>
 
@@ -6561,19 +6592,73 @@ cp -f "$srcpath" "$destpath"
 
 <p>逆に考えれば、データベースにアクセスする順序が制御できない場合は、B+木データベースよりもハッシュデータベースを使う方が有利ということになります。キャッシュに乗らない場合には、ハッシュデータベースの方がメモリ使用量も小さく、個々のレコードを取り出す際の計算量も小くて済みます。なお、ハッシュデータベースの構築時に一気にレコードを入れるような用途の場合には、非同期モードを使うとB+木データベース以上の更新性能を実現できます。新しいレコードはファイルの末尾に記録されることを利用して、ファイルの末尾部分に特化したキャッシュを作ることができるからです。</p>
 
-<h3>抽象データベース</h3>
+<h3 id="tips_tctdb">テーブルデータベースの仕組み</h3>
+
+<p>テーブルデータベースは、リレーショナルデータベースのテーブルのように、複数の列からなるレコードを格納できるデータベースです。ハッシュデータベースのように主キーでレコードを識別しながらも、リレーショナルデータベースのようにレコード内に名前をつけた複数のコラムを持たせることができます。ハッシュデータベースと違って、レコード内の個々のコラムの値を条件にしてレコードの集合を問い合わせることができます。リレーショナルデータベースとは違って、あらかじめスキーマを定義する必要がなく、レコード毎に異なる種類のコラムを持たせることができます。</p>
+
+<p>レコードの検索は、合致条件や順序指定を組み合わせたクエリオブジェクトをデータベースに渡すことで実行されます。合致条件の演算子には以下のものがあります。コマンドラインでは、「TDBQC」の部分を省いた文字列を用います。合致条件の真偽を反転させるには、各演算子と `<code>TDBQCNEGATE</code>' のビット和を用います（コマンドラインでは "~" を接頭させます）。</p>
+
+<ul>
+<li>TDBQCSTREQ : 右辺の文字列が完全一致する</li>
+<li>TDBQCSTRINC : 右辺の文字列を含む</li>
+<li>TDBQCSTRBW : 右辺の文字列で始まる</li>
+<li>TDBQCSTREW : 右辺の文字列で終わる</li>
+<li>TDBQCSTRAND : 右辺の文字列内のカンマ区切りの文字列の全てを含む</li>
+<li>TDBQCSTROR : 右辺の文字列内のカンマ区切りの文字列のいずれかを含む</li>
+<li>TDBQCSTROREQ : 右辺の文字列内のカンマ区切りの文字列のいずれかと完全一致する</li>
+<li>TDBQCSTRRX : 右辺の文字列の正規表現と一致する</li>
+<li>TDBQCNUMEQ : 右辺の数値と一致する</li>
+<li>TDBQCNUMGT : 右辺の数値より大きい</li>
+<li>TDBQCNUMGE : 右辺の数値と同じかより大きい</li>
+<li>TDBQCNUMLT : 右辺の数値より小さい</li>
+<li>TDBQCNUMLE : 右辺の数値と同じかより小さい</li>
+<li>TDBQCNUMBT : 右辺のカンマ区切りの2つの数値の間である</li>
+<li>TDBQCNUMOREQ : 右辺のカンマ区切りの文字列のいずれかと一致する</li>
+</ul>
+
+<p>順序指定の演算子には以下のものがあります。デフォルトは順序不定です。</p>
+
+<ul>
+<li>TDBQOSTRASC : 文字列の辞書順の昇順</li>
+<li>TDBQOSTRDESC : 文字列の辞書順の降順</li>
+<li>TDBQOSTRASC : 数値の昇順</li>
+<li>TDBQOSTRDESC : 数値の降順</li>
+</ul>
+
+<h3 id="tips_tctdbindex">テーブルデータベースのインデックス</h3>
+
+<p>テーブルデータベースを検索する際に、合致条件の判定や順序指定によるソートを高速化するために、任意のコラムを対象としてインデックスを張ることができます。コラムには型がありませんが、インデックスには型があります。文字列型の演算を高速化させたい場合は文字列型のインデックスを、数値型の演算子を高速化させたい場合は数値型のインデックスを張ることになります。ただし、型が異なる場合でもインデックスを張っておくと、メインのハッシュデータベースの全表スキャンの代わりに、それよりは小さいインデックスの全表スキャンを用いるので、計算量は同じですが処理時間は短くなります。</p>
+
+<ul>
+<li>文字列型インデックス:<ul>
+<li>計算量が小さくなる演算子：TDBQCSTREQ、TDBQCSTRBW、TDBQCSTROREQ</li>
+<li>計算量は同じだが高速化する演算子：TDBQCSTRINC、TDBQCSTREW、TDBQCSTRAND、TDBQCSTROR、TDBQCSTRRX、TDBQCNUMEQ、TDBQCNUMGT、TDBQCNUMGE、TDBQCNUMLT、TDBQCNUMLE、TDBQCNUMBT、TDBQCNUMOREQ</li>
+<li>計算量が小さくなる順序指定：TDBQOSTRASC、TDBQOSTRDESC</li>
+</ul></li>
+<li>数値型インデックス:<ul>
+<li>計算量が小さくなる演算子：TDBQCNUMEQ、TDBQCNUMGT、TDBQCNUMGE、TDBQCNUMLT、TDBQCNUMLE、TDBQCNUMBT、TDBQCNUMOREQ</li>
+<li>計算量は同じだが高速化する演算子：TDBQCSTREQ、TDBQCSTRBW、TDBQCSTROREQ、TDBQCSTRINC、TDBQCSTREW、TDBQCSTRAND、TDBQCSTROR、TDBQCSTRRX</li>
+<li>計算量が小さくなる順序指定：TDBQONUMASC、TDBQONUMDESC</li>
+</ul></li>
+</ul>
+
+<p>合致条件に利用できるインデックスが複数ある場合、型が一致する最初に指定された演算子に対して適用されます。したがって、カーディナリティが高い条件を先に指定する方が効率的になります。合致条件の演算子を `<code>TDBQCNOIDX</code>' とのビット和にすると、その条件の判定にインデックスを適用しないようになります（コマンドラインでは "+" を接頭させます）。否定の合致条件にはインデックスは適用されません。インデックスのデータは、レコード本体を格納したデータベースファイルとは別個に、B+木データベースのファイルとして記録されます。</p>
+
+<h3 id="tips_tcadb">抽象データベース</h3>
 
 <p>ハッシュデーターベースかB+木データベースかを実行時に決定したい場合には、抽象データベースAPIを使うとよいでしょう。抽象データベースAPIはハッシュデータベースAPIとB+木データベースAPIの共通のインターフェイスで、関数 `<code>tcadbopen</code>' でデータベースを開く際のデータベース名で具体的にどの種類のデータベースを扱うかを指定することができます。ハッシュデータベースの名前には接尾辞として ".tch" をつけ、B+木データベースの名前には接尾辞として ".tcb" をつけることで区別されます。チューニングパラメータは、名前の後に "#" で区切って "name=value" の形式で指定します。例えば "casket.tch#bnum=1000000#apow=10" などとします。数値表現には "k"、"m"、"g" などの2進接頭辞を接尾させることもできます。また、データベース名の接尾辞に ".tcf" をつけると固定長データベースになります。連番のID番号をキーにして固定長のデータを管理する場合には最も効率が良くなります。</p>
 
+<p>データベースの接尾辞に ".tct" をつけるとテーブルデータベースになります。テーブルデータベースでは単一の文字列を値とする代わりにコラムの名前と値のマップが用いられます。抽象データベースでテーブルデータベースを扱う場合、単一の文字列とマップを同一のインターフェイスで扱うために、ゼロ文字（'\0'）を区切り文字としてコラムの名前と値を交互に並べて直列化した文字列を用います。レコードを格納する際（`<code>tcadbput</code>'）の引数やレコードを取得する際（`<code>tcadbget</code>'）の戻り値にはそのゼロ区切り文字列が使われます。レコードの検索は関数 `<code>tcadbmisc</code>' のサブ関数 "search" で行います。引数に "addcond" か "setorder" か "setmax" を接頭させてゼロ文字区切りで演算式を記述した文字列を与えることでクエリを組み立てます。例えば "addcond\0name\0STRBW\0john" と "setorder\0age\0NUMASC" を指定すると、「コラム "name" の値が "john" で始まるレコードをコラム "age" の数値の昇順で取り出す」というクエリになります。戻り値は該当するレコードの主キーのリストです。サブ関数 "searchget" は "search" と同じ引数を受け取って、該当のレコードのコラムを直接化したゼロ区切り文字列のリストを返します。"searchout" は "search" と同じ引数を受け取って、該当のレコードを削除します。"genuid" は、ユニークなID番号を採番して返します。</p>
+
 <p>抽象データベースAPIはオンメモリハッシュデータベースやオンメモリツリーデータベースとしても利用することができます。データベース名を "*" とするとオンメモリハッシュデータベースになり、"+" とするとオンメモリツリーデータベースになります。また、それらをキャッシュとして利用したい場合は、"*#capsiz=100m" などとするとよいでしょう。キャッシュの容量を100MBに限定して、それを越えた際には格納した順序が古いレコードから自動的に消していくようになります。オンメモリハッシュデータベースとオンメモリツリーデータベースの使い分けですが、パフォーマンスを求める場合には前者を用い、メモリ効率を求めたり前方一致検索を行いたい場合には後者を用いるとよいでしょう。</p>
 
-<h3>リモートインターフェイス</h3>
+<h3 id="tips_tcrdb">リモートインターフェイス</h3>
 
 <p>多種のアプリケーションでデータベースを共有したい場合やWebアプリケーション等でマルチプロセスの並列処理を行う場合は、Tokyo Cabinetのファイルロック機構が鬱陶しく感じるかもしれません。また、複数のマシンからデータベースを参照したい場合にはTokyo Cabinetだと困ってしまうかもしれません。</p>
 
 <p>データベースの管理のみを行うサーバを別プロセスとして立ちあげて、アプリケーションのプロセスがネットワークソケットを介してそのサーバに接続すれば上記の問題は解決します。そのようなデータベースサーバとそれに接続するためのライブラリが別パッケージ「Tokyo Tyrant」として提供されています。Tokyo Tyrantのサーバは抽象データベースを扱うので、Tokyo Cabinetの全種類のデータベースをリモートインターフェイスで操作することができます。</p>
 
-<h3>C言語以外の言語のバインディング</h3>
+<h3 id="tips_binding">C言語以外の言語のバインディング</h3>
 
 <p>PerlとRubyとJavaとLuaの言語バインディングに関しては、Tokyo Cabinetの作者が開発およびメンテナンスを行います。それ以外の言語に関しては、第三者が提供してくれることを望みます。現状では、少なくともPythonとPHPとSchemeとLispとErlangの処理系でもTokyo Cabinetを利用できるようです。</p>
 
@@ -6585,7 +6670,7 @@ cp -f "$srcpath" "$destpath"
 
 <p>この節ではデータベースファイルのフォーマットに関する仕様を示します。</p>
 
-<h3>ハッシュデータベースのファイルフォーマット</h3>
+<h3 id="fileformat_tchdb">ハッシュデータベースのファイルフォーマット</h3>
 
 <p>ハッシュデータベースが管理するデータベースファイルの内容は、ヘッダ部、バケット部、フリーブロックプール部、レコード部の4つに大別されます。ファイルに記録される数値は固定長数値もしくは可変長数値として記録されます。前者は数値を特定の領域にリトルエンディアンで直列化したものです。後者は数値を可変長の領域に128進法のデルタ符号で直列化したものです。</p>
 
@@ -6793,7 +6878,7 @@ cp -f "$srcpath" "$destpath"
 </tr>
 </table>
 
-<h3>B+木データベースのファイルフォーマット</h3>
+<h3 id="fileformat_tcbdb">B+木データベースのファイルフォーマット</h3>
 
 <p>B+木データベースが扱う全てのデータはハッシュデータベースに記録されます。記録されるデータは、メタデータと論理ページに分類されます。論理ページはリーフノードと非リーフノードに分類されます。固定長数値と可変長数値の形式はハッシューデータベースと同じです。</p>
 
@@ -6997,7 +7082,7 @@ cp -f "$srcpath" "$destpath"
 </tr>
 </table>
 
-<h3>固定長データベースのファイルフォーマット</h3>
+<h3 id="fileformat_tcfdb">固定長データベースのファイルフォーマット</h3>
 
 <p>固定長データベースが管理するデータベースファイルの内容は、ヘッダ部とレコード部の2つに大別されます。ファイルに記録される数値はリトルエンディアンの固定長数値として記録されます。</p>
 
@@ -7101,11 +7186,11 @@ cp -f "$srcpath" "$destpath"
 </tr>
 </table>
 
-<h3>注記</h3>
+<h3 id="fileformat_note">注記</h3>
 
 <p>データベースファイルはスパースではないので、通常のファイルと同様に複製等の操作を行うことができます。ハッシュデータベースのファイルもB+木データベースのファイルも実行環境のバイトオーダに依存しない形式なので、バイトオーダの異なる環境にデータベースファイルを移設してもそのままで利用できます。</p>
 
-<p>なるべくなら、ハッシュデータベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-hash</code>' にしてください。ファイル名の接尾辞は `<code>.tch</code>' にしてください。B+木データベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-btree</code>' にしてください。ファイル名の接尾辞は `<code>.tcb</code>' にしてください。</p>
+<p>なるべくなら、ハッシュデータベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-hash</code>' にしてください。ファイル名の接尾辞は `<code>.tch</code>' にしてください。B+木データベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-btree</code>' にしてください。ファイル名の接尾辞は `<code>.tcb</code>' にしてください。固定長データベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-fixlen</code>' にしてください。ファイル名の接尾辞は `<code>.tcf</code>' にしてください。テーブルデータベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-table</code>' にしてください。ファイル名の接尾辞は `<code>.tct</code>' にしてください。</p>
 
 <p>データベースファイルのマジックデータを `<code>file</code>' コマンドに識別させたい場合は、`<code>magic</code>' ファイルに以下の行を追記してください。</p>
 
@@ -7115,13 +7200,16 @@ cp -f "$srcpath" "$destpath"
 &gt;32     byte      0                  \b, Hash
 &gt;32     byte      1                  \b, B+ tree
 &gt;32     byte      2                  \b, Fixed-length
+&gt;32     byte      3                  \b, Table
 &gt;33     byte      &amp;1                 \b, [open]
 &gt;33     byte      &amp;2                 \b, [fatal]
 &gt;34     byte      x                  \b, apow=%d
 &gt;35     byte      x                  \b, fpow=%d
 &gt;36     byte      &amp;1                 \b, [large]
 &gt;36     byte      &amp;2                 \b, [deflate]
-&gt;36     byte      &amp;4                 \b, [tcbs]
+&gt;36     byte      &amp;4                 \b, [bzip]
+&gt;36     byte      &amp;8                 \b, [tcbs]
+&gt;36     byte      &amp;16                \b, [excodec]
 &gt;40     lelong    x                  \b, bnum=%d
 &gt;48     lelong    x                  \b, rnum=%d
 &gt;56     lelong    x                  \b, fsiz=%d
