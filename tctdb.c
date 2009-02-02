@@ -823,6 +823,13 @@ TCLIST *tctdbqrysearch(TDBQRY *qry){
 }
 
 
+/* Remove each record corresponding to a query object. */
+bool tctdbqrysearchout(TDBQRY *qry){
+  assert(qry);
+  return tctdbqryproc(qry, tctdbqryprocoutcb, NULL);
+}
+
+
 /* Process each record corresponding to a query object. */
 bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op){
   assert(qry && proc);
@@ -871,13 +878,6 @@ bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op){
                (long long)getnum, (long long)putnum, (long long)outnum);
   TDBUNLOCKMETHOD(tdb);
   return !err;
-}
-
-
-/* Remove each record corresponding to a query object. */
-bool tctdbqryprocout(TDBQRY *qry){
-  assert(qry);
-  return tctdbqryproc(qry, tctdbqryprocoutcb, NULL);
 }
 
 

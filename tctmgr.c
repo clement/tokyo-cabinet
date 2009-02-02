@@ -934,7 +934,7 @@ static int procsearch(const char *path, TCLIST *conds, const char *oname, const 
   if(max >= 0) tctdbqrysetmax(qry, max);
   if(rm){
     double stime = tctime();
-    if(!tctdbqryprocout(qry)){
+    if(!tctdbqrysearchout(qry)){
       printerr(tdb);
       err = true;
     }

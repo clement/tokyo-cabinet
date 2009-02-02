@@ -18,39 +18,34 @@
 #define SAMPLENUM   10
 #define RECORDNUM   1000000
 
+
+/* function prototypes */
 int main(int argc, char **argv);
 static void test_sqlite(void);
 static void test_tctdb(void);
-static double gettime(void);
 static int myrand(void);
 static int callback(void *opq, int argc, char **argv, char **colname);
 
 
-// メインルーチン
+/* main routine */
 int main(int argc, char **argv){
-  //  test_sqlite();
+  test_sqlite();
   test_tctdb();
   return 0;
 }
 
 
-// SQLiteのテスト
+/* perform SQLite test */
 static void test_sqlite(void){
-
-  // レコード格納のテスト
   double sum = 0.0;
   for(int i = 1; i <= SAMPLENUM; i++){
     unlink(SQLFILE);
     sync(); sync();
     printf("SQLite write sample:%d ... ", i);
     fflush(stdout);
-    double stime = gettime();
-
-    // データベースを開く
+    double stime = tctime();
     sqlite3 *db;
     if(sqlite3_open(SQLFILE, &db) != 0) assert(!__LINE__);
-
-    // スキーマとインデックスを設定する
     char sql[SQLBUFSIZ], *errmsg;
     sprintf(sql, "CREATE TABLE tbl ( k TEXT PRIMARY KEY, a TEXT, b INTEGER,"
             " c TEXT, d INTEGER );");
@@ -59,62 +54,40 @@ static void test_sqlite(void){
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
     sprintf(sql, "CREATE INDEX tbl_n ON tbl ( b );");
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
-
-    // キャッシュサイズを設定する
     sprintf(sql, "PRAGMA cache_size = %d;", RECORDNUM);
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
-
-    // トランザクションを開始する
     sprintf(sql, "BEGIN TRANSACTION;");
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
-
-    // レコードを格納する
     for(int j = 1; j <= RECORDNUM; j++){
       sprintf(sql, "INSERT INTO tbl VALUES ( '%08d', '%08d', %d, '%08d', %d );",
 	    j, j, myrand() % RECORDNUM, myrand() % RECORDNUM, j);
       if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
     }
-
-    // トランザクションを終了する
     sprintf(sql, "END TRANSACTION;");
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
-
-    // データベースを閉じる
     sqlite3_close(db);
-
-    double etime = gettime() - stime;
+    double etime = tctime() - stime;
     printf("%.6f\n", etime);
     sum += etime;
   }
   printf("SQLite write average: %.6f\n", sum / SAMPLENUM);
-
-  // レコード検索のテスト
   sum = 0.0;
   for(int i = 1; i <= SAMPLENUM; i++){
     sync(); sync();
     printf("SQLite read sample:%d ... ", i);
     fflush(stdout);
-    double stime = gettime();
-
-    // データベースを開く
+    double stime = tctime();
     sqlite3 *db;
     if(sqlite3_open(SQLFILE, &db) != 0) assert(!__LINE__);
-
-    // キャッシュサイズを設定する
     char sql[SQLBUFSIZ], *errmsg;
     sprintf(sql, "PRAGMA cache_size = %d;", RECORDNUM);
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
-
-    // レコードを検索する
     for(int j = 1; j <= RECORDNUM; j++){
       sprintf(sql, "SELECT * FROM tbl WHERE a = '%08d';", myrand() % RECORDNUM + 1);
       if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
     }
-
-    // データベースを閉じる
     sqlite3_close(db);
-
-    double etime = gettime() - stime;
+    double etime = tctime() - stime;
     printf("%.6f\n", etime);
     sum += etime;
   }
@@ -122,32 +95,22 @@ static void test_sqlite(void){
 }
 
 
-// TCHDBのテスト
+/* perform TCHDB test */
 static void test_tctdb(void){
-
-  // レコード格納のテスト
   double sum = 0.0;
   for(int i = 1; i <= SAMPLENUM; i++){
     unlink(TCTFILE);
     sync(); sync();
     printf("TCTDB write sample:%d ... ", i);
     fflush(stdout);
-    double stime = gettime();
-
-    // データベースを開く
+    double stime = tctime();
     TCTDB *tdb = tctdbnew();
     if(!tctdbtune(tdb, RECORDNUM * 2, -1, -1, 0)) assert(!__LINE__);
     if(!tctdbsetcache(tdb, 0, RECORDNUM, RECORDNUM)) assert(!__LINE__);
     if(!tctdbopen(tdb, TCTFILE, TDBOWRITER | TDBOCREAT | TDBOTRUNC)) assert(!__LINE__);
-
-    // スキーマを設定する
     if(!tctdbsetindex(tdb, "a", TDBITLEXICAL)) assert(!__LINE__);
     if(!tctdbsetindex(tdb, "b", TDBITDECIMAL)) assert(!__LINE__);
-
-    // トランザクションを開始する
     if(!tctdbtranbegin(tdb)) assert(!__LINE__);
-
-    // レコードを格納する
     char buf[SQLBUFSIZ];
     int size;
     for(int j = 1; j <= RECORDNUM; j++){
@@ -164,34 +127,23 @@ static void test_tctdb(void){
       if(!tctdbput(tdb, buf, size, cols)) assert(!__LINE__);
       tcmapdel(cols);
     }
-
-    // トランザクションを終了する
     if(!tctdbtrancommit(tdb)) assert(!__LINE__);
-
-    // データベースを閉じる
     if(!tctdbclose(tdb)) assert(!__LINE__);
     tctdbdel(tdb);
-
-    double etime = gettime() - stime;
+    double etime = tctime() - stime;
     printf("%.6f\n", etime);
     sum += etime;
   }
   printf("TCTDB write average: %.6f\n", sum / SAMPLENUM);
-
-  // レコード検索のテスト
   sum = 0.0;
   for(int i = 1; i <= SAMPLENUM; i++){
     sync(); sync();
     printf("TCTDB read sample:%d ... ", i);
     fflush(stdout);
-    double stime = gettime();
-
-    // データベースを開く
+    double stime = tctime();
     TCTDB *tdb = tctdbnew();
     if(!tctdbsetcache(tdb, 0, RECORDNUM, RECORDNUM)) assert(!__LINE__);
     if(!tctdbopen(tdb, TCTFILE, TDBOREADER)) assert(!__LINE__);
-
-    // レコードを検索する
     char buf[SQLBUFSIZ];
     for(int j = 1; j <= RECORDNUM; j++){
       TDBQRY *qry = tctdbqrynew(tdb);
@@ -208,11 +160,8 @@ static void test_tctdb(void){
       tclistdel(res);
       tctdbqrydel(qry);
     }
-
-    // データベースを閉じる
     if(!tctdbclose(tdb)) assert(!__LINE__);
-
-    double etime = gettime() - stime;
+    double etime = tctime() - stime;
     printf("%.6f\n", etime);
     sum += etime;
   }
@@ -220,22 +169,18 @@ static void test_tctdb(void){
 }
 
 
-// 実時間取得
-static double gettime(void){
-  struct timeval tv;
-  if(gettimeofday(&tv, NULL) == -1) return 0.0;
-  return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
-}
-
-
-// 疑似乱数生成
+/* generate a random number */
 static int myrand(void){
   static int cnt = 0;
   return (lrand48() + cnt++) & 0x7FFFFFFF;
 }
 
 
-// SQLiteの検索結果のイテレータ
+/* iterator of SQLite */
 static int callback(void *opq, int argc, char **argv, char **colname){
   return 0;
 }
+
+
+
+/* END OF FILE */

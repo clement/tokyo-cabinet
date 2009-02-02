@@ -153,7 +153,7 @@ enum {                                   /* enumeration for post treatments */
    `pksiz' specifies the size of the region of the primary key.
    `cols' specifies a map object containing columns.
    `op' specifies the pointer to the optional opaque object.
-   The return value is flagss of the post treatment by bitwise or: `TDBQPPUT' to modify the
+   The return value is flags of the post treatment by bitwise or: `TDBQPPUT' to modify the
    record, `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration. */
 typedef int (*TDBQRYPROC)(const void *pkbuf, int pksiz, TCMAP *cols, void *op);
 
@@ -676,6 +676,12 @@ void tctdbqrysetmax(TDBQRY *qry, int max);
 TCLIST *tctdbqrysearch(TDBQRY *qry);
 
 
+/* Remove each record corresponding to a query object.
+   `qry' specifies the query object of the database connected as a writer.
+   If successful, the return value is true, else, it is false. */
+bool tctdbqrysearchout(TDBQRY *qry);
+
+
 /* Process each record corresponding to a query object.
    `qry' specifies the query object of the database connected as a writer.
    `proc' specifies the pointer to the iterator function called for each record.
@@ -683,12 +689,6 @@ TCLIST *tctdbqrysearch(TDBQRY *qry);
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
 bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op);
-
-
-/* Remove each record corresponding to a query object.
-   `qry' specifies the query object of the database connected as a writer.
-   If successful, the return value is true, else, it is false. */
-bool tctdbqryprocout(TDBQRY *qry);
 
 
 /* Get the hint of a query object.

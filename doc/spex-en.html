@@ -5722,10 +5722,10 @@ int main(int argc, char **argv){
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
-<p>The function `tctdbqryprocout' is used in order to remove each record corresponding to a query object.</p>
+<p>The function `tctdbqrysearchout' is used in order to remove each record corresponding to a query object.</p>
 
 <dl class="api">
-<dt><code>bool tctdbqryprocout(TDBQRY *<var>qry</var>);</code></dt>
+<dt><code>bool tctdbqrysearchout(TDBQRY *<var>qry</var>);</code></dt>
 <dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
@@ -6291,7 +6291,7 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>TCLIST *tcadbmisc(TCADB *<var>adb</var>, const char *<var>name</var>, const TCLIST *<var>args</var>);</code></dt>
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
-<dd>`<var>name</var>' specifies the name of the function.  All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Table database supports "setindex", "search", "searchget", "searchout", and "genuid".</dd>
+<dd>`<var>name</var>' specifies the name of the function.  All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Table database supports "setindex", "search", and "genuid".</dd>
 <dd>`<var>args</var>' specifies a list object containing arguments.</dd>
 <dd>If successful, the return value is a list object of the result.  `NULL' is returned on failure.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>

@@ -5725,10 +5725,10 @@ int main(int argc, char **argv){
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
-<p>The function `tctdbqryprocout' is used in order to remove each record corresponding to a query object.</p>
+<p>The function `tctdbqrysearchout' is used in order to remove each record corresponding to a query object.</p>
 
 <dl class="api">
-<dt><code>bool tctdbqryprocout(TDBQRY *<var>qry</var>);</code></dt>
+<dt><code>bool tctdbqrysearchout(TDBQRY *<var>qry</var>);</code></dt>
 <dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
@@ -6292,7 +6292,7 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>TCLIST *tcadbmisc(TCADB *<var>adb</var>, const char *<var>name</var>, const TCLIST *<var>args</var>);</code></dt>
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
-<dd>`<var>name</var>' specifies the name of the function.  All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Table database supports "setindex", "search", "searchget", "searchout", and "genuid".</dd>
+<dd>`<var>name</var>' specifies the name of the function.  All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Table database supports "setindex", "search", and "genuid".</dd>
 <dd>`<var>args</var>' specifies a list object containing arguments.</dd>
 <dd>If successful, the return value is a list object of the result.  `NULL' is returned on failure.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
@@ -6648,9 +6648,13 @@ cp -f "$srcpath" "$destpath"
 
 <p>ハッシュデーターベースかB+木データベースかを実行時に決定したい場合には、抽象データベースAPIを使うとよいでしょう。抽象データベースAPIはハッシュデータベースAPIとB+木データベースAPIの共通のインターフェイスで、関数 `<code>tcadbopen</code>' でデータベースを開く際のデータベース名で具体的にどの種類のデータベースを扱うかを指定することができます。ハッシュデータベースの名前には接尾辞として ".tch" をつけ、B+木データベースの名前には接尾辞として ".tcb" をつけることで区別されます。チューニングパラメータは、名前の後に "#" で区切って "name=value" の形式で指定します。例えば "casket.tch#bnum=1000000#apow=10" などとします。数値表現には "k"、"m"、"g" などの2進接頭辞を接尾させることもできます。また、データベース名の接尾辞に ".tcf" をつけると固定長データベースになります。連番のID番号をキーにして固定長のデータを管理する場合には最も効率が良くなります。</p>
 
-<p>データベースの接尾辞に ".tct" をつけるとテーブルデータベースになります。テーブルデータベースでは単一の文字列を値とする代わりにコラムの名前と値のマップが用いられます。抽象データベースでテーブルデータベースを扱う場合、単一の文字列とマップを同一のインターフェイスで扱うために、ゼロ文字（'\0'）を区切り文字としてコラムの名前と値を交互に並べて直列化した文字列を用います。レコードを格納する際（`<code>tcadbput</code>'）の引数やレコードを取得する際（`<code>tcadbget</code>'）の戻り値にはそのゼロ区切り文字列が使われます。レコードの検索は関数 `<code>tcadbmisc</code>' のサブ関数 "search" で行います。引数に "addcond" か "setorder" か "setmax" を接頭させてゼロ文字区切りで演算式を記述した文字列を与えることでクエリを組み立てます。例えば "addcond\0name\0STRBW\0john" と "setorder\0age\0NUMASC" を指定すると、「コラム "name" の値が "john" で始まるレコードをコラム "age" の数値の昇順で取り出す」というクエリになります。戻り値は該当するレコードの主キーのリストです。サブ関数 "searchget" は "search" と同じ引数を受け取って、該当のレコードのコラムを直接化したゼロ区切り文字列のリストを返します。"searchout" は "search" と同じ引数を受け取って、該当のレコードを削除します。"genuid" は、ユニークなID番号を採番して返します。</p>
-
 <p>抽象データベースAPIはオンメモリハッシュデータベースやオンメモリツリーデータベースとしても利用することができます。データベース名を "*" とするとオンメモリハッシュデータベースになり、"+" とするとオンメモリツリーデータベースになります。また、それらをキャッシュとして利用したい場合は、"*#capsiz=100m" などとするとよいでしょう。キャッシュの容量を100MBに限定して、それを越えた際には格納した順序が古いレコードから自動的に消していくようになります。オンメモリハッシュデータベースとオンメモリツリーデータベースの使い分けですが、パフォーマンスを求める場合には前者を用い、メモリ効率を求めたり前方一致検索を行いたい場合には後者を用いるとよいでしょう。</p>
+
+<h3 id="tips_tcadbtable">抽象データベースによるテーブル操作</h3>
+
+<p>抽象データベースの接尾辞に ".tct" をつけるとテーブルデータベースになります。テーブルデータベースでは単一の文字列を値とする代わりにコラムの名前と値のマップが用いられます。抽象データベースでテーブルデータベースを扱う場合、単一の文字列とマップを同一のインターフェイスで扱うために、ゼロ文字（'\0'）を区切り文字としてコラムの名前と値を交互に並べて直列化した文字列を用います。レコードを格納する際（`<code>tcadbput</code>'）の引数やレコードを取得する際（`<code>tcadbget</code>'）の戻り値にはそのゼロ区切り文字列が使われます。</p>
+
+<p>レコードの検索は関数 `<code>tcadbmisc</code>' のサブ関数 "search" で行います。引数に "addcond" か "setorder" か "setmax" か "columns" か "out" を接頭させてゼロ文字区切りで演算式を記述した文字列を与えることでクエリを組み立てます。例えば "addcond\0name\0STRBW\0john" と "setorder\0age\0NUMASC" を指定すると、「コラム "name" の値が "john" で始まるレコードをコラム "age" の数値の昇順で取り出す」というクエリになります。戻り値は該当するレコードの主キーのリストです。ただし、"columns" が指定されると、コラム名と値のマップをゼロ区切り文字列で返します。"columns\0name\0age" などとして特定のコラムに絞り込むこともできます。"out" が指定されると、該当のコラムを削除します。"columns" と "out" を組み合わせるとキューとして利用することができます。サブ関数 "genuid" は、ユニークなID番号を採番して返します。</p>
 
 <h3 id="tips_tcrdb">リモートインターフェイス</h3>
 

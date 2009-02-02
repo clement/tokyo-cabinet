@@ -363,7 +363,7 @@ uint64_t tcadbsize(TCADB *adb);
    and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an
    empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values
    of corresponding records one after the other.  Table database supports "setindex", "search",
-   "searchget", "searchout", and "genuid".
+   and "genuid".
    `args' specifies a list object containing arguments.
    If successful, the return value is a list object of the result.  `NULL' is returned on failure.
    Because the object of the return value is created with the function `tclistnew', it

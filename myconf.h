@@ -405,7 +405,7 @@ void *_tc_recdecode(const void *ptr, int size, int *sp, void *op);
   } while(false);
 #endif
 
-#if defined(_SYS_MACOSX_) && TCUSEPTHREAD
+#if (defined(_SYS_MACOSX_) || defined(_SYS_SUNOS_)) && TCUSEPTHREAD
 #define pthread_yield()                  usleep(1000 * 20)
 #endif
 

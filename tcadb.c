@@ -23,6 +23,10 @@
 #include "myconf.h"
 
 
+/* private function prototypes */
+static int tcadbtdbqrygetout(const void *pkbuf, int pksiz, TCMAP *cols, void *op);
+
+
 
 /*************************************************************************************************
  * API
@@ -1380,11 +1384,10 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         tclistdel(rv);
         rv = NULL;
       }
-    } else if(!strcmp(name, "search") || !strcmp(name, "searchget") ||
-              !strcmp(name, "searchout")){
-      bool toget = !strcmp(name, "searchget");
-      bool toout = !strcmp(name, "searchout");
+    } else if(!strcmp(name, "search")){
+      bool toout = false;
       TDBQRY *qry = tctdbqrynew(adb->tdb);
+      TCLIST *cnames = NULL;
       for(int i = 0; i < argc; i++){
         const char *arg;
         int asiz;
@@ -1408,19 +1411,41 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
             const char *maxstr = TCLISTVALPTR(tokens, 1);
             int64_t max = tcatoi(maxstr);
             if(max >= 0) tctdbqrysetmax(qry, max);
+          } else if(!strcmp(cmd, "columns") || !strcmp(cmd, "cols")){
+            if(!cnames) cnames = tclistnew();
+            for(int j = 1; j < tnum; j++){
+              const char *token;
+              int tsiz;
+              TCLISTVAL(token, tokens, j, tsiz);
+              TCLISTPUSH(cnames, token, tsiz);
+            }
+          } else if(!strcmp(cmd, "out")){
+            toout = true;
           }
         }
         tclistdel(tokens);
       }
       if(toout){
-        if(tctdbqryprocout(qry)){
+        if(cnames){
           rv = tclistnew2(1);
+          void *opq[2];
+          opq[0] = rv;
+          opq[1] = cnames;
+          if(!tctdbqryproc(qry, tcadbtdbqrygetout, opq)){
+            tclistdel(rv);
+            rv = NULL;
+          }
         } else {
-          rv = NULL;
+          if(tctdbqrysearchout(qry)){
+            rv = tclistnew2(1);
+          } else {
+            rv = NULL;
+          }
         }
       } else {
         rv = tctdbqrysearch(qry);
-        if(toget){
+        if(cnames){
+          int cnnum = TCLISTNUM(cnames);
           int rnum = TCLISTNUM(rv);
           TCLIST *nrv = tclistnew2(rnum);
           for(int i = 0; i < rnum; i++){
@@ -1431,6 +1456,19 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
             if(cols){
               tcmapput(cols, "", 0, pkbuf, pksiz);
               tcmapmove(cols, "", 0, true);
+              if(cnnum > 0){
+                TCMAP *ncols = tcmapnew2(cnnum + 1);
+                for(int j = 0; j < cnnum; j++){
+                  const char *cname;
+                  int cnsiz;
+                  TCLISTVAL(cname, cnames, j, cnsiz);
+                  int cvsiz;
+                  const char *cvalue = tcmapget(cols, cname, cnsiz, &cvsiz);
+                  if(cvalue) tcmapput(ncols, cname, cnsiz, cvalue, cvsiz);
+                }
+                tcmapdel(cols);
+                cols = ncols;
+              }
               int csiz;
               char *cbuf = tcstrjoin4(cols, &csiz);
               tclistpushmalloc(nrv, cbuf, csiz);
@@ -1441,6 +1479,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
           rv = nrv;
         }
       }
+      if(cnames) tclistdel(cnames);
       tctdbqrydel(qry);
     } else if(!strcmp(name, "genuid")){
       rv = tclistnew2(1);
@@ -1531,6 +1570,42 @@ bool tcadbforeach(TCADB *adb, TCITER iter, void *op){
     break;
   }
   return rv;
+}
+
+
+/* Retrieve and remove each record corresponding to a query object.
+   `pkbuf' specifies the pointer to the region of the primary key.
+   `pksiz' specifies the size of the region of the primary key.
+   `cols' specifies a map object containing columns.
+   `op' specifies the pointer to the optional opaque object.
+   The return value is flags of the post treatment by bitwise or.
+   If successful, the return value is true, else, it is false. */
+static int tcadbtdbqrygetout(const void *pkbuf, int pksiz, TCMAP *cols, void *op){
+  TCLIST *rv = ((void **)op)[0];
+  TCLIST *cnames = ((void **)op)[1];
+  int cnnum = TCLISTNUM(cnames);
+  tcmapput(cols, "", 0, pkbuf, pksiz);
+  tcmapmove(cols, "", 0, true);
+  if(cnnum > 0){
+    TCMAP *ncols = tcmapnew2(cnnum + 1);
+    for(int j = 0; j < cnnum; j++){
+      const char *cname;
+      int cnsiz;
+      TCLISTVAL(cname, cnames, j, cnsiz);
+      int cvsiz;
+      const char *cvalue = tcmapget(cols, cname, cnsiz, &cvsiz);
+      if(cvalue) tcmapput(ncols, cname, cnsiz, cvalue, cvsiz);
+    }
+    int csiz;
+    char *cbuf = tcstrjoin4(ncols, &csiz);
+    tclistpushmalloc(rv, cbuf, csiz);
+    tcmapdel(ncols);
+  } else {
+    int csiz;
+    char *cbuf = tcstrjoin4(cols, &csiz);
+    tclistpushmalloc(rv, cbuf, csiz);
+  }
+  return TDBQPOUT;
 }
 
 

@@ -3163,8 +3163,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.2"
-#define _TC_LIBVER     707
+#define _TC_VERSION    "1.4.3"
+#define _TC_LIBVER     708
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */
@@ -3631,6 +3631,7 @@ uint64_t tcpagealign(uint64_t off);
 #define tcbdbcmpdecimal   tccmpdecimal
 #define tcbdbcmpint32     tccmpint32
 #define tcbdbcmpint64     tccmpint64
+#define tctdbqryprocout   tctdbqrysearchout
 
 
 
