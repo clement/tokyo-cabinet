@@ -147,7 +147,6 @@ enum {                                   /* enumeration for post treatments */
   TDBQPSTOP = 1 << 24                    /* stop the iteration */
 };
 
-
 /* type of the pointer to a iterator function for each table record.
    `pkbuf' specifies the pointer to the region of the primary key.
    `pksiz' specifies the size of the region of the primary key.
@@ -429,7 +428,8 @@ int tctdbvsiz2(TCTDB *tdb, const char *pkstr);
 /* Initialize the iterator of a table database object.
    `tdb' specifies the table database object.
    If successful, the return value is true, else, it is false.
-   The iterator is used in order to access the key of every record stored in a database. */
+   The iterator is used in order to access the primary key of every record stored in a
+   database. */
 bool tctdbiterinit(TCTDB *tdb);
 
 

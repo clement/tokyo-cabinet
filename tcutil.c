@@ -1967,6 +1967,86 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
 }
 
 
+/* Store a record into a map object with a duplication handler. */
+bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op){
+  assert(map && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  unsigned int hash;
+  TCMAPHASH1(hash, kbuf, ksiz);
+  int bidx = hash % map->bnum;
+  TCMAPREC *rec = map->buckets[bidx];
+  TCMAPREC **entp = map->buckets + bidx;
+  TCMAPHASH2(hash, kbuf, ksiz);
+  while(rec){
+    if(hash > rec->hash){
+      entp = &(rec->left);
+      rec = rec->left;
+    } else if(hash < rec->hash){
+      entp = &(rec->right);
+      rec = rec->right;
+    } else {
+      char *dbuf = (char *)rec + sizeof(*rec);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      if(kcmp < 0){
+        entp = &(rec->left);
+        rec = rec->left;
+      } else if(kcmp > 0){
+        entp = &(rec->right);
+        rec = rec->right;
+      } else {
+        int psiz = TCALIGNPAD(ksiz);
+        int nvsiz;
+        char *nvbuf = proc(dbuf + ksiz + psiz, rec->vsiz, &nvsiz, op);
+        if(!nvbuf) return false;
+        map->msiz += nvsiz - rec->vsiz;
+        if(nvsiz > rec->vsiz){
+          TCMAPREC *old = rec;
+          TCREALLOC(rec, rec, sizeof(*rec) + ksiz + psiz + nvsiz + 1);
+          if(rec != old){
+            if(map->first == old) map->first = rec;
+            if(map->last == old) map->last = rec;
+            if(map->cur == old) map->cur = rec;
+            *entp = rec;
+            if(rec->prev) rec->prev->next = rec;
+            if(rec->next) rec->next->prev = rec;
+            dbuf = (char *)rec + sizeof(*rec);
+          }
+        }
+        memcpy(dbuf + ksiz + psiz, nvbuf, nvsiz);
+        dbuf[ksiz+psiz+nvsiz] = '\0';
+        rec->vsiz = nvsiz;
+        TCFREE(nvbuf);
+        return true;
+      }
+    }
+  }
+  int psiz = TCALIGNPAD(ksiz);
+  int asiz = sizeof(*rec) + ksiz + psiz + vsiz + 1;
+  int unit = (asiz <= TCMAPCSUNIT) ? TCMAPCSUNIT : TCMAPCBUNIT;
+  asiz = (asiz - 1) + unit - (asiz - 1) % unit;
+  map->msiz += ksiz + vsiz;
+  TCMALLOC(rec, asiz);
+  char *dbuf = (char *)rec + sizeof(*rec);
+  memcpy(dbuf, kbuf, ksiz);
+  dbuf[ksiz] = '\0';
+  rec->ksiz = ksiz;
+  memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
+  dbuf[ksiz+psiz+vsiz] = '\0';
+  rec->vsiz = vsiz;
+  rec->hash = hash;
+  rec->left = NULL;
+  rec->right = NULL;
+  rec->prev = map->last;
+  rec->next = NULL;
+  *entp = rec;
+  if(!map->first) map->first = rec;
+  if(map->last) map->last->next = rec;
+  map->last = rec;
+  map->rnum++;
+  return true;
+}
+
+
 /* Retrieve a semivolatile record in a map object. */
 const void *tcmapget3(TCMAP *map, const void *kbuf, int ksiz, int *sp){
   assert(map && kbuf && ksiz >= 0 && sp);
@@ -2406,6 +2486,92 @@ void tctreeputcat(TCTREE *tree, const void *kbuf, int ksiz, const void *vbuf, in
 void tctreeputcat2(TCTREE *tree, const char *kstr, const char *vstr){
   assert(tree && kstr && vstr);
   tctreeputcat(tree, kstr, strlen(kstr), vstr, strlen(vstr));
+}
+
+
+/* Store a record into a tree object with a duplication handler. */
+bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                   TCPDPROC proc, void *op){
+  assert(tree && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  TCTREEREC *top = tctreesplay(tree, kbuf, ksiz);
+  if(!top){
+    int psiz = TCALIGNPAD(ksiz);
+    TCTREEREC *rec;
+    TCMALLOC(rec, sizeof(*rec) + ksiz + psiz + vsiz + 1);
+    char *dbuf = (char *)rec + sizeof(*rec);
+    memcpy(dbuf, kbuf, ksiz);
+    dbuf[ksiz] = '\0';
+    rec->ksiz = ksiz;
+    memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
+    dbuf[ksiz+psiz+vsiz] = '\0';
+    rec->vsiz = vsiz;
+    rec->left = NULL;
+    rec->right = NULL;
+    tree->root = rec;
+    tree->rnum = 1;
+    tree->msiz = ksiz + vsiz;
+    return true;
+  }
+  char *dbuf = (char *)top + sizeof(*top);
+  int cv = tree->cmp(kbuf, ksiz, dbuf, top->ksiz, tree->cmpop);
+  if(cv < 0){
+    int psiz = TCALIGNPAD(ksiz);
+    TCTREEREC *rec;
+    TCMALLOC(rec, sizeof(*rec) + ksiz + psiz + vsiz + 1);
+    dbuf = (char *)rec + sizeof(*rec);
+    memcpy(dbuf, kbuf, ksiz);
+    dbuf[ksiz] = '\0';
+    rec->ksiz = ksiz;
+    memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
+    dbuf[ksiz+psiz+vsiz] = '\0';
+    rec->vsiz = vsiz;
+    rec->left = top->left;
+    rec->right = top;
+    top->left = NULL;
+    tree->rnum++;
+    tree->msiz += ksiz + vsiz;
+    tree->root = rec;
+  } else if(cv > 0){
+    int psiz = TCALIGNPAD(ksiz);
+    TCTREEREC *rec;
+    TCMALLOC(rec, sizeof(*rec) + ksiz + psiz + vsiz + 1);
+    dbuf = (char *)rec + sizeof(*rec);
+    memcpy(dbuf, kbuf, ksiz);
+    dbuf[ksiz] = '\0';
+    rec->ksiz = ksiz;
+    memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
+    dbuf[ksiz+psiz+vsiz] = '\0';
+    rec->vsiz = vsiz;
+    rec->left = top;
+    rec->right = top->right;
+    top->right = NULL;
+    tree->rnum++;
+    tree->msiz += ksiz + vsiz;
+    tree->root = rec;
+  } else {
+    int psiz = TCALIGNPAD(ksiz);
+    int nvsiz;
+    char *nvbuf = proc(dbuf + ksiz + psiz, top->vsiz, &nvsiz, op);
+    if(!nvbuf){
+      tree->root = top;
+      return false;
+    }
+    tree->msiz += nvsiz - top->vsiz;
+    if(nvsiz > top->vsiz){
+      TCTREEREC *old = top;
+      TCREALLOC(top, top, sizeof(*top) + ksiz + psiz + nvsiz + 1);
+      if(top != old){
+        if(tree->cur == old) tree->cur = top;
+        dbuf = (char *)top + sizeof(*top);
+      }
+    }
+    memcpy(dbuf + ksiz + psiz, nvbuf, nvsiz);
+    dbuf[ksiz+psiz+nvsiz] = '\0';
+    top->vsiz = nvsiz;
+    TCFREE(nvbuf);
+    tree->root = top;
+  }
+  return true;
 }
 
 
@@ -3656,6 +3822,19 @@ void tcmdbputcat3(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int 
 }
 
 
+/* Store a record into a on-memory hash database object with a duplication handler. */
+bool tcmdbputproc(TCMDB *mdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op){
+  assert(mdb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  unsigned int mi;
+  TCMDBHASH(mi, kbuf, ksiz);
+  if(pthread_rwlock_wrlock((pthread_rwlock_t *)mdb->mmtxs + mi) != 0) return false;
+  bool rv = tcmapputproc(mdb->maps[mi], kbuf, ksiz, vbuf, vsiz, proc, op);
+  pthread_rwlock_unlock((pthread_rwlock_t *)mdb->mmtxs + mi);
+  return rv;
+}
+
+
 /* Retrieve a record and move it astern in an on-memory hash database. */
 void *tcmdbget3(TCMDB *mdb, const void *kbuf, int ksiz, int *sp){
   assert(mdb && kbuf && ksiz >= 0 && sp);
@@ -4022,6 +4201,17 @@ void tcndbputcat3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int 
   if(pthread_mutex_lock((pthread_mutex_t *)ndb->mmtx) != 0) return;
   tctreeputcat3(ndb->tree, kbuf, ksiz, vbuf, vsiz);
   pthread_mutex_unlock((pthread_mutex_t *)ndb->mmtx);
+}
+
+
+/* Store a record into a on-memory tree database object with a duplication handler. */
+bool tcndbputproc(TCNDB *ndb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op){
+  assert(ndb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  if(pthread_mutex_lock((pthread_mutex_t *)ndb->mmtx) != 0) return false;
+  bool rv = tctreeputproc(ndb->tree, kbuf, ksiz, vbuf, vsiz, proc, op);
+  pthread_mutex_unlock((pthread_mutex_t *)ndb->mmtx);
+  return rv;
 }
 
 
@@ -5243,6 +5433,30 @@ static time_t tcmkgmtime(struct tm *tm){
 /*************************************************************************************************
  * miscellaneous utilities (for experts)
  *************************************************************************************************/
+
+
+/* Check whether a string is numeric completely or not. */
+bool tcstrisnum(const char *str){
+  assert(str);
+  bool isnum = false;
+  while(*str > '\0' && *str <= ' '){
+    str++;
+  }
+  if(*str == '-') str++;
+  while(*str >= '0' && *str <= '9'){
+    isnum = true;
+    str++;
+  }
+  if(*str == '.') str++;
+  while(*str >= '0' && *str <= '9'){
+    isnum = true;
+    str++;
+  }
+  while(*str > '\0' && *str <= ' '){
+    str++;
+  }
+  return isnum && *str == '\0';
+}
 
 
 /* Create a list object by splitting a region by zero code. */

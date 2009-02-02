@@ -54,6 +54,8 @@ typedef struct {                         // type of structure for a sort key
   ((TC_tdb)->mmtx ? tctdblockmethod((TC_tdb), (TC_wr)) : true)
 #define TDBUNLOCKMETHOD(TC_tdb) \
   ((TC_tdb)->mmtx ? tctdbunlockmethod(TC_tdb) : true)
+#define TDBTHREADYIELD(TC_tdb) \
+  do { if((TC_tdb)->mmtx) sched_yield(); } while(false)
 
 
 /* private function prototypes */
@@ -553,6 +555,7 @@ bool tctdboptimize(TCTDB *tdb, int64_t bnum, int8_t apow, int8_t fpow, uint8_t o
     TDBUNLOCKMETHOD(tdb);
     return false;
   }
+  TDBTHREADYIELD(tdb);
   bool rv = tctdboptimizeimpl(tdb, bnum, apow, fpow, opts);
   TDBUNLOCKMETHOD(tdb);
   return rv;
@@ -568,6 +571,7 @@ bool tctdbvanish(TCTDB *tdb){
     TDBUNLOCKMETHOD(tdb);
     return false;
   }
+  TDBTHREADYIELD(tdb);
   bool rv = tctdbvanishimpl(tdb);
   TDBUNLOCKMETHOD(tdb);
   return rv;
@@ -583,6 +587,7 @@ bool tctdbcopy(TCTDB *tdb, const char *path){
     TDBUNLOCKMETHOD(tdb);
     return false;
   }
+  TDBTHREADYIELD(tdb);
   bool rv = tctdbcopyimpl(tdb, path);
   TDBUNLOCKMETHOD(tdb);
   return rv;
@@ -1095,6 +1100,7 @@ bool tctdbforeach(TCTDB *tdb, TCITER iter, void *op){
     TDBUNLOCKMETHOD(tdb);
     return false;
   }
+  TDBTHREADYIELD(tdb);
   bool rv = tctdbforeachimpl(tdb, iter, op);
   TDBUNLOCKMETHOD(tdb);
   return rv;
@@ -1116,6 +1122,8 @@ int tctdbstrtoindextype(const char *str){
     type = TDBITDECIMAL;
   } else if(!tcstricmp(str, "VOID") || !tcstricmp(str, "NULL")){
     type = TDBITVOID;
+  } else if(tcstrisnum(str)){
+    type = tcatoi(str);
   }
   return type | flags;
 }
@@ -1164,6 +1172,8 @@ int tctdbqrystrtocondop(const char *str){
     op = TDBQCNUMBT;
   } else if(!tcstricmp(str, "NUMOREQ")){
     op = TDBQCNUMOREQ;
+  } else if(tcstrisnum(str)){
+    op = tcatoi(str);
   }
   return op | flags;
 }
@@ -1181,6 +1191,8 @@ int tctdbqrystrtoordertype(const char *str){
     type = TDBQONUMASC;
   } else if(!tcstricmp(str, "NUMDESC")){
     type = TDBQONUMDESC;
+  } else if(tcstrisnum(str)){
+    type = tcatoi(str);
   }
   return type;
 }

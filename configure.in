@@ -7,11 +7,11 @@
 #================================================================
 
 # Package name
-AC_INIT(tokyocabinet, 1.4.3)
+AC_INIT(tokyocabinet, 1.4.4)
 
 # Package information
 MYLIBVER=7
-MYLIBREV=8
+MYLIBREV=9
 MYFORMATVER="1.0"
 
 # Targets
@@ -243,6 +243,7 @@ AC_CHECK_LIB(m, main)
 if test "$enable_pthread" != "no"
 then
   AC_CHECK_LIB(pthread, main)
+  AC_CHECK_LIB(rt, main)
 fi
 if test "$enable_zlib" != "no"
 then

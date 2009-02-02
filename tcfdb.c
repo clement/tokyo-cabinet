@@ -44,8 +44,14 @@ enum {                                   // enumeration for duplication behavior
   FDBPDKEEP,                             // keep the existing value
   FDBPDCAT,                              // concatenate values
   FDBPDADDINT,                           // add an integer
-  FDBPDADDDBL                            // add a real number
+  FDBPDADDDBL,                           // add a real number
+  FDBPDPROC                              // process by a callback function
 };
+
+typedef struct {                         // type of structure for a duplication callback
+  TCPDPROC proc;                         // function pointer
+  void *op;                              // opaque pointer
+} FDBPDPROCOP;
 
 
 /* private macros */
@@ -66,7 +72,7 @@ enum {                                   // enumeration for duplication behavior
 #define FDBUNLOCKALLRECORDS(TC_fdb) \
   ((TC_fdb)->mmtx ? tcfdbunlockallrecords(TC_fdb) : true)
 #define FDBTHREADYIELD(TC_fdb) \
-  do { if((TC_fdb)->mmtx) pthread_yield(); } while(false)
+  do { if((TC_fdb)->mmtx) sched_yield(); } while(false)
 
 
 /* private function prototypes */
@@ -1101,6 +1107,57 @@ char *tcfdbopaque(TCFDB *fdb){
 }
 
 
+/* Store a record into a fixed-length database object with a duplication handler. */
+bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC proc, void *op){
+  assert(fdb && vbuf && vsiz >= 0 && proc);
+  if(!FDBLOCKMETHOD(fdb, id < 1)) return false;
+  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER)){
+    tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  if(id == FDBIDMIN){
+    id = fdb->min;
+  } else if(id == FDBIDPREV){
+    id = fdb->min - 1;
+  } else if(id == FDBIDMAX){
+    id = fdb->max;
+  } else if(id == FDBIDNEXT){
+    id = fdb->max + 1;
+  }
+  if(id < 1 || id > fdb->limid){
+    tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  if(!FDBLOCKRECORD(fdb, true, id)){
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  FDBPDPROCOP procop;
+  procop.proc = proc;
+  procop.op = op;
+  FDBPDPROCOP *procptr = &procop;
+  char stack[FDBDEFWIDTH+TCNUMBUFSIZ];
+  char *rbuf;
+  if(vsiz <= sizeof(stack) - sizeof(procptr)){
+    rbuf = stack;
+  } else {
+    TCMALLOC(rbuf, vsiz + sizeof(procptr));
+  }
+  char *wp = rbuf;
+  memcpy(wp, &procptr, sizeof(procptr));
+  wp += sizeof(procptr);
+  memcpy(wp, vbuf, vsiz);
+  vbuf = rbuf + sizeof(procptr);
+  bool rv = tcfdbputimpl(fdb, id, vbuf, vsiz, FDBPDPROC);
+  if(rbuf != stack) TCFREE(rbuf);
+  FDBUNLOCKRECORD(fdb, id);
+  FDBUNLOCKMETHOD(fdb);
+  return rv;
+}
+
+
 /* Process each record atomically of a fixed-length database object. */
 bool tcfdbforeach(TCFDB *fdb, TCITER iter, void *op){
   assert(fdb && iter);
@@ -1110,7 +1167,6 @@ bool tcfdbforeach(TCFDB *fdb, TCITER iter, void *op){
     FDBUNLOCKMETHOD(fdb);
     return false;
   }
-
   if(!FDBLOCKALLRECORDS(fdb, false)){
     FDBUNLOCKMETHOD(fdb);
     return false;
@@ -1715,6 +1771,7 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
       lnum += *(int *)vbuf;
       *(int *)vbuf = lnum;
       memcpy(rp, &lnum, sizeof(lnum));
+      TCDODEBUG(fdb->cnt_writerec++);
       return true;
     }
     if(dmode == FDBPDADDDBL){
@@ -1731,6 +1788,41 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
       dnum += *(double *)vbuf;
       *(double *)vbuf = dnum;
       memcpy(rp, &dnum, sizeof(dnum));
+      TCDODEBUG(fdb->cnt_writerec++);
+      return true;
+    }
+    if(dmode == FDBPDPROC){
+      FDBPDPROCOP *procptr = *(FDBPDPROCOP **)((char *)vbuf - sizeof(procptr));
+      int nvsiz;
+      char *nvbuf = procptr->proc(rp, osiz, &nvsiz, procptr->op);
+      if(!nvbuf){
+        tcfdbsetecode(fdb, TCEKEEP, __FILE__, __LINE__, __func__);
+        return false;
+      }
+      if(nvsiz > fdb->width) nvsiz = fdb->width;
+      unsigned char *wp = rec;
+      switch(fdb->wsiz){
+      case 1:
+        *(wp++) = nvsiz;
+        break;
+      case 2:
+        snum = TCHTOIS(nvsiz);
+        memcpy(wp, &snum, sizeof(snum));
+        wp += sizeof(snum);
+        break;
+      default:
+        lnum = TCHTOIL(nvsiz);
+        memcpy(wp, &lnum, sizeof(lnum));
+        wp += sizeof(lnum);
+        break;
+      }
+      if(nvsiz > 0){
+        memcpy(wp, nvbuf, nvsiz);
+      } else {
+        *wp = 1;
+      }
+      TCFREE(nvbuf);
+      TCDODEBUG(fdb->cnt_writerec++);
       return true;
     }
   }

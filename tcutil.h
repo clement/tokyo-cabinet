@@ -133,6 +133,16 @@ typedef int (*TCCMP)(const char *aptr, int asiz, const char *bptr, int bsiz, voi
    call, else, it is `NULL'. */
 typedef void *(*TCCODEC)(const void *ptr, int size, int *sp, void *op);
 
+/* type of the pointer to a callback function to process record duplication.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `sp' specifies the pointer to the variable into which the size of the region of the return
+   value is assigned.
+   `op' specifies the pointer to the optional opaque object.
+   The return value is the pointer to the result object allocated with `malloc'.  It is
+   released by the caller.  If it is `NULL', the record is not modified. */
+typedef void *(*TCPDPROC)(const void *vbuf, int vsiz, int *sp, void *op);
+
 /* type of the pointer to a iterator function.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
@@ -868,6 +878,20 @@ void tcmapput4(TCMAP *map, const void *kbuf, int ksiz,
 void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int vsiz);
 
 
+/* Store a record into a map object with a duplication handler.
+   `map' specifies the map object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `proc' specifies the pointer to the callback function to process duplication.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op);
+
+
 /* Retrieve a semivolatile record in a map object.
    `map' specifies the map object.
    `kbuf' specifies the pointer to the region of the key.
@@ -1039,6 +1063,20 @@ void tctreeputcat(TCTREE *tree, const void *kbuf, int ksiz, const void *vbuf, in
    `vstr' specifies the string of the value.
    If there is no corresponding record, a new record is created. */
 void tctreeputcat2(TCTREE *tree, const char *kstr, const char *vstr);
+
+
+/* Store a record into a tree object with a duplication handler.
+   `tree' specifies the tree object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `proc' specifies the pointer to the callback function to process duplication.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                   TCPDPROC proc, void *op);
 
 
 /* Remove a record of a tree object.
@@ -1603,6 +1641,20 @@ void tcmdbput4(TCMDB *mdb, const void *kbuf, int ksiz,
 void tcmdbputcat3(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz);
 
 
+/* Store a record into a on-memory hash database object with a duplication handler.
+   `mdb' specifies the on-memory hash database object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `proc' specifies the pointer to the callback function to process duplication.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tcmdbputproc(TCMDB *mdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op);
+
+
 /* Retrieve a record and move it astern in an on-memory hash database object.
    `mdb' specifies the on-memory hash database object.
    `kbuf' specifies the pointer to the region of the key.
@@ -1932,6 +1984,20 @@ bool tcndbputkeep3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int
    If there is no corresponding record, a new record is created.  The structure of the tree is
    not modifed by this function. */
 void tcndbputcat3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int vsiz);
+
+
+/* Store a record into a on-memory tree database object with a duplication handler.
+   `ndb' specifies the on-memory tree database.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `proc' specifies the pointer to the callback function to process duplication.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tcndbputproc(TCNDB *ndb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op);
 
 
 /* Retrieve a record in an on-memory tree database object without balancing nodes.
@@ -2406,6 +2472,12 @@ int tcdayofweek(int year, int mon, int day);
 /*************************************************************************************************
  * miscellaneous utilities (for experts)
  *************************************************************************************************/
+
+
+/* Check whether a string is numeric completely or not.
+   `str' specifies the string to be checked.
+   The return value is true if the string is numeric, else, it is false. */
+bool tcstrisnum(const char *str);
 
 
 /* Create a list object by splitting a region by zero code.
@@ -3163,8 +3235,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.3"
-#define _TC_LIBVER     708
+#define _TC_VERSION    "1.4.4"
+#define _TC_LIBVER     709
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

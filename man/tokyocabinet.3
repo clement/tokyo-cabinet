@@ -100,12 +100,12 @@ In cases that multiple processes access a database at the same time or some proc
 
 .SH HOW TO USE THE LIBRARY
 .PP
-Tokyo Cabinet provides API of the C language and it is available by programs conforming to the C89 (ANSI C) standard or the C99 standard.  As the header files of Tokyo Cabinet are provided as `\fBtcutil.h\fR', `\fBtchdb.h\fR', and `\fBtcbdb.h\fR', applications should include one or more of them accordingly to use the API.  As the library is provided as `\fBlibtokyocabinet.a\fR' and `\fBlibtokyocabinet.so\fR' and they depends `\fBlibz.so\fR', `\fBlibpthread.so\fR', `\fBlibm.so\fR', and `\fBlibc.so\fR', linker options `\fB\-ltokyocabinet\fR', `\fB\-lz\fR', `\fB\-lbz2\fR', `\fB\-lpthread\fR', `\fB\-lm\fR', and `\fB\-lc\fR' are required for build command.  A typical build command is the following.
+Tokyo Cabinet provides API of the C language and it is available by programs conforming to the C89 (ANSI C) standard or the C99 standard.  As the header files of Tokyo Cabinet are provided as `\fBtcutil.h\fR', `\fBtchdb.h\fR', and `\fBtcbdb.h\fR', applications should include one or more of them accordingly to use the API.  As the library is provided as `\fBlibtokyocabinet.a\fR' and `\fBlibtokyocabinet.so\fR' and they depends `\fBlibz.so\fR', `\fBlibrt.so\fR', `\fBlibpthread.so\fR', `\fBlibm.so\fR', and `\fBlibc.so\fR', linker options `\fB\-ltokyocabinet\fR', `\fB\-lz\fR', `\fB\-lbz2\fR', `\fB\-lrt\fR', `\fB\-lpthread\fR', `\fB\-lm\fR', and `\fB\-lc\fR' are required for build command.  A typical build command is the following.
 .PP
 .RS
 gcc \-I/usr/local/include tc_example.c \-o tc_example \\
 .br
-  \-L/usr/local/lib \-ltokyocabinet \-lz \-lbz2 \-lpthread \-lm \-lc
+  \-L/usr/local/lib \-ltokyocabinet \-lz \-lbz2 \-lrt \-lpthread \-lm \-lc
 .RE
 .PP
 You can also use Tokyo Cabinet in programs written in C++.  Because each header is wrapped in C linkage (`\fBextern "C"\fR' block), you can simply include them into your C++ programs.

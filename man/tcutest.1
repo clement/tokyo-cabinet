@@ -19,22 +19,22 @@ Perform test of extensible string.
 Perform test of array list.
 .RE
 .br
-\fBtcutest map \fR[\fB\-rd\fR]\fB \fR[\fB\-tr\fR]\fB \fR[\fB\-rnd\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR]\fB \fIrnum\fB \fR[\fB\fIbnum\fB\fR]\fB\fR
+\fBtcutest map \fR[\fB\-rd\fR]\fB \fR[\fB\-tr\fR]\fB \fR[\fB\-rnd\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR|\fB\-dpr\fR]\fB \fIrnum\fB \fR[\fB\fIbnum\fB\fR]\fB\fR
 .RS
 Perform test of hash map.
 .RE
 .br
-\fBtcutest tree \fR[\fB\-rd\fR]\fB \fR[\fB\-tr\fR]\fB \fR[\fB\-rnd\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR]\fB \fIrnum\fB\fR
+\fBtcutest tree \fR[\fB\-rd\fR]\fB \fR[\fB\-tr\fR]\fB \fR[\fB\-rnd\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR|\fB\-dpr\fR]\fB \fIrnum\fB\fR
 .RS
 Perform test of ordered tree.
 .RE
 .br
-\fBtcutest mdb \fR[\fB\-rd\fR]\fB \fR[\fB\-tr\fR]\fB \fR[\fB\-rnd\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR]\fB \fIrnum\fB \fR[\fB\fIbnum\fB\fR]\fB\fR
+\fBtcutest mdb \fR[\fB\-rd\fR]\fB \fR[\fB\-tr\fR]\fB \fR[\fB\-rnd\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR|\fB\-dpr\fR]\fB \fIrnum\fB \fR[\fB\fIbnum\fB\fR]\fB\fR
 .RS
 Perform test of on\-memory hash database.
 .RE
 .br
-\fBtcutest ndb \fR[\fB\-rd\fR]\fB \fR[\fB\-tr\fR]\fB \fR[\fB\-rnd\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR]\fB \fIrnum\fB\fR
+\fBtcutest ndb \fR[\fB\-rd\fR]\fB \fR[\fB\-tr\fR]\fB \fR[\fB\-rnd\fR]\fB \fR[\fB\-dk\fR|\fB\-dc\fR|\fB\-dai\fR|\fB\-dad\fR|\fB\-dpr\fR]\fB \fIrnum\fB\fR
 .RS
 Perform test of on\-memory tree database.
 .RE
@@ -66,6 +66,8 @@ Options feature the following.
 \fB\-dai\fR : use the function `tcxxxaddint' instead of `tcxxxput'.
 .br
 \fB\-dad\fR : use the function `tcxxxadddouble' instead of `tcxxxput'.
+.br
+\fB\-dpr\fR : use the function `tcxxxputproc' instead of `tcxxxput'.
 .br
 .RE
 .PP

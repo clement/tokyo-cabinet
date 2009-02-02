@@ -29,6 +29,7 @@ int main(int argc, char **argv);
 static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
+static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int myrand(int range);
 static int runxstr(int argc, char **argv);
@@ -85,10 +86,14 @@ static void usage(void){
   fprintf(stderr, "usage:\n");
   fprintf(stderr, "  %s xstr rnum\n", g_progname);
   fprintf(stderr, "  %s list [-rd] rnum [anum]\n", g_progname);
-  fprintf(stderr, "  %s map [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad] rnum [bnum]\n", g_progname);
-  fprintf(stderr, "  %s tree [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad] rnum\n", g_progname);
-  fprintf(stderr, "  %s mdb [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad] rnum [bnum]\n", g_progname);
-  fprintf(stderr, "  %s ndb [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad] rnum\n", g_progname);
+  fprintf(stderr, "  %s map [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad|-dpr] rnum [bnum]\n",
+          g_progname);
+  fprintf(stderr, "  %s tree [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad|-dpr] rnum\n",
+          g_progname);
+  fprintf(stderr, "  %s mdb [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad|-dpr] rnum [bnum]\n",
+          g_progname);
+  fprintf(stderr, "  %s ndb [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad|-dpr] rnum\n",
+          g_progname);
   fprintf(stderr, "  %s misc rnum\n", g_progname);
   fprintf(stderr, "  %s wicked rnum\n", g_progname);
   fprintf(stderr, "\n");
@@ -110,6 +115,17 @@ static void iprintf(const char *format, ...){
 static void iputchar(int c){
   putchar(c);
   fflush(stdout);
+}
+
+
+/* duplication callback function */
+static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(myrand(2) == 0) return NULL;
+  int len = myrand(RECBUFSIZ);
+  char buf[RECBUFSIZ];
+  memset(buf, '*', len);
+  *sp = len;
+  return tcmemdup(buf, len);
 }
 
 
@@ -205,6 +221,8 @@ static int runmap(int argc, char **argv){
         dmode = 10;
       } else if(!strcmp(argv[i], "-dad")){
         dmode = 11;
+      } else if(!strcmp(argv[i], "-dpr")){
+        dmode = 12;
       } else {
         usage();
       }
@@ -248,6 +266,8 @@ static int runtree(int argc, char **argv){
         dmode = 10;
       } else if(!strcmp(argv[i], "-dad")){
         dmode = 11;
+      } else if(!strcmp(argv[i], "-dpr")){
+        dmode = 12;
       } else {
         usage();
       }
@@ -289,6 +309,8 @@ static int runmdb(int argc, char **argv){
         dmode = 10;
       } else if(!strcmp(argv[i], "-dad")){
         dmode = 11;
+      } else if(!strcmp(argv[i], "-dpr")){
+        dmode = 12;
       } else {
         usage();
       }
@@ -332,6 +354,8 @@ static int runndb(int argc, char **argv){
         dmode = 10;
       } else if(!strcmp(argv[i], "-dad")){
         dmode = 11;
+      } else if(!strcmp(argv[i], "-dpr")){
+        dmode = 12;
       } else {
         usage();
       }
@@ -468,6 +492,9 @@ static int procmap(int rnum, int bnum, bool rd, bool tr, bool rnd, int dmode){
     case 11:
       tcmapadddouble(map, buf, len, myrand(3));
       break;
+    case 12:
+      tcmapputproc(map, buf, len, buf, len, pdprocfunc, NULL);
+      break;
     default:
       tcmapput(map, buf, len, buf, len);
       break;
@@ -539,6 +566,9 @@ static int proctree(int rnum, bool rd, bool tr, bool rnd, int dmode){
       break;
     case 11:
       tctreeadddouble(tree, buf, len, myrand(3));
+      break;
+    case 12:
+      tctreeputproc(tree, buf, len, buf, len, pdprocfunc, NULL);
       break;
     default:
       tctreeput(tree, buf, len, buf, len);
@@ -612,6 +642,9 @@ static int procmdb(int rnum, int bnum, bool rd, bool tr, bool rnd, int dmode){
     case 11:
       tcmdbadddouble(mdb, buf, len, myrand(3));
       break;
+    case 12:
+      tcmdbputproc(mdb, buf, len, buf, len, pdprocfunc, NULL);
+      break;
     default:
       tcmdbput(mdb, buf, len, buf, len);
       break;
@@ -683,6 +716,9 @@ static int procndb(int rnum, bool rd, bool tr, bool rnd, int dmode){
       break;
     case 11:
       tcndbadddouble(ndb, buf, len, myrand(3));
+      break;
+    case 12:
+      tcndbputproc(ndb, buf, len, buf, len, pdprocfunc, NULL);
       break;
     default:
       tcndbput(ndb, buf, len, buf, len);

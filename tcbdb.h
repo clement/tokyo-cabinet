@@ -736,7 +736,7 @@ bool tcbdbcurout(BDBCUR *cur);
    the return value can be treated as a character string.  Because the region of the return
    value is allocated with the `malloc' call, it should be released with the `free' call when
    it is no longer in use. */
-char *tcbdbcurkey(BDBCUR *cur, int *sp);
+void *tcbdbcurkey(BDBCUR *cur, int *sp);
 
 
 /* Get the key string of the record where the cursor object is.
@@ -758,7 +758,7 @@ char *tcbdbcurkey2(BDBCUR *cur);
    the return value can be treated as a character string.  Because the region of the return value
    is volatile and it may be spoiled by another operation of the database, the data should be
    copied into another involatile buffer immediately. */
-const char *tcbdbcurkey3(BDBCUR *cur, int *sp);
+const void *tcbdbcurkey3(BDBCUR *cur, int *sp);
 
 
 /* Get the value of the record where the cursor object is.
@@ -771,7 +771,7 @@ const char *tcbdbcurkey3(BDBCUR *cur, int *sp);
    the return value can be treated as a character string.  Because the region of the return
    value is allocated with the `malloc' call, it should be released with the `free' call when
    it is no longer in use. */
-char *tcbdbcurval(BDBCUR *cur, int *sp);
+void *tcbdbcurval(BDBCUR *cur, int *sp);
 
 
 /* Get the value string of the record where the cursor object is.
@@ -793,7 +793,7 @@ char *tcbdbcurval2(BDBCUR *cur);
    the return value can be treated as a character string.  Because the region of the return value
    is volatile and it may be spoiled by another operation of the database, the data should be
    copied into another involatile buffer immediately. */
-const char *tcbdbcurval3(BDBCUR *cur, int *sp);
+const void *tcbdbcurval3(BDBCUR *cur, int *sp);
 
 
 /* Get the key and the value of the record where the cursor object is.
@@ -1002,6 +1002,20 @@ bool tcbdbputdupback(TCBDB *bdb, const void *kbuf, int ksiz, const void *vbuf, i
    If a record with the same key exists in the database, the new record is placed after the
    existing one. */
 bool tcbdbputdupback2(TCBDB *bdb, const char *kstr, const char *vstr);
+
+
+/* Store a record into a B+ tree database object with a duplication handler.
+   `bdb' specifies the B+ tree database object connected as a writer.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `proc' specifies the pointer to the callback function to process duplication.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tcbdbputproc(TCBDB *bdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op);
 
 
 /* Move a cursor object to the rear of records corresponding a key.

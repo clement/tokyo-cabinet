@@ -742,6 +742,23 @@ uint8_t tcfdbflags(TCFDB *fdb);
 char *tcfdbopaque(TCFDB *fdb);
 
 
+/* Store a record into a fixed-length database object with a duplication handler.
+   `fdb' specifies the fixed-length database object connected as a writer.
+   `id' specifies the ID number.  It should be more than 0.  If it is `FDBIDMIN', the minimum ID
+   number of existing records is specified.  If it is `FDBIDPREV', the number less by one than
+   the minimum ID number of existing records is specified.  If it is `FDBIDMAX', the maximum ID
+   number of existing records is specified.  If it is `FDBIDNEXT', the number greater by one than
+   the maximum ID number of existing records is specified.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.  If the size of the value is greater
+   than the width tuning parameter of the database, the size is cut down to the width.
+   `proc' specifies the pointer to the callback function to process duplication.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC proc, void *op);
+
+
 /* Process each record atomically of a fixed-length database object.
    `fdb' specifies the fixed-length database object.
    `iter' specifies the pointer to the iterator function called for each record.

@@ -730,6 +730,20 @@ bool tchdbsetcodecfunc(TCHDB *hdb, TCCODEC enc, void *encop, TCCODEC dec, void *
 void tchdbcodecfunc(TCHDB *hdb, TCCODEC *ep, void **eop, TCCODEC *dp, void **dop);
 
 
+/* Store a record into a hash database object with a duplication handler.
+   `hdb' specifies the hash database object connected as a writer.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `proc' specifies the pointer to the callback function to process duplication.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op);
+
+
 /* Retrieve the next record of a record in a hash database object.
    `hdb' specifies the hash database object.
    `kbuf' specifies the pointer to the region of the key.  If it is `NULL', the first record is

@@ -33,6 +33,7 @@ static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCBDB *bdb, const char *func);
 static void mprint(TCBDB *bdb);
+static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int myrand(int range);
 static int runwrite(int argc, char **argv);
@@ -171,6 +172,17 @@ static void mprint(TCBDB *bdb){
   iprintf("cnt_deferdrp: %lld\n", (long long)bdb->hdb->cnt_deferdrp);
   iprintf("cnt_flushdrp: %lld\n", (long long)bdb->hdb->cnt_flushdrp);
   iprintf("cnt_adjrecc: %lld\n", (long long)bdb->hdb->cnt_adjrecc);
+}
+
+
+/* duplication callback function */
+static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(myrand(2) == 0) return NULL;
+  int len = myrand(RECBUFSIZ);
+  char buf[RECBUFSIZ];
+  memset(buf, '*', len);
+  *sp = len;
+  return tcmemdup(buf, len);
 }
 
 
@@ -989,7 +1001,7 @@ static int procrcat(const char *path, int rnum,
       sprintf(fmt, "%%0%dd", myrand(RECBUFSIZ));
       char kbuf[RECBUFSIZ];
       int ksiz = sprintf(kbuf, fmt, myrand(pnum));
-      switch(myrand(9)){
+      switch(myrand(10)){
       case 0:
         if(!tcbdbput(bdb, kbuf, ksiz, kbuf, ksiz)){
           eprint(bdb, "tcbdbput");
@@ -1029,6 +1041,13 @@ static int procrcat(const char *path, int rnum,
       case 6:
         if(isnan(tcbdbadddouble(bdb, kbuf, ksiz, 1.0)) && tcbdbecode(bdb) != TCEKEEP){
           eprint(bdb, "tcbdbadddouble");
+          err = true;
+        }
+        break;
+      case 7:
+        if(!tcbdbputproc(bdb, kbuf, ksiz, kbuf, ksiz, pdprocfunc, NULL) &&
+           tcbdbecode(bdb) != TCEKEEP){
+          eprint(bdb, "tcbdbputproc");
           err = true;
         }
         break;

@@ -5,7 +5,7 @@ tctdb \- the table database API
 
 .SH DESCRIPTION
 .PP
-Table database is a file containing records composed of the primary keys and arbitrary columns and is handled with the table database API.  See `\fBtctdb.h\fR' for entire specification.
+Table database is a file containing records composed of the primary keys and arbitrary columns and is handled with the table database API.
 .PP
 To use the table database API, include `\fBtcutil.h\fR', `\fBtctdb.h\fR', and related standard header files.  Usually, write the following description near the front of a source file.
 .PP
@@ -576,7 +576,7 @@ The function `tctdbiterinit' is used in order to initialize the iterator of a ta
 If successful, the return value is true, else, it is false.
 .RE
 .RS
-The iterator is used in order to access the key of every record stored in a database.
+The iterator is used in order to access the primary key of every record stored in a database.
 .RE
 .RE
 .PP
@@ -746,7 +746,7 @@ The function `tctdboptimize' is used in order to optimize the file of a table da
 `\fIfpow\fR' specifies the maximum number of elements of the free block pool by power of 2.  If it is negative, the current setting is not changed.
 .RE
 .RS
-`\fIopts\fR' specifies options by bitwise or: `BDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `BDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `BDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `BDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.
+`\fIopts\fR' specifies options by bitwise or: `TDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `TDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `TDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `TDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.
 .RE
 .RS
 If successful, the return value is true, else, it is false.

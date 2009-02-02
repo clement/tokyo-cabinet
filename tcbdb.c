@@ -70,8 +70,14 @@ enum {                                   // enumeration for duplication behavior
   BDBPDDUP,                              // allow duplication of keys
   BDBPDDUPB,                             // allow backward duplication
   BDBPDADDINT,                           // add an integer
-  BDBPDADDDBL                            // add a real number
+  BDBPDADDDBL,                           // add a real number
+  BDBPDPROC                              // process by a callback function
 };
+
+typedef struct {                         // type of structure for a duplication callback
+  TCPDPROC proc;                         // function pointer
+  void *op;                              // opaque pointer
+} BDBPDPROCOP;
 
 
 /* private macros */
@@ -84,7 +90,7 @@ enum {                                   // enumeration for duplication behavior
 #define BDBUNLOCKCACHE(TC_bdb) \
   ((TC_bdb)->mmtx ? tcbdbunlockcache(TC_bdb) : true)
 #define BDBTHREADYIELD(TC_bdb) \
-  do { if((TC_bdb)->mmtx) pthread_yield(); } while(false)
+  do { if((TC_bdb)->mmtx) sched_yield(); } while(false)
 
 
 /* private function prototypes */
@@ -1104,7 +1110,7 @@ bool tcbdbcurout(BDBCUR *cur){
 
 
 /* Get the key of the record where the cursor object is. */
-char *tcbdbcurkey(BDBCUR *cur, int *sp){
+void *tcbdbcurkey(BDBCUR *cur, int *sp){
   assert(cur && sp);
   TCBDB *bdb = cur->bdb;
   if(!BDBLOCKMETHOD(bdb, false)) return false;
@@ -1141,7 +1147,7 @@ char *tcbdbcurkey2(BDBCUR *cur){
 
 
 /* Get the key of the record where the cursor object is, as a volatile buffer. */
-const char *tcbdbcurkey3(BDBCUR *cur, int *sp){
+const void *tcbdbcurkey3(BDBCUR *cur, int *sp){
   assert(cur && sp);
   TCBDB *bdb = cur->bdb;
   if(!BDBLOCKMETHOD(bdb, false)) return false;
@@ -1170,7 +1176,7 @@ const char *tcbdbcurkey3(BDBCUR *cur, int *sp){
 
 
 /* Get the value of the record where the cursor object is. */
-char *tcbdbcurval(BDBCUR *cur, int *sp){
+void *tcbdbcurval(BDBCUR *cur, int *sp){
   assert(cur && sp);
   TCBDB *bdb = cur->bdb;
   if(!BDBLOCKMETHOD(bdb, false)) return false;
@@ -1207,7 +1213,7 @@ char *tcbdbcurval2(BDBCUR *cur){
 
 
 /* Get the value of the record where the cursor object is, as a volatile buffer. */
-const char *tcbdbcurval3(BDBCUR *cur, int *sp){
+const void *tcbdbcurval3(BDBCUR *cur, int *sp){
   assert(cur && sp);
   TCBDB *bdb = cur->bdb;
   if(!BDBLOCKMETHOD(bdb, false)) return false;
@@ -1565,6 +1571,39 @@ bool tcbdbputdupback(TCBDB *bdb, const void *kbuf, int ksiz, const void *vbuf, i
     return false;
   }
   bool rv = tcbdbputimpl(bdb, kbuf, ksiz, vbuf, vsiz, BDBPDDUPB);
+  BDBUNLOCKMETHOD(bdb);
+  return rv;
+}
+
+
+/* Store a record into a B+ tree database object with a duplication handler. */
+bool tcbdbputproc(TCBDB *bdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op){
+  assert(bdb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  if(!BDBLOCKMETHOD(bdb, true)) return false;
+  if(!bdb->open || !bdb->wmode){
+    tcbdbsetecode(bdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    BDBUNLOCKMETHOD(bdb);
+    return false;
+  }
+  BDBPDPROCOP procop;
+  procop.proc = proc;
+  procop.op = op;
+  BDBPDPROCOP *procptr = &procop;
+  char stack[TCNUMBUFSIZ*2];
+  char *rbuf;
+  if(ksiz <= sizeof(stack) - sizeof(procptr)){
+    rbuf = stack;
+  } else {
+    TCMALLOC(rbuf, ksiz + sizeof(procptr));
+  }
+  char *wp = rbuf;
+  memcpy(wp, &procptr, sizeof(procptr));
+  wp += sizeof(procptr);
+  memcpy(wp, kbuf, ksiz);
+  kbuf = rbuf + sizeof(procptr);
+  bool rv = tcbdbputimpl(bdb, kbuf, ksiz, vbuf, vsiz, BDBPDPROC);
+  if(rbuf != stack) TCFREE(rbuf);
   BDBUNLOCKMETHOD(bdb);
   return rv;
 }
@@ -2076,6 +2115,9 @@ static bool tcbdbleafaddrec(TCBDB *bdb, BDBLEAF *leaf, int dmode,
     if(rv == 0){
       int psiz = TCALIGNPAD(rec->ksiz);
       BDBREC *orec = rec;
+      BDBPDPROCOP *procptr;
+      int nvsiz;
+      char *nvbuf;
       switch(dmode){
       case BDBPDKEEP:
         return false;
@@ -2126,6 +2168,22 @@ static bool tcbdbleafaddrec(TCBDB *bdb, BDBLEAF *leaf, int dmode,
         }
         *(double *)(dbuf + rec->ksiz + psiz) += *(double *)vbuf;
         *(double *)vbuf = *(double *)(dbuf + rec->ksiz + psiz);
+        break;
+      case BDBPDPROC:
+        procptr = *(BDBPDPROCOP **)((char *)kbuf - sizeof(procptr));
+        nvbuf = procptr->proc(dbuf + rec->ksiz + psiz, rec->vsiz, &nvsiz, procptr->op);
+        if(!nvbuf) return false;
+        if(nvsiz > rec->vsiz){
+          TCREALLOC(rec, rec, sizeof(*rec) + rec->ksiz + psiz + nvsiz + 1);
+          if(rec != orec){
+            tcptrlistover(recs, i, rec);
+            dbuf = (char *)rec + sizeof(*rec);
+          }
+        }
+        memcpy(dbuf + rec->ksiz + psiz, nvbuf, nvsiz);
+        dbuf[rec->ksiz+psiz+nvsiz] = '\0';
+        rec->vsiz = nvsiz;
+        TCFREE(nvbuf);
         break;
       default:
         if(vsiz > rec->vsiz){

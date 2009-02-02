@@ -243,6 +243,9 @@
 
 #if TCUSEPTHREAD
 #include <pthread.h>
+#if defined(_POSIX_PRIORITY_SCHEDULING)
+#include <sched.h>
+#endif
 #endif
 
 
@@ -377,7 +380,7 @@ void *_tc_recdecode(const void *ptr, int size, int *sp, void *op);
   (*(TC_th) = 0, (TC_func)(TC_arg), 0)
 #define pthread_join(TC_th, TC_rv)       (*(TC_rv) = NULL, 0)
 #define pthread_detach(TC_th)            0
-#define pthread_yield()                  _tc_dummyfunc()
+#define sched_yield()                    _tc_dummyfunc()
 
 #endif
 
@@ -405,8 +408,8 @@ void *_tc_recdecode(const void *ptr, int size, int *sp, void *op);
   } while(false);
 #endif
 
-#if (defined(_SYS_MACOSX_) || defined(_SYS_SUNOS_)) && TCUSEPTHREAD
-#define pthread_yield()                  usleep(1000 * 20)
+#if !defined(_POSIX_PRIORITY_SCHEDULING) && TCUSEPTHREAD
+#define sched_yield()                    usleep(1000 * 20)
 #endif
 
 

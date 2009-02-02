@@ -358,12 +358,14 @@ uint64_t tcadbsize(TCADB *adb);
 
 /* Call a versatile function for miscellaneous operations of an abstract database object.
    `adb' specifies the abstract database object.
-   `name' specifies the name of the function.  All databases support "putlist", "outlist", and
-   "getlist".  "putlist" is to store records.  It receives keys and values one after the other,
-   and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an
-   empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values
-   of corresponding records one after the other.  Table database supports "setindex", "search",
-   and "genuid".
+   `name' specifies the name of the function.  All databases support "put", "out", "get",
+   "putlist", "outlist", and "getlist".  "put" is to store a record.  It receives a key and a
+   value, and returns an empty list.  "out" is to remove a record.  It receives a key, and
+   returns an empty list.  "get" is to retrieve a record.  It receives a key, and returns a list
+   of the values.  "putlist" is to store records.  It receives keys and values one after the
+   other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and
+   returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys
+   and values of corresponding records one after the other.
    `args' specifies a list object containing arguments.
    If successful, the return value is a list object of the result.  `NULL' is returned on failure.
    Because the object of the return value is created with the function `tclistnew', it
@@ -390,6 +392,21 @@ int tcadbomode(TCADB *adb);
    The return value is the concrete database object depend on the open mode or 0 if the object
    does not connect to any database instance. */
 void *tcadbreveal(TCADB *adb);
+
+
+/* Store a record into an abstract database object with a duplication handler.
+   `adb' specifies the abstract database object connected as a writer.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `proc' specifies the pointer to the callback function to process duplication.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false.
+   This function does not work for the table database. */
+bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+                  TCPDPROC proc, void *op);
 
 
 /* Process each record atomically of an abstract database object.

@@ -246,10 +246,10 @@
 
 <h3 id="installation_library">How to Use the Library</h3>
 
-<p>Tokyo Cabinet provides API of the C language and it is available by programs conforming to the C89 (ANSI C) standard or the C99 standard.  As the header files of Tokyo Cabinet are provided as `<code>tcutil.h</code>', `<code>tchdb.h</code>', `<code>tcbdb.h</code>', and `<code>tcadb.h</code>', applications should include one or more of them accordingly to use the API.  As the library is provided as `<code>libtokyocabinet.a</code>' and `<code>libtokyocabinet.so</code>' and they depends `<code>libz.so</code>', `<code>libpthread.so</code>', `<code>libm.so</code>', and `<code>libc.so</code>', linker options `<code>-ltokyocabinet</code>', `<code>-lz</code>', `<code>-lbz2</code>', `<code>-lpthread</code>', `<code>-lm</code>', and `<code>-lc</code>' are required for build command.  A typical build command is the following.</p>
+<p>Tokyo Cabinet provides API of the C language and it is available by programs conforming to the C89 (ANSI C) standard or the C99 standard.  As the header files of Tokyo Cabinet are provided as `<code>tcutil.h</code>', `<code>tchdb.h</code>', `<code>tcbdb.h</code>', and `<code>tcadb.h</code>', applications should include one or more of them accordingly to use the API.  As the library is provided as `<code>libtokyocabinet.a</code>' and `<code>libtokyocabinet.so</code>' and they depends `<code>libz.so</code>', `<code>librt.so</code>', `<code>libpthread.so</code>', `<code>libm.so</code>', and `<code>libc.so</code>', linker options `<code>-ltokyocabinet</code>', `<code>-lz</code>', `<code>-lbz2</code>', `<code>-lrt</code>', `<code>-lpthread</code>', `<code>-lm</code>', and `<code>-lc</code>' are required for build command.  A typical build command is the following.</p>
 
 <pre>gcc -I/usr/local/include tc_example.c -o tc_example \
-  -L/usr/local/lib -ltokyocabinet -lz -lbz2 -lpthread -lm -lc
+  -L/usr/local/lib -ltokyocabinet -lz -lbz2 -lrt -lpthread -lm -lc
 </pre>
 
 <p>You can also use Tokyo Cabinet in programs written in C++.  Because each header is wrapped in C linkage (`<code>extern "C"</code>' block), you can simply include them into your C++ programs.</p>
@@ -258,7 +258,7 @@
 
 <h2 id="tcutilapi">The Utility API</h2>
 
-<p>The utility API is a set of routines to handle records on memory easily.  Especially, extensible string, array list, hash map, and ordered tree are useful.  See `<code>tcutil.h</code>' for entire specification.</p>
+<p>The utility API is a set of routines to handle records on memory easily.  Especially, extensible string, array list, hash map, and ordered tree are useful.  See `<code>tcutil.h</code>' for the entire specification.</p>
 
 <h3 id="tcutilapi_description">Description</h3>
 
@@ -2841,13 +2841,13 @@ int main(int argc, char **argv){
 <dd>Perform test of extensible string.</dd>
 <dt><code>tcutest list [-rd] <var>rnum</var> [<var>anum</var>]</code></dt>
 <dd>Perform test of array list.</dd>
-<dt><code>tcutest map [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad] <var>rnum</var> [<var>bnum</var>]</code></dt>
+<dt><code>tcutest map [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad|-dpr] <var>rnum</var> [<var>bnum</var>]</code></dt>
 <dd>Perform test of hash map.</dd>
-<dt><code>tcutest tree [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad] <var>rnum</var></code></dt>
+<dt><code>tcutest tree [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad|-dpr] <var>rnum</var></code></dt>
 <dd>Perform test of ordered tree.</dd>
-<dt><code>tcutest mdb [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad] <var>rnum</var> [<var>bnum</var>]</code></dt>
+<dt><code>tcutest mdb [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad|-dpr] <var>rnum</var> [<var>bnum</var>]</code></dt>
 <dd>Perform test of on-memory hash database.</dd>
-<dt><code>tcutest ndb [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad] <var>rnum</var></code></dt>
+<dt><code>tcutest ndb [-rd] [-tr] [-rnd] [-dk|-dc|-dai|-dad|-dpr] <var>rnum</var></code></dt>
 <dd>Perform test of on-memory tree database.</dd>
 <dt><code>tcutest misc <var>rnum</var></code></dt>
 <dd>Perform test of miscellaneous routines.</dd>
@@ -2865,6 +2865,7 @@ int main(int argc, char **argv){
 <li><code>-dc</code> : use the function `tcxxxputcat' instead of `tcxxxput'.</li>
 <li><code>-dai</code> : use the function `tcxxxaddint' instead of `tcxxxput'.</li>
 <li><code>-dad</code> : use the function `tcxxxadddouble' instead of `tcxxxput'.</li>
+<li><code>-dpr</code> : use the function `tcxxxputproc' instead of `tcxxxput'.</li>
 </ul>
 
 <p>This command returns 0 on success, another on failure.</p>
@@ -2953,7 +2954,7 @@ int main(int argc, char **argv){
 
 <h2 id="tchdbapi">The Hash Database API</h2>
 
-<p>Hash database is a file containing a hash table and is handled with the hash database API.  See `<code>tchdb.h</code>' for entire specification.</p>
+<p>Hash database is a file containing a hash table and is handled with the hash database API.  See `<code>tchdb.h</code>' for the entire specification.</p>
 
 <h3 id="tchdbapi_description">Description</h3>
 
@@ -3612,7 +3613,7 @@ int main(int argc, char **argv){
 
 <h2 id="tcbdbapi">The B+ Tree Database API</h2>
 
-<p>B+ tree database is a file containing a B+ tree and is handled with the B+ tree database API.  See `<code>tcbdb.h</code>' for entire specification.</p>
+<p>B+ tree database is a file containing a B+ tree and is handled with the B+ tree database API.  See `<code>tcbdb.h</code>' for the entire specification.</p>
 
 <h3 id="tcbdbapi_description">Description</h3>
 
@@ -4238,7 +4239,7 @@ int main(int argc, char **argv){
 <p>The function `tcbdbcurkey' is used in order to get the key of the record where the cursor object is.</p>
 
 <dl class="api">
-<dt><code>char *tcbdbcurkey(BDBCUR *<var>cur</var>, int *<var>sp</var>);</code></dt>
+<dt><code>void *tcbdbcurkey(BDBCUR *<var>cur</var>, int *<var>sp</var>);</code></dt>
 <dd>`<var>cur</var>' specifies the cursor object.</dd>
 <dd>`<var>sp</var>' specifies the pointer to the variable into which the size of the region of the return value is assigned.</dd>
 <dd>If successful, the return value is the pointer to the region of the key, else, it is `NULL'.  `NULL' is returned when the cursor is at invalid position.</dd>
@@ -4257,7 +4258,7 @@ int main(int argc, char **argv){
 <p>The function `tcbdbcurkey3' is used in order to get the key of the record where the cursor object is, as a volatile buffer.</p>
 
 <dl class="api">
-<dt><code>const char *tcbdbcurkey3(BDBCUR *<var>cur</var>, int *<var>sp</var>);</code></dt>
+<dt><code>const void *tcbdbcurkey3(BDBCUR *<var>cur</var>, int *<var>sp</var>);</code></dt>
 <dd>`<var>cur</var>' specifies the cursor object.</dd>
 <dd>`<var>sp</var>' specifies the pointer to the variable into which the size of the region of the return value is assigned.</dd>
 <dd>If successful, the return value is the pointer to the region of the key, else, it is `NULL'.  `NULL' is returned when the cursor is at invalid position.</dd>
@@ -4267,7 +4268,7 @@ int main(int argc, char **argv){
 <p>The function `tcbdbcurval' is used in order to get the value of the record where the cursor object is.</p>
 
 <dl class="api">
-<dt><code>char *tcbdbcurval(BDBCUR *<var>cur</var>, int *<var>sp</var>);</code></dt>
+<dt><code>void *tcbdbcurval(BDBCUR *<var>cur</var>, int *<var>sp</var>);</code></dt>
 <dd>`<var>cur</var>' specifies the cursor object.</dd>
 <dd>`<var>sp</var>' specifies the pointer to the variable into which the size of the region of the return value is assigned.</dd>
 <dd>If successful, the return value is the pointer to the region of the value, else, it is `NULL'.  `NULL' is returned when the cursor is at invalid position.</dd>
@@ -4286,7 +4287,7 @@ int main(int argc, char **argv){
 <p>The function `tcbdbcurval3' is used in order to get the value of the record where the cursor object is, as a volatile buffer.</p>
 
 <dl class="api">
-<dt><code>const char *tcbdbcurval3(BDBCUR *<var>cur</var>, int *<var>sp</var>);</code></dt>
+<dt><code>const void *tcbdbcurval3(BDBCUR *<var>cur</var>, int *<var>sp</var>);</code></dt>
 <dd>`<var>cur</var>' specifies the cursor object.</dd>
 <dd>`<var>sp</var>' specifies the pointer to the variable into which the size of the region of the return value is assigned.</dd>
 <dd>If successful, the return value is the pointer to the region of the value, else, it is `NULL'.  `NULL' is returned when the cursor is at invalid position.</dd>
@@ -4520,7 +4521,7 @@ int main(int argc, char **argv){
 
 <h2 id="tcfdbapi">The Fixed-length Database API</h2>
 
-<p>Fixed-length database is a file containing an array of fixed-length elements and is handled with the fixed-length database API.  See `<code>tcfdb.h</code>' for entire specification.</p>
+<p>Fixed-length database is a file containing an array of fixed-length elements and is handled with the fixed-length database API.  See `<code>tcfdb.h</code>' for the entire specification.</p>
 
 <h3 id="tcfdbapi_description">Description</h3>
 
@@ -5181,7 +5182,7 @@ int main(int argc, char **argv){
 
 <h2 id="tctdbapi">The Table Database API</h2>
 
-<p>Table database is a file containing records composed of the primary keys and arbitrary columns and is handled with the table database API.  See `<code>tctdb.h</code>' for entire specification.</p>
+<p>Table database is a file containing records composed of the primary keys and arbitrary columns and is handled with the table database API.  See `<code>tctdb.h</code>' for the entire specification.</p>
 
 <h3 id="tctdbapi_description">Description</h3>
 
@@ -5481,7 +5482,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbiterinit(TCTDB *<var>tdb</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>The iterator is used in order to access the key of every record stored in a database.</dd>
+<dd>The iterator is used in order to access the primary key of every record stored in a database.</dd>
 </dl>
 
 <p>The function `tctdbiternext' is used in order to get the next primary key of the iterator of a table database object.</p>
@@ -5567,7 +5568,7 @@ int main(int argc, char **argv){
 <dd>`<var>bnum</var>' specifies the number of elements of the bucket array.  If it is not more than 0, the default value is specified.  The default value is two times of the number of records.</dd>
 <dd>`<var>apow</var>' specifies the size of record alignment by power of 2.  If it is negative, the current setting is not changed.</dd>
 <dd>`<var>fpow</var>' specifies the maximum number of elements of the free block pool by power of 2.  If it is negative, the current setting is not changed.</dd>
-<dd>`<var>opts</var>' specifies options by bitwise or: `BDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64-bit bucket array, `BDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `BDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `BDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.</dd>
+<dd>`<var>opts</var>' specifies options by bitwise or: `TDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64-bit bucket array, `TDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `TDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `TDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>This function is useful to reduce the size of the database file with data fragmentation by successive updating.</dd>
 </dl>
@@ -5984,7 +5985,7 @@ int main(int argc, char **argv){
 
 <h2 id="tcadbapi">The Abstract Database API</h2>
 
-<p>Abstract database is a set of interfaces to use on-memory hash database, on-memory tree database, hash database, B+ tree database, fixed-length database, and table database with the same API.  See `<code>tcadb.h</code>' for entire specification.</p>
+<p>Abstract database is a set of interfaces to use on-memory hash database, on-memory tree database, hash database, B+ tree database, fixed-length database, and table database with the same API.  See `<code>tcadb.h</code>' for the entire specification.</p>
 
 <h3 id="tcadbapi_description">Description</h3>
 
@@ -6291,7 +6292,7 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>TCLIST *tcadbmisc(TCADB *<var>adb</var>, const char *<var>name</var>, const TCLIST *<var>args</var>);</code></dt>
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
-<dd>`<var>name</var>' specifies the name of the function.  All databases support "putlist", "outlist", and "getlist".  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.  Table database supports "setindex", "search", and "genuid".</dd>
+<dd>`<var>name</var>' specifies the name of the function.  All databases support "put", "out", "get", "putlist", "outlist", and "getlist".  "put" is to store a record.  It receives a key and a value, and returns an empty list.  "out" is to remove a record.  It receives a key, and returns an empty list.  "get" is to retrieve a record.  It receives a key, and returns a list of the values.  "putlist" is to store records.  It receives keys and values one after the other, and returns an empty list.  "outlist" is to remove records.  It receives keys, and returns an empty list.  "getlist" is to retrieve records.  It receives keys, and returns keys and values of corresponding records one after the other.</dd>
 <dd>`<var>args</var>' specifies a list object containing arguments.</dd>
 <dd>If successful, the return value is a list object of the result.  `NULL' is returned on failure.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>

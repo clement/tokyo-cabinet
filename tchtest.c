@@ -33,6 +33,7 @@ static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCHDB *hdb, const char *func);
 static void mprint(TCHDB *hdb);
+static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int myrand(int range);
 static int runwrite(int argc, char **argv);
@@ -145,6 +146,17 @@ static void mprint(TCHDB *hdb){
   iprintf("cnt_deferdrp: %lld\n", (long long)hdb->cnt_deferdrp);
   iprintf("cnt_flushdrp: %lld\n", (long long)hdb->cnt_flushdrp);
   iprintf("cnt_adjrecc: %lld\n", (long long)hdb->cnt_adjrecc);
+}
+
+
+/* duplication callback function */
+static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(myrand(2) == 0) return NULL;
+  int len = myrand(RECBUFSIZ);
+  char buf[RECBUFSIZ];
+  memset(buf, '*', len);
+  *sp = len;
+  return tcmemdup(buf, len);
 }
 
 
@@ -726,7 +738,7 @@ static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
       sprintf(fmt, "%%0%dd", myrand(RECBUFSIZ));
       char kbuf[RECBUFSIZ];
       int ksiz = sprintf(kbuf, fmt, myrand(pnum));
-      switch(myrand(7)){
+      switch(myrand(8)){
       case 0:
         if(!tchdbput(hdb, kbuf, ksiz, kbuf, ksiz)){
           eprint(hdb, "tchdbput");
@@ -754,6 +766,13 @@ static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
       case 4:
         if(isnan(tchdbadddouble(hdb, kbuf, ksiz, 1.0)) && tchdbecode(hdb) != TCEKEEP){
           eprint(hdb, "tchdbadddouble");
+          err = true;
+        }
+        break;
+      case 5:
+        if(!tchdbputproc(hdb, kbuf, ksiz, kbuf, ksiz, pdprocfunc, NULL) &&
+           tchdbecode(hdb) != TCEKEEP){
+          eprint(hdb, "tchdbputproc");
           err = true;
         }
         break;
@@ -1719,7 +1738,7 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
           if(tchdbout(hdb, kbuf, ksiz)){
             cnt--;
           } else if(tchdbecode(hdb) != TCENOREC){
-            eprint(hdb, "tcbdbout");
+            eprint(hdb, "tchdbout");
             err = true;
           }
           tcmapout(map, kbuf, ksiz);

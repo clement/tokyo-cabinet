@@ -1,3 +1,25 @@
+2009-01-29  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcmapputproc, tctreeputproc, tcmdbputproc, tcndbputproc): new functions.
+
+	* tchdb.c (tchdbputproc): new function.
+
+	* tchdb.c (TDBTHREADYIELD): "sched_yield" is now used instead of "pthread_yield".
+
+	* tcbdb.c (tcbdbputproc): new function.
+
+	* tcbdb.c (tcbdbcurkey, tcbdbcurval): the type of the return value was modified.
+
+	* tcfdb.c (tcfdbputproc): new function.
+
+	* tcadb.c (tcadbputproc): new function.
+
+	* tcadb.c (tcadbmisc): sub funcitons "put", "out", and "get" were added.
+
+	* tcadb.c (tcstrisnum): new function.
+
+	- Release: 1.4.4
+
 2009-01-26  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tctdb.c (tctdbqryprocout): renamed as "tctdbqrysearchout".

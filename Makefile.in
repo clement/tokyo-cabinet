@@ -133,7 +133,7 @@ install :
 
 install-strip :
 	make DESTDIR=$(DESTDIR) install
-	cd $(DESTDIR)$(BINDIR) && strip $(MYCOMMANDS)
+	cd $(DESTDIR)$(BINDIR) && strip $(COMMANDFILES)
 
 
 uninstall :
@@ -186,8 +186,10 @@ check-util :
 	$(RUNENV) $(RUNCMD) ./tcutest tree -rd -tr -rnd -dc 50000
 	$(RUNENV) $(RUNCMD) ./tcutest mdb -rd -tr 50000
 	$(RUNENV) $(RUNCMD) ./tcutest mdb -rd -tr -rnd -dc 50000
+	$(RUNENV) $(RUNCMD) ./tcutest mdb -rd -tr -rnd -dpr 50000
 	$(RUNENV) $(RUNCMD) ./tcutest ndb -rd -tr 50000
 	$(RUNENV) $(RUNCMD) ./tcutest ndb -rd -tr -rnd -dc 50000
+	$(RUNENV) $(RUNCMD) ./tcutest ndb -rd -tr -rnd -dpr 50000
 	$(RUNENV) $(RUNCMD) ./tcutest misc 500
 	$(RUNENV) $(RUNCMD) ./tcutest wicked 50000
 	$(RUNENV) $(RUNCMD) ./tcumttest combo 5 50000 500
@@ -372,6 +374,7 @@ check-fdb :
 	$(RUNENV) $(RUNCMD) ./tcftest remove -mt casket
 	$(RUNENV) $(RUNCMD) ./tcftest rcat -pn 500 casket 50000 50
 	$(RUNENV) $(RUNCMD) ./tcftest rcat -nl -pn 500 -rl casket 5000 500
+	$(RUNENV) $(RUNCMD) ./tcftest rcat -pn 500 -ru casket 5000 500
 	$(RUNENV) $(RUNCMD) ./tcfmgr list -pv casket > check.out
 	$(RUNENV) $(RUNCMD) ./tcfmgr list -pv -ri "[100,200)" -px casket > check.out
 	$(RUNENV) $(RUNCMD) ./tcftest misc casket 5000
