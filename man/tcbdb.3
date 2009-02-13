@@ -107,7 +107,7 @@ The function `tcbdbsetcmpfunc' is used in order to set the custom comparison fun
 `\fIbdb\fR' specifies the B+ tree database object which is not opened.
 .RE
 .RS
-`\fIcmp\fR' specifies the pointer to the custom comparison function.
+`\fIcmp\fR' specifies the pointer to the custom comparison function.  It receives five parameters.  The first parameter is the pointer to the region of one key.  The second parameter is the size of the region of one key.  The third parameter is the pointer to the region of the other key.  The fourth parameter is the size of the region of the other key.  The fifth parameter is the pointer to the optional opaque object.  It returns positive if the former is big, negative if the latter is big, 0 if both are equivalent.
 .RE
 .RS
 `\fIcmpop\fR' specifies an arbitrary pointer to be given as a parameter of the comparison function.  If it is not needed, `NULL' can be specified.

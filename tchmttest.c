@@ -59,6 +59,12 @@ typedef struct {                         // type of structure for typical thread
   int id;
 } TARGTYPICAL;
 
+typedef struct {                         // type of structure for race thread
+  TCHDB *hdb;
+  int rnum;
+  int id;
+} TARGRACE;
+
 
 /* global variables */
 const char *g_progname;                  // program name
@@ -80,6 +86,7 @@ static int runread(int argc, char **argv);
 static int runremove(int argc, char **argv);
 static int runwicked(int argc, char **argv);
 static int runtypical(int argc, char **argv);
+static int runrace(int argc, char **argv);
 static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
                      int opts, int rcnum, int xmsiz, int omode, bool as, bool rnd);
 static int procread(const char *path, int tnum, int rcnum, int xmsiz, int omode,
@@ -88,11 +95,14 @@ static int procremove(const char *path, int tnum, int rcnum, int xmsiz, int omod
 static int procwicked(const char *path, int tnum, int rnum, int opts, int omode, bool nc);
 static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
                        int opts, int rcnum, int xmsiz, int omode, bool nc, int rratio);
+static int procrace(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
+                    int opts, int xmsiz, int omode);
 static void *threadwrite(void *targ);
 static void *threadread(void *targ);
 static void *threadremove(void *targ);
 static void *threadwicked(void *targ);
 static void *threadtypical(void *targ);
+static void *threadrace(void *targ);
 
 
 /* main routine */
@@ -114,6 +124,8 @@ int main(int argc, char **argv){
     rv = runwicked(argc, argv);
   } else if(!strcmp(argv[1], "typical")){
     rv = runtypical(argc, argv);
+  } else if(!strcmp(argv[1], "race")){
+    rv = runrace(argc, argv);
   } else {
     usage();
   }
@@ -135,6 +147,8 @@ static void usage(void){
           " path tnum rnum\n", g_progname);
   fprintf(stderr, "  %s typical [-tl] [-td|-tb|-tt|-tx] [-rc num] [-xm num] [-nl|-nb] [-nc]"
           " [-rr num] path tnum rnum [bnum [apow [fpow]]]\n", g_progname);
+  fprintf(stderr, "  %s race [-tl] [-td|-tb|-tt|-tx] [-xm num] [-nl|-nb]"
+          " path tnum rnum [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "\n");
   exit(1);
 }
@@ -486,6 +500,67 @@ static int runtypical(int argc, char **argv){
   int apow = astr ? tcatoix(astr) : -1;
   int fpow = fstr ? tcatoix(fstr) : -1;
   int rv = proctypical(path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, omode, nc, rratio);
+  return rv;
+}
+
+
+/* parse arguments of race command */
+static int runrace(int argc, char **argv){
+  char *path = NULL;
+  char *tstr = NULL;
+  char *rstr = NULL;
+  char *bstr = NULL;
+  char *astr = NULL;
+  char *fstr = NULL;
+  int opts = 0;
+  int xmsiz = -1;
+  int omode = 0;
+  for(int i = 2; i < argc; i++){
+    if(!path && argv[i][0] == '-'){
+      if(!strcmp(argv[i], "-tl")){
+        opts |= HDBTLARGE;
+      } else if(!strcmp(argv[i], "-td")){
+        opts |= HDBTDEFLATE;
+      } else if(!strcmp(argv[i], "-tb")){
+        opts |= HDBTBZIP;
+      } else if(!strcmp(argv[i], "-tt")){
+        opts |= HDBTTCBS;
+      } else if(!strcmp(argv[i], "-tx")){
+        opts |= HDBTEXCODEC;
+      } else if(!strcmp(argv[i], "-xm")){
+        if(++i >= argc) usage();
+        xmsiz = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-nl")){
+        omode |= HDBONOLCK;
+      } else if(!strcmp(argv[i], "-nb")){
+        omode |= HDBOLCKNB;
+      } else {
+        usage();
+      }
+    } else if(!path){
+      path = argv[i];
+    } else if(!tstr){
+      tstr = argv[i];
+    } else if(!rstr){
+      rstr = argv[i];
+    } else if(!bstr){
+      bstr = argv[i];
+    } else if(!astr){
+      astr = argv[i];
+    } else if(!fstr){
+      fstr = argv[i];
+    } else {
+      usage();
+    }
+  }
+  if(!path || !tstr || !rstr) usage();
+  int tnum = tcatoix(tstr);
+  int rnum = tcatoix(rstr);
+  if(tnum < 1 || rnum < 1) usage();
+  int bnum = bstr ? tcatoix(bstr) : -1;
+  int apow = astr ? tcatoix(astr) : -1;
+  int fpow = fstr ? tcatoix(fstr) : -1;
+  int rv = procrace(path, tnum, rnum, bnum, apow, fpow, opts, xmsiz, omode);
   return rv;
 }
 
@@ -896,6 +971,79 @@ static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow,
       targs[i].rratio= rratio;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadtypical, targs + i) != 0){
+        eprint(hdb, "pthread_create");
+        targs[i].id = -1;
+        err = true;
+      }
+    }
+    for(int i = 0; i < tnum; i++){
+      if(targs[i].id == -1) continue;
+      void *rv;
+      if(pthread_join(threads[i], &rv) != 0){
+        eprint(hdb, "pthread_join");
+        err = true;
+      } else if(rv){
+        err = true;
+      }
+    }
+  }
+  iprintf("record number: %llu\n", (unsigned long long)tchdbrnum(hdb));
+  iprintf("size: %llu\n", (unsigned long long)tchdbfsiz(hdb));
+  mprint(hdb);
+  if(!tchdbclose(hdb)){
+    eprint(hdb, "tchdbclose");
+    err = true;
+  }
+  tchdbdel(hdb);
+  iprintf("time: %.3f\n", tctime() - stime);
+  iprintf("%s\n\n", err ? "error" : "ok");
+  return err ? 1 : 0;
+}
+
+
+/* perform race command */
+static int procrace(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
+                    int opts, int xmsiz, int omode){
+  iprintf("<Race Condition Test>\n  path=%s  tnum=%d  rnum=%d  bnum=%d  apow=%d  fpow=%d"
+          "  opts=%d  xmsiz=%d  omode=%d\n\n",
+          path, tnum, rnum, bnum, apow, fpow, opts, xmsiz, omode);
+  bool err = false;
+  double stime = tctime();
+  TCHDB *hdb = tchdbnew();
+  if(g_dbgfd >= 0) tchdbsetdbgfd(hdb, g_dbgfd);
+  if(!tchdbsetmutex(hdb)){
+    eprint(hdb, "tchdbsetmutex");
+    err = true;
+  }
+  if(!tchdbsetcodecfunc(hdb, _tc_recencode, NULL, _tc_recdecode, NULL)){
+    eprint(hdb, "tchdbsetcodecfunc");
+    err = true;
+  }
+  if(!tchdbtune(hdb, bnum, apow, fpow, opts)){
+    eprint(hdb, "tchdbtune");
+    err = true;
+  }
+  if(xmsiz >= 0 && !tchdbsetxmsiz(hdb, xmsiz)){
+    eprint(hdb, "tchdbsetxmsiz");
+    err = true;
+  }
+  if(!tchdbopen(hdb, path, HDBOWRITER | HDBOCREAT | HDBOTRUNC | omode)){
+    eprint(hdb, "tchdbopen");
+    err = true;
+  }
+  TARGRACE targs[tnum];
+  pthread_t threads[tnum];
+  if(tnum == 1){
+    targs[0].hdb = hdb;
+    targs[0].rnum = rnum;
+    targs[0].id = 0;
+    if(threadrace(targs) != NULL) err = true;
+  } else {
+    for(int i = 0; i < tnum; i++){
+      targs[i].hdb = hdb;
+      targs[i].rnum = rnum;
+      targs[i].id = i;
+      if(pthread_create(threads + i, NULL, threadrace, targs + i) != 0){
         eprint(hdb, "pthread_create");
         targs[i].id = -1;
         err = true;
@@ -1368,6 +1516,112 @@ static void *threadtypical(void *targ){
       }
     }
     tcmapdel(map);
+  }
+  return err ? "error" : NULL;
+}
+
+
+/* thread the race function */
+static void *threadrace(void *targ){
+  TCHDB *hdb = ((TARGRACE *)targ)->hdb;
+  int rnum = ((TARGRACE *)targ)->rnum;
+  int id = ((TARGRACE *)targ)->id;
+  bool err = false;
+  int mid = rnum * 2;
+  for(int i = 1; !err && i <= rnum; i++){
+    char buf[RECBUFSIZ];
+    int len = sprintf(buf, "%d", myrandnd(i));
+    int rnd = myrand(100);
+    if(rnd < 10){
+      if(!tchdbputkeep(hdb, buf, len, buf, len) && tchdbecode(hdb) != TCEKEEP){
+        eprint(hdb, "tchdbputkeep");
+        err = true;
+      }
+    } else if(rnd < 20){
+      if(!tchdbputcat(hdb, buf, len, buf, len)){
+        eprint(hdb, "tchdbputcat");
+        err = true;
+      }
+    } else if(rnd < 30){
+      if(!tchdbout(hdb, buf, len) && tchdbecode(hdb) != TCENOREC){
+        eprint(hdb, "tchdbout");
+        err = true;
+      }
+    } else if(rnd < 31){
+      if(!tchdbputasync(hdb, buf, len, buf, len)){
+        eprint(hdb, "tchdbputasync");
+        err = true;
+      }
+    } else {
+      if(myrand(10) == 0){
+        int rsiz = myrand(256);
+        char *rbuf = tcmalloc(rsiz + 1);
+        for(int j = 0; j < rsiz; j++){
+          rbuf[j] = myrand('z' - 'a') + 'a';
+        }
+        if(myrand(2) == 0){
+          if(!tchdbput(hdb, buf, len, rbuf, rsiz)){
+            eprint(hdb, "tchdbputcat");
+            err = true;
+          }
+        } else {
+          if(!tchdbputcat(hdb, buf, len, rbuf, rsiz)){
+            eprint(hdb, "tchdbputcat");
+            err = true;
+          }
+        }
+        tcfree(rbuf);
+      } else {
+        if(!tchdbput(hdb, buf, len, buf, len)){
+          eprint(hdb, "tchdbput");
+          err = true;
+        }
+      }
+    }
+    if(id == 0){
+      if(myrand(mid) == 0){
+        iprintf("[v]");
+        if(!tchdbvanish(hdb)){
+          eprint(hdb, "tchdbvanish");
+          err = true;
+        }
+      }
+      if(myrand(mid) == 0){
+        iprintf("[o]");
+        if(!tchdboptimize(hdb, myrand(rnum) + 1, myrand(10), myrand(10), 0)){
+          eprint(hdb, "tchdbvanish");
+          err = true;
+        }
+      }
+      if(myrand(mid) == 0){
+        iprintf("[i]");
+        if(!tchdbiterinit(hdb)){
+          eprint(hdb, "tchdbput");
+          err = true;
+        }
+        char *kbuf;
+        int ksiz;
+        while((kbuf = tchdbiternext(hdb, &ksiz)) != NULL){
+          int vsiz;
+          char *vbuf = tchdbget(hdb, kbuf, ksiz, &vsiz);
+          if(vbuf){
+            tcfree(vbuf);
+          } else if(tchdbecode(hdb) != TCENOREC){
+            eprint(hdb, "tchdbget");
+            err = true;
+          }
+          tcfree(kbuf);
+        }
+        if(tchdbecode(hdb) != TCENOREC){
+          eprint(hdb, "(validation)");
+          err = true;
+        }
+      }
+      if(rnum > 250 && i % (rnum / 250) == 0){
+        iputchar('.');
+        if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+      }
+    }
   }
   return err ? "error" : NULL;
 }

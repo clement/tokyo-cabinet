@@ -58,6 +58,12 @@ typedef struct {                         // type of structure for typical thread
   int id;
 } TARGTYPICAL;
 
+typedef struct {                         // type of structure for race thread
+  TCBDB *bdb;
+  int rnum;
+  int id;
+} TARGRACE;
+
 
 /* global variables */
 const char *g_progname;                  // program name
@@ -79,6 +85,7 @@ static int runread(int argc, char **argv);
 static int runremove(int argc, char **argv);
 static int runwicked(int argc, char **argv);
 static int runtypical(int argc, char **argv);
+static int runrace(int argc, char **argv);
 static int procwrite(const char *path, int tnum, int rnum, int lmemb, int nmemb,
                      int bnum, int apow, int fpow, int opts, int omode, bool rnd);
 static int procread(const char *path, int tnum, int omode, bool wb, bool rnd);
@@ -86,11 +93,14 @@ static int procremove(const char *path, int tnum, int omode, bool rnd);
 static int procwicked(const char *path, int tnum, int rnum, int opts, int omode, bool nc);
 static int proctypical(const char *path, int tnum, int rnum, int lmemb, int nmemb,
                        int bnum, int apow, int fpow, int opts, int omode, bool nc, int rratio);
+static int procrace(const char *path, int tnum, int rnum, int lmemb, int nmemb,
+                    int bnum, int apow, int fpow, int opts, int omode);
 static void *threadwrite(void *targ);
 static void *threadread(void *targ);
 static void *threadremove(void *targ);
 static void *threadwicked(void *targ);
 static void *threadtypical(void *targ);
+static void *threadrace(void *targ);
 
 
 /* main routine */
@@ -112,6 +122,8 @@ int main(int argc, char **argv){
     rv = runwicked(argc, argv);
   } else if(!strcmp(argv[1], "typical")){
     rv = runtypical(argc, argv);
+  } else if(!strcmp(argv[1], "race")){
+    rv = runrace(argc, argv);
   } else {
     usage();
   }
@@ -130,7 +142,9 @@ static void usage(void){
   fprintf(stderr, "  %s remove [-nl|-nb] [-rnd] path tnum\n", g_progname);
   fprintf(stderr, "  %s wicked [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc] path tnum rnum\n",
           g_progname);
-  fprintf(stderr, "  %s typical [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc] [-rr] path tnum rnum"
+  fprintf(stderr, "  %s typical [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc] [-rr num] path tnum rnum"
+          " [lmemb [nmemb [bnum [apow [fpow]]]]]\n", g_progname);
+  fprintf(stderr, "  %s race [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] path tnum rnum"
           " [lmemb [nmemb [bnum [apow [fpow]]]]]\n", g_progname);
   fprintf(stderr, "\n");
   exit(1);
@@ -475,6 +489,71 @@ static int runtypical(int argc, char **argv){
   int apow = astr ? tcatoix(astr) : -1;
   int fpow = fstr ? tcatoix(fstr) : -1;
   int rv = proctypical(path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode, nc, rratio);
+  return rv;
+}
+
+
+/* parse arguments of race command */
+static int runrace(int argc, char **argv){
+  char *path = NULL;
+  char *tstr = NULL;
+  char *rstr = NULL;
+  char *lmstr = NULL;
+  char *nmstr = NULL;
+  char *bstr = NULL;
+  char *astr = NULL;
+  char *fstr = NULL;
+  int opts = 0;
+  int omode = 0;
+  for(int i = 2; i < argc; i++){
+    if(!path && argv[i][0] == '-'){
+      if(!strcmp(argv[i], "-tl")){
+        opts |= BDBTLARGE;
+      } else if(!strcmp(argv[i], "-td")){
+        opts |= BDBTDEFLATE;
+      } else if(!strcmp(argv[i], "-tb")){
+        opts |= BDBTBZIP;
+      } else if(!strcmp(argv[i], "-tt")){
+        opts |= BDBTTCBS;
+      } else if(!strcmp(argv[i], "-tx")){
+        opts |= BDBTEXCODEC;
+      } else if(!strcmp(argv[i], "-nl")){
+        omode |= BDBONOLCK;
+      } else if(!strcmp(argv[i], "-nb")){
+        omode |= BDBOLCKNB;
+      } else {
+        usage();
+      }
+    } else if(!path){
+      path = argv[i];
+    } else if(!tstr){
+      tstr = argv[i];
+    } else if(!rstr){
+      rstr = argv[i];
+    } else if(!lmstr){
+      lmstr = argv[i];
+    } else if(!nmstr){
+      nmstr = argv[i];
+    } else if(!bstr){
+      bstr = argv[i];
+    } else if(!astr){
+      astr = argv[i];
+    } else if(!fstr){
+      fstr = argv[i];
+    } else {
+      usage();
+    }
+  }
+  if(!path || !tstr || !rstr) usage();
+  int tnum = tcatoix(tstr);
+  int rnum = tcatoix(rstr);
+  if(tnum < 1 || rnum < 1) usage();
+  int lmemb = lmstr ? tcatoix(lmstr) : -1;
+  int nmemb = nmstr ? tcatoix(nmstr) : -1;
+  int bnum = bstr ? tcatoix(bstr) : -1;
+  int apow = astr ? tcatoix(astr) : -1;
+  int fpow = fstr ? tcatoix(fstr) : -1;
+  int rv = procrace(path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode);
   return rv;
 }
 
@@ -837,6 +916,75 @@ static int proctypical(const char *path, int tnum, int rnum, int lmemb, int nmem
       targs[i].rratio = rratio;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadtypical, targs + i) != 0){
+        eprint(bdb, "pthread_create");
+        targs[i].id = -1;
+        err = true;
+      }
+    }
+    for(int i = 0; i < tnum; i++){
+      if(targs[i].id == -1) continue;
+      void *rv;
+      if(pthread_join(threads[i], &rv) != 0){
+        eprint(bdb, "pthread_join");
+        err = true;
+      } else if(rv){
+        err = true;
+      }
+    }
+  }
+  iprintf("record number: %llu\n", (unsigned long long)tcbdbrnum(bdb));
+  iprintf("size: %llu\n", (unsigned long long)tcbdbfsiz(bdb));
+  mprint(bdb);
+  if(!tcbdbclose(bdb)){
+    eprint(bdb, "tcbdbclose");
+    err = true;
+  }
+  tcbdbdel(bdb);
+  iprintf("time: %.3f\n", tctime() - stime);
+  iprintf("%s\n\n", err ? "error" : "ok");
+  return err ? 1 : 0;
+}
+
+
+/* perform race command */
+static int procrace(const char *path, int tnum, int rnum, int lmemb, int nmemb,
+                    int bnum, int apow, int fpow, int opts, int omode){
+  iprintf("<Race Condition Test>\n  path=%s  tnum=%d  rnum=%d  lmemb=%d  nmemb=%d"
+          "  bnum=%d  apow=%d  fpow=%d  opts=%d  omode=%d\n\n",
+          path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode);
+  bool err = false;
+  double stime = tctime();
+  TCBDB *bdb = tcbdbnew();
+  if(g_dbgfd >= 0) tcbdbsetdbgfd(bdb, g_dbgfd);
+  if(!tcbdbsetmutex(bdb)){
+    eprint(bdb, "tcbdbsetmutex");
+    err = true;
+  }
+  if(!tcbdbsetcodecfunc(bdb, _tc_recencode, NULL, _tc_recdecode, NULL)){
+    eprint(bdb, "tcbdbsetcodecfunc");
+    err = true;
+  }
+  if(!tcbdbtune(bdb, lmemb, nmemb, bnum, apow, fpow, opts)){
+    eprint(bdb, "tcbdbtune");
+    err = true;
+  }
+  if(!tcbdbopen(bdb, path, BDBOWRITER | BDBOCREAT | BDBOTRUNC | omode)){
+    eprint(bdb, "tcbdbopen");
+    err = true;
+  }
+  TARGRACE targs[tnum];
+  pthread_t threads[tnum];
+  if(tnum == 1){
+    targs[0].bdb = bdb;
+    targs[0].rnum = rnum;
+    targs[0].id = 0;
+    if(threadrace(targs) != NULL) err = true;
+  } else {
+    for(int i = 0; i < tnum; i++){
+      targs[i].bdb = bdb;
+      targs[i].rnum = rnum;
+      targs[i].id = i;
+      if(pthread_create(threads + i, NULL, threadrace, targs + i) != 0){
         eprint(bdb, "pthread_create");
         targs[i].id = -1;
         err = true;
@@ -1371,6 +1519,120 @@ static void *threadtypical(void *targ){
       }
     }
     tcmapdel(map);
+  }
+  return err ? "error" : NULL;
+}
+
+
+/* thread the race function */
+static void *threadrace(void *targ){
+  TCBDB *bdb = ((TARGRACE *)targ)->bdb;
+  int rnum = ((TARGRACE *)targ)->rnum;
+  int id = ((TARGRACE *)targ)->id;
+  bool err = false;
+  int mid = rnum * 2;
+  for(int i = 1; !err && i <= rnum; i++){
+    char buf[RECBUFSIZ];
+    int len = sprintf(buf, "%d", myrandnd(i));
+    int rnd = myrand(100);
+    if(rnd < 10){
+      if(!tcbdbputkeep(bdb, buf, len, buf, len) && tcbdbecode(bdb) != TCEKEEP){
+        eprint(bdb, "tcbdbputkeep");
+        err = true;
+      }
+    } else if(rnd < 20){
+      if(!tcbdbputcat(bdb, buf, len, buf, len)){
+        eprint(bdb, "tcbdbputcat");
+        err = true;
+      }
+    } else if(rnd < 30){
+      if(!tcbdbputdup(bdb, buf, len, buf, len)){
+        eprint(bdb, "tcbdbputdup");
+        err = true;
+      }
+    } else if(rnd < 40){
+      if(!tcbdbputdupback(bdb, buf, len, buf, len)){
+        eprint(bdb, "tcbdbputdupback");
+        err = true;
+      }
+    } else if(rnd < 50){
+      if(!tcbdbout(bdb, buf, len) && tcbdbecode(bdb) != TCENOREC){
+        eprint(bdb, "tcbdbout");
+        err = true;
+      }
+    } else {
+      if(myrand(10) == 0){
+        int rsiz = myrand(1024);
+        char *rbuf = tcmalloc(rsiz + 1);
+        for(int j = 0; j < rsiz; j++){
+          rbuf[j] = myrand('z' - 'a') + 'a';
+        }
+        if(myrand(2) == 0){
+          if(!tcbdbput(bdb, buf, len, rbuf, rsiz)){
+            eprint(bdb, "tcbdbputcat");
+            err = true;
+          }
+        } else {
+          if(!tcbdbputcat(bdb, buf, len, rbuf, rsiz)){
+            eprint(bdb, "tcbdbputcat");
+            err = true;
+          }
+        }
+        tcfree(rbuf);
+      } else {
+        if(!tcbdbput(bdb, buf, len, buf, len)){
+          eprint(bdb, "tcbdbput");
+          err = true;
+        }
+      }
+    }
+    if(id == 0){
+      if(myrand(mid) == 0){
+        iprintf("[v]");
+        if(!tcbdbvanish(bdb)){
+          eprint(bdb, "tcbdbvanish");
+          err = true;
+        }
+      }
+      if(myrand(mid) == 0){
+        iprintf("[o]");
+        if(!tcbdboptimize(bdb, -1, -1, myrand(rnum) + 1, myrand(10), myrand(10), 0)){
+          eprint(bdb, "tcbdbvanish");
+          err = true;
+        }
+      }
+      if(myrand(mid) == 0){
+        iprintf("[i]");
+        BDBCUR *cur = tcbdbcurnew(bdb);
+        if(!tcbdbcurfirst(cur) && tcbdbecode(bdb) != TCENOREC){
+          eprint(bdb, "tcbdbcurfirst");
+          err = true;
+        }
+        char *kbuf;
+        int ksiz;
+        while((kbuf = tcbdbcurkey(cur, &ksiz)) != NULL){
+          int vsiz;
+          char *vbuf = tcbdbcurval(cur, &vsiz);
+          if(vbuf){
+            tcfree(vbuf);
+          } else if(tcbdbecode(bdb) != TCENOREC){
+            eprint(bdb, "tcbdbget");
+            err = true;
+          }
+          tcfree(kbuf);
+          tcbdbcurnext(cur);
+        }
+        if(tcbdbecode(bdb) != TCENOREC){
+          eprint(bdb, "(validation)");
+          err = true;
+        }
+        tcbdbcurdel(cur);
+      }
+      if(rnum > 250 && i % (rnum / 250) == 0){
+        iputchar('.');
+        if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+      }
+    }
   }
   return err ? "error" : NULL;
 }

@@ -752,7 +752,13 @@ char *tcfdbopaque(TCFDB *fdb);
    `vbuf' specifies the pointer to the region of the value.
    `vsiz' specifies the size of the region of the value.  If the size of the value is greater
    than the width tuning parameter of the database, the size is cut down to the width.
-   `proc' specifies the pointer to the callback function to process duplication.
+   `proc' specifies the pointer to the callback function to process duplication.  It receives
+   four parameters.  The first parameter is the pointer to the region of the value.  The second
+   parameter is the size of the region of the value.  The third parameter is the pointer to the
+   variable into which the size of the region of the return value is assigned.  The fourth
+   parameter is the pointer to the optional opaque object.  It returns the pointer to the result
+   object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
+   not modified.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -761,7 +767,12 @@ bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC p
 
 /* Process each record atomically of a fixed-length database object.
    `fdb' specifies the fixed-length database object.
-   `iter' specifies the pointer to the iterator function called for each record.
+   `iter' specifies the pointer to the iterator function called for each record.  It receives
+   five parameters.  The first parameter is the pointer to the region of the key.  The second
+   parameter is the size of the region of the key.  The third parameter is the pointer to the
+   region of the value.  The fourth parameter is the size of the region of the value.  The fifth
+   parameter is the pointer to the optional opaque object.  It returns true to continue iteration
+   or false to stop iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */

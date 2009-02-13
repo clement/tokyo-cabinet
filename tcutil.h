@@ -884,7 +884,13 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
    `ksiz' specifies the size of the region of the key.
    `vbuf' specifies the pointer to the region of the value.
    `vsiz' specifies the size of the region of the value.
-   `proc' specifies the pointer to the callback function to process duplication.
+   `proc' specifies the pointer to the callback function to process duplication.  It receives
+   four parameters.  The first parameter is the pointer to the region of the value.  The second
+   parameter is the size of the region of the value.  The third parameter is the pointer to the
+   variable into which the size of the region of the return value is assigned.  The fourth
+   parameter is the pointer to the optional opaque object.  It returns the pointer to the result
+   object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
+   not modified.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -988,7 +994,12 @@ TCTREE *tctreenew(void);
 
 
 /* Create a tree object with specifying the custom comparison function.
-   `cmp' specifies the pointer to the custom comparison function.
+   `cmp' specifies the pointer to the custom comparison function.  It receives five parameters.
+   The first parameter is the pointer to the region of one key.  The second parameter is the size
+   of the region of one key.  The third parameter is the pointer to the region of the other key.
+   The fourth parameter is the size of the region of the other key.  The fifth parameter is the
+   pointer to the optional opaque object.  It returns positive if the former is big, negative if
+   the latter is big, 0 if both are equivalent.
    `cmpop' specifies an arbitrary pointer to be given as a parameter of the comparison function.
    If it is not needed, `NULL' can be specified.
    The return value is the new tree object.
@@ -1071,7 +1082,13 @@ void tctreeputcat2(TCTREE *tree, const char *kstr, const char *vstr);
    `ksiz' specifies the size of the region of the key.
    `vbuf' specifies the pointer to the region of the value.
    `vsiz' specifies the size of the region of the value.
-   `proc' specifies the pointer to the callback function to process duplication.
+   `proc' specifies the pointer to the callback function to process duplication.  It receives
+   four parameters.  The first parameter is the pointer to the region of the value.  The second
+   parameter is the size of the region of the value.  The third parameter is the pointer to the
+   variable into which the size of the region of the return value is assigned.  The fourth
+   parameter is the pointer to the optional opaque object.  It returns the pointer to the result
+   object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
+   not modified.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -1647,7 +1664,13 @@ void tcmdbputcat3(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int 
    `ksiz' specifies the size of the region of the key.
    `vbuf' specifies the pointer to the region of the value.
    `vsiz' specifies the size of the region of the value.
-   `proc' specifies the pointer to the callback function to process duplication.
+   `proc' specifies the pointer to the callback function to process duplication.  It receives
+   four parameters.  The first parameter is the pointer to the region of the value.  The second
+   parameter is the size of the region of the value.  The third parameter is the pointer to the
+   variable into which the size of the region of the return value is assigned.  The fourth
+   parameter is the pointer to the optional opaque object.  It returns the pointer to the result
+   object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
+   not modified.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -1672,7 +1695,12 @@ void *tcmdbget3(TCMDB *mdb, const void *kbuf, int ksiz, int *sp);
 
 
 /* Process each record atomically of an on-memory hash database object.
-   `func' specifies the pointer to the iterator function called for each record.
+   `iter' specifies the pointer to the iterator function called for each record.  It receives
+   five parameters.  The first parameter is the pointer to the region of the key.  The second
+   parameter is the size of the region of the key.  The third parameter is the pointer to the
+   region of the value.  The fourth parameter is the size of the region of the value.  The fifth
+   parameter is the pointer to the optional opaque object.  It returns true to continue iteration
+   or false to stop iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified. */
 void tcmdbforeach(TCMDB *mdb, TCITER iter, void *op);
@@ -1992,7 +2020,13 @@ void tcndbputcat3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int 
    `ksiz' specifies the size of the region of the key.
    `vbuf' specifies the pointer to the region of the value.
    `vsiz' specifies the size of the region of the value.
-   `proc' specifies the pointer to the callback function to process duplication.
+   `proc' specifies the pointer to the callback function to process duplication.  It receives
+   four parameters.  The first parameter is the pointer to the region of the value.  The second
+   parameter is the size of the region of the value.  The third parameter is the pointer to the
+   variable into which the size of the region of the return value is assigned.  The fourth
+   parameter is the pointer to the optional opaque object.  It returns the pointer to the result
+   object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
+   not modified.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -2016,7 +2050,12 @@ void *tcndbget3(TCNDB *ndb, const void *kbuf, int ksiz, int *sp);
 
 
 /* Process each record atomically of an on-memory tree database object.
-   `func' specifies the pointer to the iterator function called for each record.
+   `iter' specifies the pointer to the iterator function called for each record.  It receives
+   five parameters.  The first parameter is the pointer to the region of the key.  The second
+   parameter is the size of the region of the key.  The third parameter is the pointer to the
+   region of the value.  The fourth parameter is the size of the region of the value.  The fifth
+   parameter is the pointer to the optional opaque object.  It returns true to continue iteration
+   or false to stop iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified. */
 void tcndbforeach(TCNDB *ndb, TCITER iter, void *op);
@@ -3235,8 +3274,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.4"
-#define _TC_LIBVER     709
+#define _TC_VERSION    "1.4.5"
+#define _TC_LIBVER     710
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

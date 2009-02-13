@@ -684,7 +684,12 @@ bool tctdbqrysearchout(TDBQRY *qry);
 
 /* Process each record corresponding to a query object.
    `qry' specifies the query object of the database connected as a writer.
-   `proc' specifies the pointer to the iterator function called for each record.
+   `proc' specifies the pointer to the iterator function called for each record.  It receives
+   four parameters.  The first parameter is the pointer to the region of the primary key.  The
+   second parameter is the size of the region of the primary key.  The third parameter is a map
+   object containing columns.  The fourth parameter is the pointer to the optional opaque object.
+   It returns flags of the post treatment by bitwise or: `TDBQPPUT' to modify the record,
+   `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -812,7 +817,12 @@ int64_t tctdbuidseed(TCTDB *tdb);
 
 /* Set the custom codec functions of a table database object.
    `tdb' specifies the table database object.
-   `enc' specifies the pointer to the custom encoding function.
+   `enc' specifies the pointer to the custom encoding function.  It receives four parameters.
+   The first parameter is the pointer to the region.  The second parameter is the size of the
+   region.  The third parameter is the pointer to the variable into which the size of the region
+   of the return value is assigned.  The fourth parameter is the pointer to the optional opaque
+   object.  It returns the pointer to the result object allocated with `malloc' call if
+   successful, else, it returns `NULL'.
    `encop' specifies an arbitrary pointer to be given as a parameter of the encoding function.
    If it is not needed, `NULL' can be specified.
    `dec' specifies the pointer to the custom decoding function.
@@ -826,7 +836,12 @@ bool tctdbsetcodecfunc(TCTDB *tdb, TCCODEC enc, void *encop, TCCODEC dec, void *
 
 /* Process each record atomically of a table database object.
    `tdb' specifies the table database object.
-   `iter' specifies the pointer to the iterator function called for each record.
+   `iter' specifies the pointer to the iterator function called for each record.  It receives
+   five parameters.  The first parameter is the pointer to the region of the key.  The second
+   parameter is the size of the region of the key.  The third parameter is the pointer to the
+   region of the value.  The fourth parameter is the size of the region of the value.  The fifth
+   parameter is the pointer to the optional opaque object.  It returns true to continue iteration
+   or false to stop iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */

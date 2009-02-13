@@ -59,7 +59,7 @@
 
 <p>固定長配列のデータベースでは、一意な自然数をキーとしてレコードが格納されます。キーが重複する複数のレコードを格納することはできません。また、各レコードの値の長さは一定以下に制限されます。提供される操作はハッシュデータベースとほぼ同様です。</p>
 
-<p>ハッシュ表のデータベース変種として、テーブルのデータベースも提供されます。各レコードは主キーで識別されるとともに、名前付きカラムの集合を値として持ちます。データスキーマの概念はありませんが、任意のコラムに張られたインデックスを用いることで複雑な条件に基づくレコードの検索を効率化することができます。</p>
+<p>ハッシュ表のデータベース変種として、テーブルのデータベースも提供されます。各レコードは主キーで識別されるとともに、名前付きコラムの集合を値として持ちます。データスキーマの概念はありませんが、任意のコラムに張られたインデックスを用いることで複雑な条件に基づくレコードの検索を効率化することができます。</p>
 
 <p>Tokyo CabinetはC言語で記述され、CとPerlとRubyとJavaとLuaのAPIとして提供されます。Tokyo CabinetはC99およびPOSIX準拠のAPIを備えるプラットフォームで利用できます。Tokyo CabinetはGNU Lesser General Public Licenseに基づくフリーソフトウェアです。</p>
 
@@ -116,7 +116,7 @@
 
 <h3 id="features_tctdb">柔軟なテーブルデータベースの実装</h3>
 
-<p>テーブルデータベースは、単純なキーと値の構造ではなく、リレーショナルデータベースの表のような構造を表現します。各レコードは主キーで識別されるとともに、任意の文字列で名前を付けられたカラムの集合を値として持ちます。例えば、社員番号を主キーにして、名前や部署や給与などのコラムを構造化して格納することができます。リレーショナルデータベースと違ってデータスキーマを事前に定義する必要はなく、レコード毎に異なる種類のコラムを持たせることができます。</p>
+<p>テーブルデータベースは、単純なキーと値の構造ではなく、リレーショナルデータベースの表のような構造を表現します。各レコードは主キーで識別されるとともに、任意の文字列で名前を付けられたコラムの集合を値として持ちます。例えば、社員番号を主キーにして、名前や部署や給与などのコラムを構造化して格納することができます。リレーショナルデータベースと違ってデータスキーマを事前に定義する必要はなく、レコード毎に異なる種類のコラムを持たせることができます。</p>
 
 <p>テーブルデータベースに対しては、主キー以外の条件でも問い合わせを行うことができます。条件はコラムの名前と条件式で構成されます。条件式の演算子としては、文字列型に関しては完全一致や前方一致や正規表現などが提供され、数値型に関しては完全一致や範囲一致が提供されます。複数の条件式を組み合わせることもできます。検索結果の順序は文字列または数値の昇順または降順を指定することができます。</p>
 
@@ -1019,7 +1019,7 @@
 
 <dl class="api">
 <dt><code>TCTREE *tctreenew2(TCCMP <var>cmp</var>, void *<var>cmpop</var>);</code></dt>
-<dd>`<var>cmp</var>' specifies the pointer to the custom comparison function.</dd>
+<dd>`<var>cmp</var>' specifies the pointer to the custom comparison function.  It receives five parameters.  The first parameter is the pointer to the region of one key.  The second parameter is the size of the region of one key.  The third parameter is the pointer to the region of the other key.  The fourth parameter is the size of the region of the other key.  The fifth parameter is the pointer to the optional opaque object.  It returns positive if the former is big, negative if the latter is big, 0 if both are equivalent.</dd>
 <dd>`<var>cmpop</var>' specifies an arbitrary pointer to be given as a parameter of the comparison function.  If it is not needed, `NULL' can be specified.</dd>
 <dd>The return value is the new tree object.</dd>
 <dd>The default comparison function compares keys of two records by lexical order.  The functions `tccmplexical' (dafault), `tccmpdecimal', `tccmpint32', and `tccmpint64' are built-in.</dd>
@@ -3540,6 +3540,8 @@ int main(int argc, char **argv){
 <dd>各種更新操作を無作為に選択して実行する。</dd>
 <dt><code>tchmttest typical [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-nc] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
 <dd>典型的な操作を無作為に選択して実行する。</dd>
+<dt><code>tchmttest race [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
+<dd>レースコンディション検出のテストを行う。</dd>
 </dl>
 
 <p>各オプションは以下の機能を持ちます</p>
@@ -3682,7 +3684,7 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>bool tcbdbsetcmpfunc(TCBDB *<var>bdb</var>, TCCMP <var>cmp</var>, void *<var>cmpop</var>);</code></dt>
 <dd>`<var>bdb</var>' specifies the B+ tree database object which is not opened.</dd>
-<dd>`<var>cmp</var>' specifies the pointer to the custom comparison function.</dd>
+<dd>`<var>cmp</var>' specifies the pointer to the custom comparison function.  It receives five parameters.  The first parameter is the pointer to the region of one key.  The second parameter is the size of the region of one key.  The third parameter is the pointer to the region of the other key.  The fourth parameter is the size of the region of the other key.  The fifth parameter is the pointer to the optional opaque object.  It returns positive if the former is big, negative if the latter is big, 0 if both are equivalent.</dd>
 <dd>`<var>cmpop</var>' specifies an arbitrary pointer to be given as a parameter of the comparison function.  If it is not needed, `NULL' can be specified.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>The default comparison function compares keys of two records by lexical order.  The functions `tccmplexical' (dafault), `tccmpdecimal', `tccmpint32', and `tccmpint64' are built-in.  Note that the comparison function should be set before the database is opened.  Moreover, user-defined comparison functions should be set every time the database is being opened.</dd>
@@ -4443,6 +4445,8 @@ int main(int argc, char **argv){
 <dd>各種更新操作を無作為に選択して実行する。</dd>
 <dt><code>tcbmttest typical [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>典型的な操作を無作為に選択して実行する。</dd>
+<dt><code>tcbmttest race [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dd>レースコンディション検出のテストを行う。</dd>
 </dl>
 
 <p>各オプションは以下の機能を持ちます</p>
@@ -5185,7 +5189,7 @@ int main(int argc, char **argv){
 
 <h2 id="tctdbapi">テーブルデータベースAPI</h2>
 
-<p>テーブルデータベースは、プライマリキーと任意のカラムを持つレコード群を単一のファイルに記録したデータベースです。それを扱うのがテーブルデータベースAPIです。`<code>tctdb.h</code>' にAPIの仕様の完全な記述があります。</p>
+<p>テーブルデータベースは、プライマリキーと任意のコラムを持つレコード群を単一のファイルに記録したデータベースです。それを扱うのがテーブルデータベースAPIです。`<code>tctdb.h</code>' にAPIの仕様の完全な記述があります。</p>
 
 <h3 id="tctdbapi_description">概要</h3>
 
@@ -5716,21 +5720,21 @@ int main(int argc, char **argv){
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<p>The function `tctdbqryproc' is used in order to process each record corresponding to a query object.</p>
-
-<dl class="api">
-<dt><code>bool tctdbqryproc(TDBQRY *<var>qry</var>, TDBQRYPROC <var>proc</var>, void *<var>op</var>);</code></dt>
-<dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
-<dd>`<var>proc</var>' specifies the pointer to the iterator function called for each record.</dd>
-<dd>`<var>op</var>' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.</dd>
-<dd>If successful, the return value is true, else, it is false.</dd>
-</dl>
-
 <p>The function `tctdbqrysearchout' is used in order to remove each record corresponding to a query object.</p>
 
 <dl class="api">
 <dt><code>bool tctdbqrysearchout(TDBQRY *<var>qry</var>);</code></dt>
 <dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+</dl>
+
+<p>The function `tctdbqryproc' is used in order to process each record corresponding to a query object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbqryproc(TDBQRY *<var>qry</var>, TDBQRYPROC <var>proc</var>, void *<var>op</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
+<dd>`<var>proc</var>' specifies the pointer to the iterator function called for each record.  It receives four parameters.  The first parameter is the pointer to the region of the primary key.  The second parameter is the size of the region of the primary key.  The third parameter is a map object containing columns.  The fourth parameter is the pointer to the optional opaque object.  It returns flags of the post treatment by bitwise or: `TDBQPPUT' to modify the record, `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration.</dd>
+<dd>`<var>op</var>' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 

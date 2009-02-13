@@ -7,11 +7,11 @@
 #================================================================
 
 # Package name
-AC_INIT(tokyocabinet, 1.4.4)
+AC_INIT(tokyocabinet, 1.4.5)
 
 # Package information
 MYLIBVER=7
-MYLIBREV=9
+MYLIBREV=10
 MYFORMATVER="1.0"
 
 # Targets
@@ -33,7 +33,7 @@ MYPCFILES="tokyocabinet.pc"
 # Building flags
 MYCFLAGS="-std=c99 -Wall -fPIC -fsigned-char -O2"
 MYCPPFLAGS="-I. -I\$(INCLUDEDIR) -I$HOME/include -I/usr/local/include"
-MYCPPFLAGS="$MYCPPFLAGS -DNDEBUG -D_GNU_SOURCE=1 -D_REENTRANT"
+MYCPPFLAGS="$MYCPPFLAGS -DNDEBUG -D_GNU_SOURCE=1 -D_REENTRANT -D__EXTENSIONS__"
 MYLDFLAGS="-L. -L\$(LIBDIR) -L$HOME/lib -L/usr/local/lib"
 MYCMDLDFLAGS=""
 MYRUNPATH="\$(LIBDIR)"

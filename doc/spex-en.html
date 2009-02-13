@@ -1016,7 +1016,7 @@
 
 <dl class="api">
 <dt><code>TCTREE *tctreenew2(TCCMP <var>cmp</var>, void *<var>cmpop</var>);</code></dt>
-<dd>`<var>cmp</var>' specifies the pointer to the custom comparison function.</dd>
+<dd>`<var>cmp</var>' specifies the pointer to the custom comparison function.  It receives five parameters.  The first parameter is the pointer to the region of one key.  The second parameter is the size of the region of one key.  The third parameter is the pointer to the region of the other key.  The fourth parameter is the size of the region of the other key.  The fifth parameter is the pointer to the optional opaque object.  It returns positive if the former is big, negative if the latter is big, 0 if both are equivalent.</dd>
 <dd>`<var>cmpop</var>' specifies an arbitrary pointer to be given as a parameter of the comparison function.  If it is not needed, `NULL' can be specified.</dd>
 <dd>The return value is the new tree object.</dd>
 <dd>The default comparison function compares keys of two records by lexical order.  The functions `tccmplexical' (dafault), `tccmpdecimal', `tccmpint32', and `tccmpint64' are built-in.</dd>
@@ -3537,6 +3537,8 @@ int main(int argc, char **argv){
 <dd>Perform updating operations selected at random.</dd>
 <dt><code>tchmttest typical [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-nc] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
 <dd>Perform typical operations selected at random.</dd>
+<dt><code>tchmttest race [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
+<dd>Perform race condition test.</dd>
 </dl>
 
 <p>Options feature the following.</p>
@@ -3679,7 +3681,7 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>bool tcbdbsetcmpfunc(TCBDB *<var>bdb</var>, TCCMP <var>cmp</var>, void *<var>cmpop</var>);</code></dt>
 <dd>`<var>bdb</var>' specifies the B+ tree database object which is not opened.</dd>
-<dd>`<var>cmp</var>' specifies the pointer to the custom comparison function.</dd>
+<dd>`<var>cmp</var>' specifies the pointer to the custom comparison function.  It receives five parameters.  The first parameter is the pointer to the region of one key.  The second parameter is the size of the region of one key.  The third parameter is the pointer to the region of the other key.  The fourth parameter is the size of the region of the other key.  The fifth parameter is the pointer to the optional opaque object.  It returns positive if the former is big, negative if the latter is big, 0 if both are equivalent.</dd>
 <dd>`<var>cmpop</var>' specifies an arbitrary pointer to be given as a parameter of the comparison function.  If it is not needed, `NULL' can be specified.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>The default comparison function compares keys of two records by lexical order.  The functions `tccmplexical' (dafault), `tccmpdecimal', `tccmpint32', and `tccmpint64' are built-in.  Note that the comparison function should be set before the database is opened.  Moreover, user-defined comparison functions should be set every time the database is being opened.</dd>
@@ -4440,6 +4442,8 @@ int main(int argc, char **argv){
 <dd>Perform updating operations selected at random.</dd>
 <dt><code>tcbmttest typical [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>Perform typical operations selected at random.</dd>
+<dt><code>tcbmttest race [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dd>Perform race condition test.</dd>
 </dl>
 
 <p>Options feature the following.</p>
@@ -5713,21 +5717,21 @@ int main(int argc, char **argv){
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
-<p>The function `tctdbqryproc' is used in order to process each record corresponding to a query object.</p>
-
-<dl class="api">
-<dt><code>bool tctdbqryproc(TDBQRY *<var>qry</var>, TDBQRYPROC <var>proc</var>, void *<var>op</var>);</code></dt>
-<dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
-<dd>`<var>proc</var>' specifies the pointer to the iterator function called for each record.</dd>
-<dd>`<var>op</var>' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.</dd>
-<dd>If successful, the return value is true, else, it is false.</dd>
-</dl>
-
 <p>The function `tctdbqrysearchout' is used in order to remove each record corresponding to a query object.</p>
 
 <dl class="api">
 <dt><code>bool tctdbqrysearchout(TDBQRY *<var>qry</var>);</code></dt>
 <dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+</dl>
+
+<p>The function `tctdbqryproc' is used in order to process each record corresponding to a query object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbqryproc(TDBQRY *<var>qry</var>, TDBQRYPROC <var>proc</var>, void *<var>op</var>);</code></dt>
+<dd>`<var>qry</var>' specifies the query object of the database connected as a writer.</dd>
+<dd>`<var>proc</var>' specifies the pointer to the iterator function called for each record.  It receives four parameters.  The first parameter is the pointer to the region of the primary key.  The second parameter is the size of the region of the primary key.  The third parameter is a map object containing columns.  The fourth parameter is the pointer to the optional opaque object.  It returns flags of the post treatment by bitwise or: `TDBQPPUT' to modify the record, `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration.</dd>
+<dd>`<var>op</var>' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 

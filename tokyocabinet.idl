@@ -75,6 +75,7 @@ module TokyoCabinet {
     const long OTRUNC = 1 << 3;
     const long ONOLCK = 1 << 4;
     const long OLCKNB = 1 << 5;
+    const long OTSYNC = 1 << 6;
     boolean tune(in long long bnum, in long apow, in long fpow, in long opts);
     boolean setcache(in long rcnum);
     boolean setxmsiz(in long long xmsiz);
@@ -117,6 +118,7 @@ module TokyoCabinet {
     const long OTRUNC = 1 << 3;
     const long ONOLCK = 1 << 4;
     const long OLCKNB = 1 << 5;
+    const long OTSYNC = 1 << 6;
     boolean tune(in long lmemb, in long nmemb,
                  in long long bnum, in long apow, in long fpow, in long opts);
     boolean setcache(in long lcnum, in long ncnum);
@@ -213,6 +215,7 @@ module TokyoCabinet {
     const long OTRUNC = 1 << 3;
     const long ONOLCK = 1 << 4;
     const long OLCKNB = 1 << 5;
+    const long OTSYNC = 1 << 6;
     const long ITLEXICAL = 0;
     const long ITDECIMAL = 1;
     const long ITVOID = 9999;
@@ -250,11 +253,35 @@ module TokyoCabinet {
   // the table query API
   //----------------------------------------------------------------
   interface TDBQRY {
+    const long QCSTREQ = 1;
+    const long QCSTRINC = 2;
+    const long QCSTRBW = 3;
+    const long QCSTREW = 4;
+    const long QCSTRAND = 5;
+    const long QCSTROR = 6;
+    const long QCSTROREQ = 7;
+    const long QCSTRRX = 8;
+    const long QCNUMEQ = 9;
+    const long QCNUMGT = 10;
+    const long QCNUMGE = 11;
+    const long QCNUMLT = 12;
+    const long QCNUMLE = 13;
+    const long QCNUMBT = 14;
+    const long QCNUMOREQ = 15;
+    const long QCNEGATE = 1 << 24;
+    const long QCNOIDX = 1 << 25;
+    const long QOSTRASC = 0;
+    const long QOSTRDESC = 1;
+    const long QONUMASC = 2;
+    const long QONUMDESC = 3;
+    const long QPPUT = 1 << 0;
+    const long QPOUT = 1 << 1;
+    const long QPSTOP = 1 << 24;
     void addcond(in string name, in long op, in string expr);
     void setorder(in string name, in long type);
     void setmax(in long max);
     List search();
-    bool searchout();
+    boolean searchout();
     string hint();
   };
 };

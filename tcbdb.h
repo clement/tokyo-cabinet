@@ -163,7 +163,12 @@ bool tcbdbsetmutex(TCBDB *bdb);
 
 /* Set the custom comparison function of a B+ tree database object.
    `bdb' specifies the B+ tree database object which is not opened.
-   `cmp' specifies the pointer to the custom comparison function.
+   `cmp' specifies the pointer to the custom comparison function.  It receives five parameters.
+   The first parameter is the pointer to the region of one key.  The second parameter is the size
+   of the region of one key.  The third parameter is the pointer to the region of the other key.
+   The fourth parameter is the size of the region of the other key.  The fifth parameter is the
+   pointer to the optional opaque object.  It returns positive if the former is big, negative if
+   the latter is big, 0 if both are equivalent.
    `cmpop' specifies an arbitrary pointer to be given as a parameter of the comparison function.
    If it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false.
@@ -970,7 +975,12 @@ bool tcbdbsetcapnum(TCBDB *bdb, uint64_t capnum);
 
 /* Set the custom codec functions of a B+ tree database object.
    `bdb' specifies the B+ tree database object.
-   `enc' specifies the pointer to the custom encoding function.
+   `enc' specifies the pointer to the custom encoding function.  It receives four parameters.
+   The first parameter is the pointer to the region.  The second parameter is the size of the
+   region.  The third parameter is the pointer to the variable into which the size of the region
+   of the return value is assigned.  The fourth parameter is the pointer to the optional opaque
+   object.  It returns the pointer to the result object allocated with `malloc' call if
+   successful, else, it returns `NULL'.
    `encop' specifies an arbitrary pointer to be given as a parameter of the encoding function.
    If it is not needed, `NULL' can be specified.
    `dec' specifies the pointer to the custom decoding function.
@@ -1010,7 +1020,13 @@ bool tcbdbputdupback2(TCBDB *bdb, const char *kstr, const char *vstr);
    `ksiz' specifies the size of the region of the key.
    `vbuf' specifies the pointer to the region of the value.
    `vsiz' specifies the size of the region of the value.
-   `proc' specifies the pointer to the callback function to process duplication.
+   `proc' specifies the pointer to the callback function to process duplication.  It receives
+   four parameters.  The first parameter is the pointer to the region of the value.  The second
+   parameter is the size of the region of the value.  The third parameter is the pointer to the
+   variable into which the size of the region of the return value is assigned.  The fourth
+   parameter is the pointer to the optional opaque object.  It returns the pointer to the result
+   object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
+   not modified.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -1041,7 +1057,12 @@ bool tcbdbcurjumpback2(BDBCUR *cur, const char *kstr);
 
 /* Process each record atomically of a B+ tree database object.
    `bdb' specifies the B+ tree database object.
-   `iter' specifies the pointer to the iterator function called for each record.
+   `iter' specifies the pointer to the iterator function called for each record.  It receives
+   five parameters.  The first parameter is the pointer to the region of the key.  The second
+   parameter is the size of the region of the key.  The third parameter is the pointer to the
+   region of the value.  The fourth parameter is the size of the region of the value.  The fifth
+   parameter is the pointer to the optional opaque object.  It returns true to continue iteration
+   or false to stop iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */

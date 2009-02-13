@@ -262,6 +262,7 @@ check-hdb :
 	$(RUNENV) $(RUNCMD) ./tchmttest typical casket 5 50000 5000
 	$(RUNENV) $(RUNCMD) ./tchmttest typical -rr 1000 casket 5 50000 5000
 	$(RUNENV) $(RUNCMD) ./tchmttest typical -tl -rc 50000 -nc casket 5 50000 5000
+	$(RUNENV) $(RUNCMD) ./tchmttest race casket 5 10000
 	$(RUNENV) $(RUNCMD) ./tchmgr create casket 3 1 1
 	$(RUNENV) $(RUNCMD) ./tchmgr inform casket
 	$(RUNENV) $(RUNCMD) ./tchmgr put casket one first
@@ -338,6 +339,7 @@ check-bdb :
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical casket 5 50000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical -rr 1000 casket 5 50000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical -tl -nc casket 5 50000 5 5
+	$(RUNENV) $(RUNCMD) ./tcbmttest race casket 5 10000
 	$(RUNENV) $(RUNCMD) ./tcbmgr create casket 4 4 3 1 1
 	$(RUNENV) $(RUNCMD) ./tcbmgr inform casket
 	$(RUNENV) $(RUNCMD) ./tcbmgr put casket one first
@@ -573,6 +575,14 @@ check-forever :
 	    make check || break ; \
 	    make check || break ; \
 	    make check-thread || break ; \
+	  done
+
+
+check-race :
+	while true ; \
+	  do \
+	    ./tchmttest race casket 5 10000 || break ; \
+	    ./tcbmttest race casket 5 10000 || break ; \
 	  done
 
 

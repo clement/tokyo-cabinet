@@ -270,6 +270,8 @@
 #endif
 
 
+extern int _tc_dummy_cnt;
+
 int _tc_dummyfunc(void);
 
 int _tc_dummyfuncv(int a, ...);
@@ -387,10 +389,9 @@ void *_tc_recdecode(const void *ptr, int size, int *sp, void *op);
 #if TCUSEPTHREAD && TCMICROYIELD
 #define TCTESTYIELD() \
   do { \
-    static uint32_t cnt = 0; \
-    if(((++cnt) & (0x20 - 1)) == 0){ \
-      pthread_yield(); \
-      if(cnt > 0x1000) cnt = (uint32_t)time(NULL) % 0x1000; \
+    if(((++_tc_dummy_cnt) & (0x20 - 1)) == 0){ \
+      sched_yield(); \
+      if(_tc_dummy_cnt > 0x1000) _tc_dummy_cnt = (uint32_t)time(NULL) % 0x1000; \
     } \
   } while(false)
 #undef assert
@@ -402,10 +403,14 @@ void *_tc_recdecode(const void *ptr, int size, int *sp, void *op);
     } \
     TCTESTYIELD(); \
   } while(false)
+#define if(TC_cond) \
+  if((((++_tc_dummy_cnt) & (0x100 - 1)) != 0 || (sched_yield() * 0) == 0) && (TC_cond))
+#define while(TC_cond) \
+  while((((++_tc_dummy_cnt) & (0x100 - 1)) != 0 || (sched_yield() * 0) == 0) && (TC_cond))
 #else
 #define TCTESTYIELD() \
   do { \
-  } while(false);
+  } while(false)
 #endif
 
 #if !defined(_POSIX_PRIORITY_SCHEDULING) && TCUSEPTHREAD
@@ -501,7 +506,12 @@ void *_tc_recdecode(const void *ptr, int size, int *sp, void *op);
     (TC_step) = _TC_i + 1; \
   } while(false)
 
-/* Compare keys of two records by lexical order. */
+/* calculate the size of a buffer for a variable length number */
+#define TCCALCVNUMSIZE(TC_num) \
+  ((TC_num) < 0x80 ? 1 : (TC_num) < 0x4000 ? 2 : (TC_num) < 0x200000 ? 3 : \
+   (TC_num) < 0x10000000 ? 4 : 5)
+
+/* compare keys of two records by lexical order */
 #define TCCMPLEXICAL(TC_rv, TC_aptr, TC_asiz, TC_bptr, TC_bsiz) \
   do { \
     (TC_rv) = 0; \
