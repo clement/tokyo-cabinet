@@ -815,6 +815,12 @@ int tctdbinum(TCTDB *tdb);
 int64_t tctdbuidseed(TCTDB *tdb);
 
 
+/* Set the seed of unique ID unumbers of a table database object.
+   `tdb' specifies the table database object connected as a writer.
+   If successful, the return value is true, else, it is false. */
+bool tctdbsetuidseed(TCTDB *tdb, int64_t seed);
+
+
 /* Set the custom codec functions of a table database object.
    `tdb' specifies the table database object.
    `enc' specifies the pointer to the custom encoding function.  It receives four parameters.

@@ -1,3 +1,13 @@
+2009-02-13  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tctdb.c (tctdbgenuidimpl): the meta data format was normalized to the big endian.
+
+	* tctdb.c (tctdbsetuidseed): new function.
+
+	* tcadb.c (tcadbmisc): "get" function of the table database was enhanced.
+
+	- Release: 1.4.6
+
 2009-02-02  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tchdb.c (tchdbput, tchdbget, tchdbout): bugs related to race condition were fixed.

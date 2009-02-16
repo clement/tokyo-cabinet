@@ -532,8 +532,8 @@ check-adb :
 	$(RUNENV) $(RUNCMD) ./tcamgr get -sep '\t' casket.tct 1 > check.out
 	$(RUNENV) $(RUNCMD) ./tcamgr list -sep '\t' -pv casket.tct > check.out
 	$(RUNENV) $(RUNCMD) ./tcamgr misc -sep '|' casket.tct search \
-	  "addcond|name|STRINC|i" "setorder|age|NUMASC" "setmax|1" "columns" > check.out
-	$(RUNENV) $(RUNCMD) ./tcamgr misc -sep '|' casket.tct search "columns" "out" > check.out
+	  "addcond|name|STRINC|i" "setorder|age|NUMASC" "setmax|1" "get" > check.out
+	$(RUNENV) $(RUNCMD) ./tcamgr misc -sep '|' casket.tct search "get" "out" > check.out
 
 
 check-valgrind :

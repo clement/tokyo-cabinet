@@ -73,7 +73,7 @@ static bool tctdbtranbeginimpl(TCTDB *tdb);
 static bool tctdbtrancommitimpl(TCTDB *tdb);
 static bool tctdbtranabortimpl(TCTDB *tdb);
 static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type);
-static int64_t tctdbgenuidimpl(TCTDB *tdb);
+static int64_t tctdbgenuidimpl(TCTDB *tdb, int64_t inc);
 static TCLIST *tctdbqrysearchimpl(TDBQRY *qry);
 static bool tctdbqryonecondmatch(TDBQRY *qry, TDBCOND *cond, const char *pkbuf, int pksiz);
 static bool tctdbqryallcondmatch(TDBQRY *qry, const char *pkbuf, int pksiz);
@@ -728,7 +728,7 @@ int64_t tctdbgenuid(TCTDB *tdb){
     TDBUNLOCKMETHOD(tdb);
     return -1;
   }
-  int64_t rv = tctdbgenuidimpl(tdb);
+  int64_t rv = tctdbgenuidimpl(tdb, 1);
   TDBUNLOCKMETHOD(tdb);
   return rv;
 }
@@ -1067,12 +1067,30 @@ int tctdbinum(TCTDB *tdb){
 /* Get the seed of unique ID unumbers of a table database object. */
 int64_t tctdbuidseed(TCTDB *tdb){
   assert(tdb);
+  if(!TDBLOCKMETHOD(tdb, false)) return -1;
   if(!tdb->open){
     tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
-    return 0;
+    TDBUNLOCKMETHOD(tdb);
+    return -1;
   }
-  void *opq = tchdbopaque(tdb->hdb);
-  return *(int64_t *)opq;
+  int64_t rv = tctdbgenuidimpl(tdb, 0);
+  TDBUNLOCKMETHOD(tdb);
+  return rv;
+}
+
+
+/* Set the seed of unique ID unumbers of a table database object. */
+bool tctdbsetuidseed(TCTDB *tdb, int64_t seed){
+  assert(tdb && seed >= 0);
+  if(!TDBLOCKMETHOD(tdb, true)) return -1;
+  if(!tdb->open || !tdb->wmode){
+    tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    TDBUNLOCKMETHOD(tdb);
+    return false;
+  }
+  tctdbgenuidimpl(tdb, -seed - 1);
+  TDBUNLOCKMETHOD(tdb);
+  return true;
 }
 
 
@@ -1886,11 +1904,22 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
 
 /* Generate a unique ID number.
    `tdb' specifies the table database object.
+   `inc' specifies the increment of the seed.
    The return value is the new unique ID number or -1 on failure. */
-static int64_t tctdbgenuidimpl(TCTDB *tdb){
+static int64_t tctdbgenuidimpl(TCTDB *tdb, int64_t inc){
   assert(tdb);
   void *opq = tchdbopaque(tdb->hdb);
-  return ++*(int64_t *)opq;
+  uint64_t llnum, uid;
+  if(inc < 0){
+    uid = -inc - 1;
+  } else {
+    memcpy(&llnum, opq, sizeof(llnum));
+    if(inc == 0) return TCITOHLL(llnum);
+    uid = TCITOHLL(llnum) + inc;
+  }
+  llnum = TCITOHLL(uid);
+  memcpy(opq, &llnum, sizeof(llnum));
+  return uid;
 }
 
 

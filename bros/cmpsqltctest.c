@@ -60,7 +60,7 @@ static void test_sqlite(void){
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
     for(int j = 1; j <= RECORDNUM; j++){
       sprintf(sql, "INSERT INTO tbl VALUES ( '%08d', '%08d', %d, '%08d', %d );",
-	    j, j, myrand() % RECORDNUM, myrand() % RECORDNUM, j);
+            j, j, myrand() % RECORDNUM, myrand() % RECORDNUM, j);
       if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK) assert(!__LINE__);
     }
     sprintf(sql, "END TRANSACTION;");

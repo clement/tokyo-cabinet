@@ -1760,7 +1760,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
             const char *maxstr = TCLISTVALPTR(tokens, 1);
             int64_t max = tcatoi(maxstr);
             if(max >= 0) tctdbqrysetmax(qry, max);
-          } else if(!strcmp(cmd, "columns") || !strcmp(cmd, "cols")){
+          } else if(!strcmp(cmd, "get") || !strcmp(cmd, "columns")){
             if(!cnames) cnames = tclistnew();
             for(int j = 1; j < tnum; j++){
               const char *token;
@@ -1768,7 +1768,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
               TCLISTVAL(token, tokens, j, tsiz);
               TCLISTPUSH(cnames, token, tsiz);
             }
-          } else if(!strcmp(cmd, "out")){
+          } else if(!strcmp(cmd, "out") || !strcmp(cmd, "remove")){
             toout = true;
           }
         }

@@ -301,7 +301,7 @@ int dotblwrite(char *name, int rnum){
     return 1;
   }
   sprintf(sql, "CREATE TABLE tbl ( key INTEGER PRIMARY KEY, s TEXT, n INTEGER,"
-	  " t TEXT, f TEXT );");
+          " t TEXT, f TEXT );");
   if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
     fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
     sqlite3_free(errmsg);
@@ -331,7 +331,7 @@ int dotblwrite(char *name, int rnum){
   for(i = 1; i <= rnum; i++){
     /* store a record */
     sprintf(sql, "INSERT INTO tbl VALUES ( %d, '%08d', %d, '%08d', '%08d' );",
-	    i, i, myrand() % i, i, myrand() % rnum);
+            i, i, myrand() % i, i, myrand() % rnum);
     if(sqlite3_exec(db, sql, callback, 0, &errmsg) != SQLITE_OK){
       fprintf(stderr, "sqlite3_exec failed: %s\n", errmsg);
       sqlite3_free(errmsg);
