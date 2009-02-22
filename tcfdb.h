@@ -152,10 +152,10 @@ bool tcfdbtune(TCFDB *fdb, int32_t width, int64_t limsiz);
    `fdb' specifies the fixed-length database object which is not opened.
    `path' specifies the path of the database file.
    `omode' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.
-   If the mode is `FDBOWRITER', the following may be added by bitwise or: `FDBOCREAT', which
+   If the mode is `FDBOWRITER', the following may be added by bitwise-or: `FDBOCREAT', which
    means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new
    database regardless if one exists.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by
-   bitwise or: `FDBONOLCK', which means it opens the database file without file locking, or
+   bitwise-or: `FDBONOLCK', which means it opens the database file without file locking, or
    `FDBOLCKNB', which means locking is performed without blocking.
    If successful, the return value is true, else, it is false. */
 bool tcfdbopen(TCFDB *fdb, const char *path, int omode);

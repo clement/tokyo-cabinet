@@ -1985,7 +1985,7 @@ bool tcadbforeach(TCADB *adb, TCITER iter, void *op){
    `pksiz' specifies the size of the region of the primary key.
    `cols' specifies a map object containing columns.
    `op' specifies the pointer to the optional opaque object.
-   The return value is flags of the post treatment by bitwise or.
+   The return value is flags of the post treatment by bitwise-or.
    If successful, the return value is true, else, it is false. */
 static int tcadbtdbqrygetout(const void *pkbuf, int pksiz, TCMAP *cols, void *op){
   TCLIST *rv = ((void **)op)[0];

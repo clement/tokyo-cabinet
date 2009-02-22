@@ -116,7 +116,7 @@ The function `tchdbtune' is used in order to set the tuning parameters of a hash
 `\fIfpow\fR' specifies the maximum number of elements of the free block pool by power of 2.  If it is negative, the default value is specified.  The default value is 10 standing for 2^10=1024.
 .RE
 .RS
-`\fIopts\fR' specifies options by bitwise or: `HDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `HDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `HDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `HDBTTCBS' specifies that each record is compressed with TCBS encoding.
+`\fIopts\fR' specifies options by bitwise-or: `HDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `HDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `HDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `HDBTTCBS' specifies that each record is compressed with TCBS encoding.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -176,7 +176,7 @@ The function `tchdbopen' is used in order to open a database file and connect a 
 `\fIpath\fR' specifies the path of the database file.
 .RE
 .RS
-`\fIomode\fR' specifies the connection mode: `HDBOWRITER' as a writer, `HDBOREADER' as a reader.  If the mode is `HDBOWRITER', the following may be added by bitwise or: `HDBOCREAT', which means it creates a new database if not exist, `HDBOTRUNC', which means it creates a new database regardless if one exists, `HDBOTSYNC', which means every transaction synchronizes updated contents with the device.  Both of `HDBOREADER' and `HDBOWRITER' can be added to by bitwise or: `HDBONOLCK', which means it opens the database file without file locking, or `HDBOLCKNB', which means locking is performed without blocking.
+`\fIomode\fR' specifies the connection mode: `HDBOWRITER' as a writer, `HDBOREADER' as a reader.  If the mode is `HDBOWRITER', the following may be added by bitwise-or: `HDBOCREAT', which means it creates a new database if not exist, `HDBOTRUNC', which means it creates a new database regardless if one exists, `HDBOTSYNC', which means every transaction synchronizes updated contents with the device.  Both of `HDBOREADER' and `HDBOWRITER' can be added to by bitwise-or: `HDBONOLCK', which means it opens the database file without file locking, or `HDBOLCKNB', which means locking is performed without blocking.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -742,7 +742,7 @@ The function `tchdboptimize' is used in order to optimize the file of a hash dat
 `\fIfpow\fR' specifies the maximum number of elements of the free block pool by power of 2.  If it is negative, the current setting is not changed.
 .RE
 .RS
-`\fIopts\fR' specifies options by bitwise or: `HDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `HDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `HDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `HDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.
+`\fIopts\fR' specifies options by bitwise-or: `HDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `HDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `HDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `HDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.
 .RE
 .RS
 If successful, the return value is true, else, it is false.

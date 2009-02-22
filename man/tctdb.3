@@ -114,7 +114,7 @@ The function `tctdbtune' is used in order to set the tuning parameters of a tabl
 `\fIfpow\fR' specifies the maximum number of elements of the free block pool by power of 2.  If it is negative, the default value is specified.  The default value is 10 standing for 2^10=1024.
 .RE
 .RS
-`\fIopts\fR' specifies options by bitwise or: `TDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `TDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `TDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `TDBTTCBS' specifies that each record is compressed with TCBS encoding.
+`\fIopts\fR' specifies options by bitwise-or: `TDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `TDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `TDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `TDBTTCBS' specifies that each record is compressed with TCBS encoding.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -180,7 +180,7 @@ The function `tctdbopen' is used in order to open a database file and connect a 
 `\fIpath\fR' specifies the path of the database file.
 .RE
 .RS
-`\fIomode\fR' specifies the connection mode: `TDBOWRITER' as a writer, `TDBOREADER' as a reader.  If the mode is `TDBOWRITER', the following may be added by bitwise or: `TDBOCREAT', which means it creates a new database if not exist, `TDBOTRUNC', which means it creates a new database regardless if one exists, `TDBOTSYNC', which means every transaction synchronizes updated contents with the device.  Both of `TDBOREADER' and `TDBOWRITER' can be added to by bitwise or: `TDBONOLCK', which means it opens the database file without file locking, or `TDBOLCKNB', which means locking is performed without blocking.
+`\fIomode\fR' specifies the connection mode: `TDBOWRITER' as a writer, `TDBOREADER' as a reader.  If the mode is `TDBOWRITER', the following may be added by bitwise-or: `TDBOCREAT', which means it creates a new database if not exist, `TDBOTRUNC', which means it creates a new database regardless if one exists, `TDBOTSYNC', which means every transaction synchronizes updated contents with the device.  Both of `TDBOREADER' and `TDBOWRITER' can be added to by bitwise-or: `TDBONOLCK', which means it opens the database file without file locking, or `TDBOLCKNB', which means locking is performed without blocking.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -746,7 +746,7 @@ The function `tctdboptimize' is used in order to optimize the file of a table da
 `\fIfpow\fR' specifies the maximum number of elements of the free block pool by power of 2.  If it is negative, the current setting is not changed.
 .RE
 .RS
-`\fIopts\fR' specifies options by bitwise or: `TDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `TDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `TDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `TDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.
+`\fIopts\fR' specifies options by bitwise-or: `TDBTLARGE' specifies that the size of the database can be larger than 2GB by using 64\-bit bucket array, `TDBTDEFLATE' specifies that each record is compressed with Deflate encoding, `TDBTBZIP' specifies that each record is compressed with BZIP2 encoding, `TDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it is `UINT8_MAX', the current setting is not changed.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -887,7 +887,7 @@ The function `tctdbsetindex' is used in order to set a column index to a table d
 `\fIname\fR' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.
 .RE
 .RS
-`\fItype\fR' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise or and the index exists, this function merely returns failure.
+`\fItype\fR' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise\-or and the index exists, this function merely returns failure.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -945,7 +945,7 @@ The function `tctdbqryaddcond' is used in order to add a narrowing condition to 
 `\fIname\fR' specifies the name of a column.  An empty string means the primary key.
 .RE
 .RS
-`\fIop\fR' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression.  All operations can be flagged by bitwise or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.
+`\fIop\fR' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression.  All operations can be flagged by bitwise-or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.
 .RE
 .RS
 `\fIexpr\fR' specifies an operand exression.
@@ -1019,7 +1019,7 @@ The function `tctdbqryproc' is used in order to process each record correspondin
 `\fIqry\fR' specifies the query object of the database connected as a writer.
 .RE
 .RS
-`\fIproc\fR' specifies the pointer to the iterator function called for each record.  It receives four parameters.  The first parameter is the pointer to the region of the primary key.  The second parameter is the size of the region of the primary key.  The third parameter is a map object containing columns.  The fourth parameter is the pointer to the optional opaque object.  It returns flags of the post treatment by bitwise or: `TDBQPPUT' to modify the record, `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration.
+`\fIproc\fR' specifies the pointer to the iterator function called for each record.  It receives four parameters.  The first parameter is the pointer to the region of the primary key.  The second parameter is the size of the region of the primary key.  The third parameter is a map object containing columns.  The fourth parameter is the pointer to the optional opaque object.  It returns flags of the post treatment by bitwise-or: `TDBQPPUT' to modify the record, `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration.
 .RE
 .RS
 `\fIop\fR' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If it is not needed, `NULL' can be specified.

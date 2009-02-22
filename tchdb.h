@@ -184,7 +184,7 @@ bool tchdbsetmutex(TCHDB *hdb);
    value is specified.  The default value is 4 standing for 2^4=16.
    `fpow' specifies the maximum number of elements of the free block pool by power of 2.  If it
    is negative, the default value is specified.  The default value is 10 standing for 2^10=1024.
-   `opts' specifies options by bitwise or: `HDBTLARGE' specifies that the size of the database
+   `opts' specifies options by bitwise-or: `HDBTLARGE' specifies that the size of the database
    can be larger than 2GB by using 64-bit bucket array, `HDBTDEFLATE' specifies that each record
    is compressed with Deflate encoding, `HDBTBZIP' specifies that each record is compressed with
    BZIP2 encoding, `HDBTTCBS' specifies that each record is compressed with TCBS encoding.
@@ -215,11 +215,11 @@ bool tchdbsetxmsiz(TCHDB *hdb, int64_t xmsiz);
    `hdb' specifies the hash database object which is not opened.
    `path' specifies the path of the database file.
    `omode' specifies the connection mode: `HDBOWRITER' as a writer, `HDBOREADER' as a reader.
-   If the mode is `HDBOWRITER', the following may be added by bitwise or: `HDBOCREAT', which
+   If the mode is `HDBOWRITER', the following may be added by bitwise-or: `HDBOCREAT', which
    means it creates a new database if not exist, `HDBOTRUNC', which means it creates a new
    database regardless if one exists, `HDBOTSYNC', which means every transaction synchronizes
    updated contents with the device.  Both of `HDBOREADER' and `HDBOWRITER' can be added to by
-   bitwise or: `HDBONOLCK', which means it opens the database file without file locking, or
+   bitwise-or: `HDBONOLCK', which means it opens the database file without file locking, or
    `HDBOLCKNB', which means locking is performed without blocking.
    If successful, the return value is true, else, it is false. */
 bool tchdbopen(TCHDB *hdb, const char *path, int omode);
@@ -496,7 +496,7 @@ bool tchdbsync(TCHDB *hdb);
    setting is not changed.
    `fpow' specifies the maximum number of elements of the free block pool by power of 2.  If it
    is negative, the current setting is not changed.
-   `opts' specifies options by bitwise or: `HDBTLARGE' specifies that the size of the database
+   `opts' specifies options by bitwise-or: `HDBTLARGE' specifies that the size of the database
    can be larger than 2GB by using 64-bit bucket array, `HDBTDEFLATE' specifies that each record
    is compressed with Deflate encoding, `HDBTBZIP' specifies that each record is compressed with
    BZIP2 encoding, `HDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it

@@ -1138,6 +1138,8 @@ int tctdbstrtoindextype(const char *str){
     type = TDBITLEXICAL;
   } else if(!tcstricmp(str, "DEC") || !tcstricmp(str, "DECIMAL") || !tcstricmp(str, "NUM")){
     type = TDBITDECIMAL;
+  } else if(!tcstricmp(str, "OPT") || !tcstricmp(str, "OPTIMIZE")){
+    type = TDBITOPT;
   } else if(!tcstricmp(str, "VOID") || !tcstricmp(str, "NULL")){
     type = TDBITVOID;
   } else if(tcstrisnum(str)){
@@ -1507,7 +1509,7 @@ static double tctdbaddnumber(TCTDB *tdb, const void *pkbuf, int pksiz, double nu
    `bnum' specifies the number of elements of the bucket array.
    `apow' specifies the size of record alignment by power of 2.
    `fpow' specifies the maximum number of elements of the free block pool by power of 2.
-   `opts' specifies options by bitwise or.
+   `opts' specifies options by bitwise-or.
    If successful, the return value is true, else, it is false. */
 static bool tctdboptimizeimpl(TCTDB *tdb, int64_t bnum, int8_t apow, int8_t fpow, uint8_t opts){
   assert(tdb);
@@ -1765,7 +1767,7 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
     type &= ~TDBITKEEP;
     keep = true;
   }
-  bool del = false;
+  bool done = false;
   TDBIDX *idxs = tdb->idxs;
   int inum = tdb->inum;
   for(int i = 0; i < inum; i++){
@@ -1775,6 +1777,19 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
       if(keep){
         tctdbsetecode(tdb, TCEKEEP, __FILE__, __LINE__, __func__);
         return false;
+      }
+      if(type == TDBITOPT){
+        switch(idx->type){
+        case TDBITLEXICAL:
+        case TDBITDECIMAL:
+          if(!tcbdboptimize(idx->db, -1, -1, -1, -1, -1, UINT8_MAX)){
+            tctdbsetecode(tdb, tcbdbecode(idx->db), __FILE__, __LINE__, __func__);
+            err = true;
+          }
+          break;
+        }
+        done = true;
+        break;
       }
       switch(idx->type){
       case TDBITLEXICAL:
@@ -1791,12 +1806,12 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
       tdb->inum--;
       inum = tdb->inum;
       memmove(idxs + i, idxs + i + 1, sizeof(*idxs) * (inum - i));
-      del = true;
+      done = true;
       break;
     }
   }
-  if(type == TDBITVOID){
-    if(!del){
+  if(type == TDBITOPT || type == TDBITVOID){
+    if(!done){
       tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
       err = true;
     }

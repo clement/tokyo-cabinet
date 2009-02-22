@@ -1,3 +1,9 @@
+2009-02-15  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tctdb.c (tctdbsetindex): "TDBITOPT" option was added.
+
+	- Release: 1.4.7
+
 2009-02-13  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tctdb.c (tctdbgenuidimpl): the meta data format was normalized to the big endian.

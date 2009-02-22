@@ -192,7 +192,7 @@ bool tcbdbsetcmpfunc(TCBDB *bdb, TCCMP cmp, void *cmpop);
    value is specified.  The default value is 8 standing for 2^8=256.
    `fpow' specifies the maximum number of elements of the free block pool by power of 2.  If it
    is negative, the default value is specified.  The default value is 10 standing for 2^10=1024.
-   `opts' specifies options by bitwise or: `BDBTLARGE' specifies that the size of the database
+   `opts' specifies options by bitwise-or: `BDBTLARGE' specifies that the size of the database
    can be larger than 2GB by using 64-bit bucket array, `BDBTDEFLATE' specifies that each page
    is compressed with Deflate encoding, `BDBTBZIP' specifies that each page is compressed with
    BZIP2 encoding, `BDBTTCBS' specifies that each page is compressed with TCBS encoding.
@@ -226,11 +226,11 @@ bool tcbdbsetxmsiz(TCBDB *bdb, int64_t xmsiz);
    `bdb' specifies the B+ tree database object which is not opened.
    `path' specifies the path of the database file.
    `omode' specifies the connection mode: `BDBOWRITER' as a writer, `BDBOREADER' as a reader.
-   If the mode is `BDBOWRITER', the following may be added by bitwise or: `BDBOCREAT', which
+   If the mode is `BDBOWRITER', the following may be added by bitwise-or: `BDBOCREAT', which
    means it creates a new database if not exist, `BDBOTRUNC', which means it creates a new
    database regardless if one exists, `BDBOTSYNC', which means every transaction synchronizes
    updated contents with the device.  Both of `BDBOREADER' and `BDBOWRITER' can be added to by
-   bitwise or: `BDBONOLCK', which means it opens the database file without file locking, or
+   bitwise-or: `BDBONOLCK', which means it opens the database file without file locking, or
    `BDBOLCKNB', which means locking is performed without blocking.
    If successful, the return value is true, else, it is false. */
 bool tcbdbopen(TCBDB *bdb, const char *path, int omode);
@@ -555,7 +555,7 @@ bool tcbdbsync(TCBDB *bdb);
    setting is not changed.
    `fpow' specifies the maximum number of elements of the free block pool by power of 2.  If it
    is negative, the current setting is not changed.
-   `opts' specifies options by bitwise or: `BDBTLARGE' specifies that the size of the database
+   `opts' specifies options by bitwise-or: `BDBTLARGE' specifies that the size of the database
    can be larger than 2GB by using 64-bit bucket array, `BDBTDEFLATE' specifies that each record
    is compressed with Deflate encoding, `BDBTBZIP' specifies that each page is compressed with
    BZIP2 encoding, `BDBTTCBS' specifies that each page is compressed with TCBS encoding.  If it

@@ -629,11 +629,11 @@ libtokyocabinet.a : $(LIBOBJFILES)
 libtokyocabinet.so.$(LIBVER).$(LIBREV).0 : $(LIBOBJFILES)
 	if uname -a | egrep -i 'SunOS' > /dev/null ; \
 	  then \
-	    $(CC) -shared -Wl,-G,-h,libtokyocabinet.so.$(LIBVER) -o $@ $(LIBOBJFILES) \
-	      $(LDFLAGS) $(LIBS) ; \
+	    $(CC) $(CFLAGS) -shared -Wl,-G,-h,libtokyocabinet.so.$(LIBVER) -o $@ \
+	      $(LIBOBJFILES) $(LDFLAGS) $(LIBS) ; \
 	  else \
-	    $(CC) -shared -Wl,-soname,libtokyocabinet.so.$(LIBVER) -o $@ $(LIBOBJFILES) \
-	      $(LDFLAGS) $(LIBS) ; \
+	    $(CC) $(CFLAGS) -shared -Wl,-soname,libtokyocabinet.so.$(LIBVER) -o $@ \
+	      $(LIBOBJFILES) $(LDFLAGS) $(LIBS) ; \
 	  fi
 
 
@@ -646,7 +646,7 @@ libtokyocabinet.so : libtokyocabinet.so.$(LIBVER).$(LIBREV).0
 
 
 libtokyocabinet.$(LIBVER).$(LIBREV).0.dylib : $(LIBOBJFILES)
-	$(CC) -dynamiclib -o $@ \
+	$(CC) $(CFLAGS) -dynamiclib -o $@ \
 	  -install_name $(LIBDIR)/libtokyocabinet.$(LIBVER).dylib \
 	  -current_version $(LIBVER).$(LIBREV).0 -compatibility_version $(LIBVER) \
 	  $(LIBOBJFILES) $(LDFLAGS) $(LIBS)

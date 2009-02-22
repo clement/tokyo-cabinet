@@ -218,6 +218,7 @@ module TokyoCabinet {
     const long OTSYNC = 1 << 6;
     const long ITLEXICAL = 0;
     const long ITDECIMAL = 1;
+    const long ITOPT = 9998;
     const long ITVOID = 9999;
     const long ITKEEP = 1 << 24;
     boolean tune(in long long bnum, in long apow, in long fpow, in long opts);

@@ -17,7 +17,7 @@ int main(int argc, char **argv){
   tdb = tctdbnew();
 
   /* open the database */
-  if(!tctdbopen(tdb, "casket.tdb", TDBOWRITER | TDBOCREAT)){
+  if(!tctdbopen(tdb, "casket.tct", TDBOWRITER | TDBOCREAT)){
     ecode = tctdbecode(tdb);
     fprintf(stderr, "open error: %s\n", tctdberrmsg(ecode));
   }

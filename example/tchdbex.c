@@ -13,7 +13,7 @@ int main(int argc, char **argv){
   hdb = tchdbnew();
 
   /* open the database */
-  if(!tchdbopen(hdb, "casket.hdb", HDBOWRITER | HDBOCREAT)){
+  if(!tchdbopen(hdb, "casket.tch", HDBOWRITER | HDBOCREAT)){
     ecode = tchdbecode(hdb);
     fprintf(stderr, "open error: %s\n", tchdberrmsg(ecode));
   }

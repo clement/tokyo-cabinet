@@ -130,7 +130,7 @@ The function `tcfdbopen' is used in order to open a database file and connect a 
 `\fIpath\fR' specifies the path of the database file.
 .RE
 .RS
-`\fIomode\fR' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.  If the mode is `FDBOWRITER', the following may be added by bitwise or: `FDBOCREAT', which means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new database regardless if one exists.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by bitwise or: `FDBONOLCK', which means it opens the database file without file locking, or `FDBOLCKNB', which means locking is performed without blocking.
+`\fIomode\fR' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.  If the mode is `FDBOWRITER', the following may be added by bitwise-or: `FDBOCREAT', which means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new database regardless if one exists.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by bitwise-or: `FDBONOLCK', which means it opens the database file without file locking, or `FDBOLCKNB', which means locking is performed without blocking.
 .RE
 .RS
 If successful, the return value is true, else, it is false.

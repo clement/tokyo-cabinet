@@ -89,6 +89,7 @@ enum {                                   /* enumeration for open modes */
 enum {                                   /* enumeration for index types */
   TDBITLEXICAL,                          /* lexical string */
   TDBITDECIMAL,                          /* decimal string */
+  TDBITOPT = 9998,                       /* optimize */
   TDBITVOID = 9999,                      /* void */
   TDBITKEEP = 1 << 24                    /* keep existing index */
 };
@@ -152,7 +153,7 @@ enum {                                   /* enumeration for post treatments */
    `pksiz' specifies the size of the region of the primary key.
    `cols' specifies a map object containing columns.
    `op' specifies the pointer to the optional opaque object.
-   The return value is flags of the post treatment by bitwise or: `TDBQPPUT' to modify the
+   The return value is flags of the post treatment by bitwise-or: `TDBQPPUT' to modify the
    record, `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration. */
 typedef int (*TDBQRYPROC)(const void *pkbuf, int pksiz, TCMAP *cols, void *op);
 
@@ -207,7 +208,7 @@ bool tctdbsetmutex(TCTDB *tdb);
    value is specified.  The default value is 4 standing for 2^4=16.
    `fpow' specifies the maximum number of elements of the free block pool by power of 2.  If it
    is negative, the default value is specified.  The default value is 10 standing for 2^10=1024.
-   `opts' specifies options by bitwise or: `TDBTLARGE' specifies that the size of the database
+   `opts' specifies options by bitwise-or: `TDBTLARGE' specifies that the size of the database
    can be larger than 2GB by using 64-bit bucket array, `TDBTDEFLATE' specifies that each record
    is compressed with Deflate encoding, `TDBTBZIP' specifies that each record is compressed with
    BZIP2 encoding, `TDBTTCBS' specifies that each record is compressed with TCBS encoding.
@@ -243,11 +244,11 @@ bool tctdbsetxmsiz(TCTDB *tdb, int64_t xmsiz);
    `tdb' specifies the table database object which is not opened.
    `path' specifies the path of the database file.
    `omode' specifies the connection mode: `TDBOWRITER' as a writer, `TDBOREADER' as a reader.
-   If the mode is `TDBOWRITER', the following may be added by bitwise or: `TDBOCREAT', which
+   If the mode is `TDBOWRITER', the following may be added by bitwise-or: `TDBOCREAT', which
    means it creates a new database if not exist, `TDBOTRUNC', which means it creates a new
    database regardless if one exists, `TDBOTSYNC', which means every transaction synchronizes
    updated contents with the device.  Both of `TDBOREADER' and `TDBOWRITER' can be added to by
-   bitwise or: `TDBONOLCK', which means it opens the database file without file locking, or
+   bitwise-or: `TDBONOLCK', which means it opens the database file without file locking, or
    `TDBOLCKNB', which means locking is performed without blocking.
    If successful, the return value is true, else, it is false. */
 bool tctdbopen(TCTDB *tdb, const char *path, int omode);
@@ -527,7 +528,7 @@ bool tctdbsync(TCTDB *tdb);
    setting is not changed.
    `fpow' specifies the maximum number of elements of the free block pool by power of 2.  If it
    is negative, the current setting is not changed.
-   `opts' specifies options by bitwise or: `BDBTLARGE' specifies that the size of the database
+   `opts' specifies options by bitwise-or: `BDBTLARGE' specifies that the size of the database
    can be larger than 2GB by using 64-bit bucket array, `BDBTDEFLATE' specifies that each record
    is compressed with Deflate encoding, `BDBTBZIP' specifies that each record is compressed with
    BZIP2 encoding, `BDBTTCBS' specifies that each record is compressed with TCBS encoding.  If it
@@ -609,8 +610,9 @@ uint64_t tctdbfsiz(TCTDB *tdb);
    `name' specifies the name of a column.  If the name of an existing index is specified, the
    index is rebuilt.  An empty string means the primary key.
    `type' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal
-   string.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise or
-   and the index exists, this function merely returns failure.
+   string.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is
+   removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely
+   returns failure.
    If successful, the return value is true, else, it is false.
    Note that the setting indexes should be set after the database is opened. */
 bool tctdbsetindex(TCTDB *tdb, const char *name, int type);
@@ -647,7 +649,7 @@ void tctdbqrydel(TDBQRY *qry);
    greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the
    expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT'
    for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is
-   equal to at least one token in the expression.  All operations can be flagged by bitwise or:
+   equal to at least one token in the expression.  All operations can be flagged by bitwise-or:
    `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.
    `expr' specifies an operand exression. */
 void tctdbqryaddcond(TDBQRY *qry, const char *name, int op, const char *expr);
@@ -688,7 +690,7 @@ bool tctdbqrysearchout(TDBQRY *qry);
    four parameters.  The first parameter is the pointer to the region of the primary key.  The
    second parameter is the size of the region of the primary key.  The third parameter is a map
    object containing columns.  The fourth parameter is the pointer to the optional opaque object.
-   It returns flags of the post treatment by bitwise or: `TDBQPPUT' to modify the record,
+   It returns flags of the post treatment by bitwise-or: `TDBQPPUT' to modify the record,
    `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.

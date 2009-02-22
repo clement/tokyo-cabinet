@@ -3269,7 +3269,7 @@ static bool tcbdbrangefwm(TCBDB *bdb, const char *pbuf, int psiz, int max, TCLIS
    `bnum' specifies the number of elements of the bucket array.
    `apow' specifies the size of record alignment by power of 2.
    `fpow' specifies the maximum number of elements of the free block pool by power of 2.
-   `opts' specifies options by bitwise or.
+   `opts' specifies options by bitwise-or.
    If successful, the return value is true, else, it is false. */
 static bool tcbdboptimizeimpl(TCBDB *bdb, int32_t lmemb, int32_t nmemb,
                               int64_t bnum, int8_t apow, int8_t fpow, uint8_t opts){
