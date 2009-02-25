@@ -61,6 +61,7 @@ typedef struct {                         // type of structure for a node page
   uint64_t heir;                         // ID of the child before the first index
   TCPTRLIST *idxs;                       // list of indexes
   bool dirty;                            // whether to be written back
+  bool dead;                             // whether to be removed
 } BDBNODE;
 
 enum {                                   // enumeration for duplication behavior
@@ -1908,6 +1909,7 @@ static bool tcbdbleafsave(TCBDB *bdb, BDBLEAF *leaf){
     err = true;
   tcxstrdel(rbuf);
   leaf->dirty = false;
+  leaf->dead = false;
   return !err;
 }
 
@@ -2295,7 +2297,7 @@ static BDBLEAF *tcbdbleafdivide(TCBDB *bdb, BDBLEAF *leaf){
    If successful, the return value is true, else, it is false. */
 static bool tcbdbleafkill(TCBDB *bdb, BDBLEAF *leaf){
   assert(bdb && leaf);
-  BDBNODE *node = tcbdbnodeload(bdb, bdb->hist[bdb->hnum-1]);
+  BDBNODE *node = tcbdbnodeload(bdb, bdb->hist[--bdb->hnum]);
   if(!node) return false;
   if(tcbdbnodesubidx(bdb, node, leaf->id)){
     TCDODEBUG(bdb->cnt_killleaf++);
@@ -2331,6 +2333,7 @@ static BDBNODE *tcbdbnodenew(TCBDB *bdb, uint64_t heir){
   nent.idxs = tcptrlistnew2(bdb->nmemb + 1);
   nent.heir = heir;
   nent.dirty = true;
+  nent.dead = false;
   tcmapputkeep(bdb->nodec, &(nent.id), sizeof(nent.id), &nent, sizeof(nent));
   int rsiz;
   return (BDBNODE *)tcmapget(bdb->nodec, &(nent.id), sizeof(nent.id), &rsiz);
@@ -2388,9 +2391,13 @@ static bool tcbdbnodesave(TCBDB *bdb, BDBNODE *node){
   }
   bool err = false;
   step = sprintf(hbuf, "#%llx", (unsigned long long)(node->id - BDBNODEIDBASE));
-  if(!tchdbput(bdb->hdb, hbuf, step, TCXSTRPTR(rbuf), TCXSTRSIZE(rbuf))) err = true;
+  if(ln < 1 && !tchdbout(bdb->hdb, hbuf, step) && tchdbecode(bdb->hdb) != TCENOREC)
+    err = true;
+  if(!node->dead && !tchdbput(bdb->hdb, hbuf, step, TCXSTRPTR(rbuf), TCXSTRSIZE(rbuf)))
+    err = true;
   tcxstrdel(rbuf);
   node->dirty = false;
+  node->dead = false;
   return !err;
 }
 
@@ -2437,6 +2444,7 @@ static BDBNODE *tcbdbnodeload(TCBDB *bdb, uint64_t id){
   rp += step;
   rsiz -= step;
   nent.dirty = false;
+  nent.dead = false;
   nent.idxs = tcptrlistnew2(bdb->nmemb + 1);
   bool err = false;
   while(rsiz >= 2){
@@ -2556,26 +2564,37 @@ static void tcbdbnodeaddidx(TCBDB *bdb, BDBNODE *node, bool order, uint64_t pid,
    The return value is whether the subtraction is completed. */
 static bool tcbdbnodesubidx(TCBDB *bdb, BDBNODE *node, uint64_t pid){
   assert(bdb && node && pid > 0);
+  node->dirty = true;
   TCPTRLIST *idxs = node->idxs;
-  int ln = TCPTRLISTNUM(idxs);
-  if(ln < 2) return false;
   if(node->heir == pid){
-    BDBIDX *idx = tcptrlistshift(idxs);
-    node->heir = idx->pid;
-    TCFREE(idx);
-    node->dirty = true;
-    return true;
-  } else {
-    int ln = TCPTRLISTNUM(idxs);
-    for(int i = 0; i < ln; i++){
-      BDBIDX *idx = TCPTRLISTVAL(idxs, i);
-      if(idx->pid == pid){
-        TCFREE(tcptrlistremove(idxs, i));
-        node->dirty = true;
-        return true;
+    if(TCPTRLISTNUM(idxs) > 0){
+      BDBIDX *idx = tcptrlistshift(idxs);
+      assert(idx);
+      node->heir = idx->pid;
+      TCFREE(idx);
+      return true;
+    } else if(bdb->hnum > 0){
+      BDBNODE *pnode = tcbdbnodeload(bdb, bdb->hist[--bdb->hnum]);
+      if(!pnode){
+        tcbdbsetecode(bdb, TCEMISC, __FILE__, __LINE__, __func__);
+        return false;
       }
+      node->dead = true;
+      return tcbdbnodesubidx(bdb, pnode, node->id);
+    }
+    node->dead = true;
+    bdb->root = pid;
+    return false;
+  }
+  int ln = TCPTRLISTNUM(idxs);
+  for(int i = 0; i < ln; i++){
+    BDBIDX *idx = TCPTRLISTVAL(idxs, i);
+    if(idx->pid == pid){
+      TCFREE(tcptrlistremove(idxs, i));
+      return true;
     }
   }
+  tcbdbsetecode(bdb, TCEMISC, __FILE__, __LINE__, __func__);
   return false;
 }
 
@@ -2599,57 +2618,57 @@ static uint64_t tcbdbsearchleaf(TCBDB *bdb, const char *kbuf, int ksiz){
       tcbdbsetecode(bdb, TCEMISC, __FILE__, __LINE__, __func__);
       return 0;
     }
+    hist[hnum++] = node->id;
     TCPTRLIST *idxs = node->idxs;
     int ln = TCPTRLISTNUM(idxs);
-    if(ln < 1){
-      tcbdbsetecode(bdb, TCEMISC, __FILE__, __LINE__, __func__);
-      return 0;
-    }
-    hist[hnum++] = node->id;
-    int left = 0;
-    int right = ln;
-    int i = (left + right) / 2;
-    BDBIDX *idx = NULL;
-    while(right >= left && i < ln){
-      idx = TCPTRLISTVAL(idxs, i);
-      char *ebuf = (char *)idx + sizeof(*idx);
-      int rv;
-      if(cmp == tccmplexical){
-        TCCMPLEXICAL(rv, kbuf, ksiz, ebuf, idx->ksiz);
-      } else {
-        rv = cmp(kbuf, ksiz, ebuf, idx->ksiz, cmpop);
+    if(ln > 0){
+      int left = 0;
+      int right = ln;
+      int i = (left + right) / 2;
+      BDBIDX *idx = NULL;
+      while(right >= left && i < ln){
+        idx = TCPTRLISTVAL(idxs, i);
+        char *ebuf = (char *)idx + sizeof(*idx);
+        int rv;
+        if(cmp == tccmplexical){
+          TCCMPLEXICAL(rv, kbuf, ksiz, ebuf, idx->ksiz);
+        } else {
+          rv = cmp(kbuf, ksiz, ebuf, idx->ksiz, cmpop);
+        }
+        if(rv == 0){
+          break;
+        } else if(rv <= 0){
+          right = i - 1;
+        } else {
+          left = i + 1;
+        }
+        i = (left + right) / 2;
       }
-      if(rv == 0){
-        break;
-      } else if(rv <= 0){
-        right = i - 1;
-      } else {
-        left = i + 1;
-      }
-      i = (left + right) / 2;
-    }
-    if(i > 0) i--;
-    while(i < ln){
-      idx = TCPTRLISTVAL(idxs, i);
-      char *ebuf = (char *)idx + sizeof(*idx);
-      int rv;
-      if(cmp == tccmplexical){
-        TCCMPLEXICAL(rv, kbuf, ksiz, ebuf, idx->ksiz);
-      } else {
-        rv = cmp(kbuf, ksiz, ebuf, idx->ksiz, cmpop);
-      }
-      if(rv < 0){
-        if(i == 0){
-          pid = node->heir;
+      if(i > 0) i--;
+      while(i < ln){
+        idx = TCPTRLISTVAL(idxs, i);
+        char *ebuf = (char *)idx + sizeof(*idx);
+        int rv;
+        if(cmp == tccmplexical){
+          TCCMPLEXICAL(rv, kbuf, ksiz, ebuf, idx->ksiz);
+        } else {
+          rv = cmp(kbuf, ksiz, ebuf, idx->ksiz, cmpop);
+        }
+        if(rv < 0){
+          if(i == 0){
+            pid = node->heir;
+            break;
+          }
+          idx = TCPTRLISTVAL(idxs, i - 1);
+          pid = idx->pid;
           break;
         }
-        idx = TCPTRLISTVAL(idxs, i - 1);
-        pid = idx->pid;
-        break;
+        i++;
       }
-      i++;
+      if(i >= ln) pid = idx->pid;
+    } else {
+      pid = node->heir;
     }
-    if(i >= ln) pid = idx->pid;
   }
   if(bdb->lleaf == pid) bdb->hleaf = pid;
   bdb->lleaf = pid;
@@ -2964,7 +2983,7 @@ static bool tcbdbputimpl(TCBDB *bdb, const void *kbuf, int ksiz, const void *vbu
         tcbdbnodeaddidx(bdb, newnode, true, idx->pid, ebuf, idx->ksiz);
       }
       ln = TCPTRLISTNUM(newnode->idxs);
-      for(int i = 0; i < ln; i++){
+      for(int i = 0; i <= ln; i++){
         idx = tcptrlistpop(idxs);
         TCFREE(idx);
       }
@@ -3822,6 +3841,7 @@ void tcbdbprintmeta(TCBDB *bdb){
   assert(bdb);
   int dbgfd = tchdbdbgfd(bdb->hdb);
   if(dbgfd < 0) return;
+  if(dbgfd == UINT16_MAX) dbgfd = 1;
   char buf[BDBPAGEBUFSIZ];
   char *wp = buf;
   wp += sprintf(wp, "META:");
@@ -3875,6 +3895,7 @@ void tcbdbprintleaf(TCBDB *bdb, BDBLEAF *leaf){
   int dbgfd = tchdbdbgfd(bdb->hdb);
   TCPTRLIST *recs = leaf->recs;
   if(dbgfd < 0) return;
+  if(dbgfd == UINT16_MAX) dbgfd = 1;
   char buf[BDBPAGEBUFSIZ];
   char *wp = buf;
   wp += sprintf(wp, "LEAF:");
@@ -3911,12 +3932,14 @@ void tcbdbprintnode(TCBDB *bdb, BDBNODE *node){
   int dbgfd = tchdbdbgfd(bdb->hdb);
   TCPTRLIST *idxs = node->idxs;
   if(dbgfd < 0) return;
+  if(dbgfd == UINT16_MAX) dbgfd = 1;
   char buf[BDBPAGEBUFSIZ];
   char *wp = buf;
   wp += sprintf(wp, "NODE:");
   wp += sprintf(wp, " id:%llx", (unsigned long long)node->id);
   wp += sprintf(wp, " heir:%llx", (unsigned long long)node->heir);
   wp += sprintf(wp, " dirty:%d", node->dirty);
+  wp += sprintf(wp, " dead:%d", node->dead);
   wp += sprintf(wp, " rnum:%d", TCPTRLISTNUM(idxs));
   *(wp++) = ' ';
   for(int i = 0; i < TCPTRLISTNUM(idxs); i++){

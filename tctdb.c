@@ -3332,6 +3332,7 @@ void tctdbprintmeta(TCTDB *tdb){
   assert(tdb);
   int dbgfd = tchdbdbgfd(tdb->hdb);
   if(dbgfd < 0) return;
+  if(dbgfd == UINT16_MAX) dbgfd = 1;
   char buf[TDBPAGEBUFSIZ];
   char *wp = buf;
   wp += sprintf(wp, "META:");

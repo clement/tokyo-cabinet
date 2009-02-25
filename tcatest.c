@@ -916,7 +916,7 @@ static int proccompare(const char *name, int tnum, int rnum){
   }
   sprintf(path, "%s.tch", name);
   int homode = HDBOWRITER | HDBOCREAT | HDBOTRUNC;
-  if(myrand(5) == 1) homode |= HDBOTSYNC;
+  if(myrand(20) == 1) homode |= HDBOTSYNC;
   if(!tchdbopen(hdb, path, homode)){
     eprint(NULL, "tchdbopen");
     err = true;
@@ -931,11 +931,12 @@ static int proccompare(const char *name, int tnum, int rnum){
   }
   sprintf(path, "%s.tcb", name);
   int bomode = BDBOWRITER | BDBOCREAT | BDBOTRUNC;
-  if(myrand(5) == 1) bomode |= BDBOTSYNC;
+  if(myrand(20) == 1) bomode |= BDBOTSYNC;
   if(!tcbdbopen(bdb, path, bomode)){
     eprint(NULL, "tcbdbopen");
     err = true;
   }
+  BDBCUR *cur = tcbdbcurnew(bdb);
   for(int t = 1; !err && t <= tnum; t++){
     bool commit = myrand(2) == 0;
     iprintf("transaction %d (%s):\n", t, commit ? "commit" : "abort");
@@ -947,7 +948,7 @@ static int proccompare(const char *name, int tnum, int rnum){
       eprint(NULL, "tcbdbtranbegin");
       err = true;
     }
-    int act = myrand(7);
+    int act = myrand(6);
     for(int i = 1; !err && i <= rnum; i++){
       if(myrand(10) == 0) act = myrand(7);
       char kbuf[RECBUFSIZ];
@@ -1026,17 +1027,56 @@ static int proccompare(const char *name, int tnum, int rnum){
         }
         break;
       default:
-        if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
-          eprint(NULL, "tchdbout");
-          err = true;
-        }
-        if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
-          eprint(NULL, "tcbdbout");
-          err = true;
-        }
-        if(commit){
-          tcmdbout(mdb, kbuf, ksiz);
-          tcndbout(ndb, kbuf, ksiz);
+        if(myrand(20) == 0){
+          if(!tcbdbcurjump(cur, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+            eprint(NULL, "tcbdbcurjump");
+            err = true;
+          }
+          char *cbuf;
+          int csiz;
+          while((cbuf = tcbdbcurkey(cur, &csiz)) != NULL){
+            if(!tchdbout(hdb, cbuf, csiz)){
+              eprint(NULL, "tchdbout");
+              err = true;
+            }
+            if(!tcbdbout(bdb, cbuf, csiz)){
+              eprint(NULL, "tcbdbout");
+              err = true;
+            }
+            if(commit){
+              tcmdbout(mdb, cbuf, csiz);
+              tcndbout(ndb, cbuf, csiz);
+            }
+            tcfree(cbuf);
+            if(myrand(10) == 0) break;
+            switch(myrand(3)){
+            case 1:
+              if(!tcbdbcurprev(cur) && tcbdbecode(bdb) != TCENOREC){
+                eprint(NULL, "tcbdbcurprev");
+                err = true;
+              }
+              break;
+            case 2:
+              if(!tcbdbcurnext(cur) && tcbdbecode(bdb) != TCENOREC){
+                eprint(NULL, "tcbdbcurprev");
+                err = true;
+              }
+              break;
+            }
+          }
+        } else {
+          if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
+            eprint(NULL, "tchdbout");
+            err = true;
+          }
+          if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+            eprint(NULL, "tcbdbout");
+            err = true;
+          }
+          if(commit){
+            tcmdbout(mdb, kbuf, ksiz);
+            tcndbout(ndb, kbuf, ksiz);
+          }
         }
         break;
       }
@@ -1086,7 +1126,63 @@ static int proccompare(const char *name, int tnum, int rnum){
       }
     }
   }
-  iprintf("checking consistency of all:\n");
+  iprintf("checking consistency of range:\n");
+  for(int i = 1; i <= rnum; i++){
+    char kbuf[RECBUFSIZ];
+    int ksiz = sprintf(kbuf, "%d", i);
+    int vsiz;
+    char *vbuf = tcmdbget(mdb, kbuf, ksiz, &vsiz);
+    if(vbuf){
+      int rsiz;
+      char *rbuf = tcndbget(ndb, kbuf, ksiz, &rsiz);
+      if(rbuf){
+        tcfree(rbuf);
+      } else {
+        eprint(NULL, "tcndbget");
+        err = true;
+      }
+      rbuf = tchdbget(hdb, kbuf, ksiz, &rsiz);
+      if(rbuf){
+        tcfree(rbuf);
+      } else {
+        eprint(NULL, "tchdbget");
+        err = true;
+      }
+      rbuf = tcbdbget(bdb, kbuf, ksiz, &rsiz);
+      if(rbuf){
+        tcfree(rbuf);
+      } else {
+        eprint(NULL, "tcbdbget");
+        err = true;
+      }
+      tcfree(vbuf);
+    } else {
+      int rsiz;
+      char *rbuf = tcndbget(ndb, kbuf, ksiz, &rsiz);
+      if(rbuf){
+        eprint(NULL, "tcndbget");
+        tcfree(rbuf);
+        err = true;
+      }
+      rbuf = tchdbget(hdb, kbuf, ksiz, &rsiz);
+      if(rbuf){
+        eprint(NULL, "tchdbget");
+        err = true;
+        tcfree(rbuf);
+      }
+      rbuf = tcbdbget(bdb, kbuf, ksiz, &rsiz);
+      if(rbuf){
+        eprint(NULL, "tcbdbget");
+        err = true;
+        tcfree(rbuf);
+      }
+    }
+    if(rnum > 250 && i % (rnum / 250) == 0){
+      iputchar('.');
+      if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+    }
+  }
+  iprintf("checking consistency on memory:\n");
   if(tchdbrnum(hdb) != tcbdbrnum(bdb)){
     eprint(NULL, "(validation)");
     err = true;
@@ -1150,7 +1246,6 @@ static int proccompare(const char *name, int tnum, int rnum){
   }
   if(rnum > 250) iprintf(" (%08d)\n", inum);
   iprintf("checking consistency of tree:\n");
-  BDBCUR *cur = tcbdbcurnew(bdb);
   if(!tcbdbcurfirst(cur) && tcbdbecode(bdb) != TCENOREC){
     eprint(NULL, "tcbdbcurfirst");
     err = true;
@@ -1175,11 +1270,11 @@ static int proccompare(const char *name, int tnum, int rnum){
   }
   if(rnum > 250) iprintf(" (%08d)\n", inum);
   tcbdbcurdel(cur);
-  if(!tchdbclose(hdb)){
+  if(!tcbdbclose(bdb)){
     eprint(NULL, "tcbdbclose");
     err = true;
   }
-  if(!tcbdbclose(bdb)){
+  if(!tchdbclose(hdb)){
     eprint(NULL, "tcbdbclose");
     err = true;
   }

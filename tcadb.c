@@ -156,7 +156,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     adb->capsiz = capsiz;
     adb->capcnt = 0;
     adb->omode = ADBONDB;
-  } else if(tcstribwm(path, ".tch")){
+  } else if(tcstribwm(path, ".tch") || tcstribwm(path, ".hdb")){
     TCHDB *hdb = tchdbnew();
     tchdbsetmutex(hdb);
     int opts = 0;
@@ -179,7 +179,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     }
     adb->hdb = hdb;
     adb->omode = ADBOHDB;
-  } else if(tcstribwm(path, ".tcb")){
+  } else if(tcstribwm(path, ".tcb") || tcstribwm(path, ".bdb")){
     TCBDB *bdb = tcbdbnew();
     tcbdbsetmutex(bdb);
     int opts = 0;
@@ -204,7 +204,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     adb->bdb = bdb;
     adb->cur = tcbdbcurnew(bdb);
     adb->omode = ADBOBDB;
-  } else if(tcstribwm(path, ".tcf")){
+  } else if(tcstribwm(path, ".tcf") || tcstribwm(path, ".fdb")){
     TCFDB *fdb = tcfdbnew();
     tcfdbsetmutex(fdb);
     tcfdbtune(fdb, width, limsiz);
@@ -220,7 +220,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     }
     adb->fdb = fdb;
     adb->omode = ADBOFDB;
-  } else if(tcstribwm(path, ".tct")){
+  } else if(tcstribwm(path, ".tct") || tcstribwm(path, ".tdb")){
     TCTDB *tdb = tctdbnew();
     tctdbsetmutex(tdb);
     int opts = 0;

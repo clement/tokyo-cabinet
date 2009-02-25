@@ -931,11 +931,12 @@ void tcfdbsetecode(TCFDB *fdb, int ecode, const char *filename, int line, const 
     fdb->fatal = true;
     if(fdb->fd >= 0 && (fdb->omode & FDBOWRITER)) tcfdbsetflag(fdb, FDBFFATAL, true);
   }
-  if(fdb->dbgfd >= 0){
+  if(fdb->dbgfd >= 0 && (fdb->dbgfd != UINT16_MAX || fdb->fatal)){
+    int dbgfd = (fdb->dbgfd == UINT16_MAX) ? 1 : fdb->dbgfd;
     char obuf[FDBIOBUFSIZ];
     int osiz = sprintf(obuf, "ERROR:%s:%d:%s:%s:%d:%s\n", filename, line, func,
                        fdb->path ? fdb->path : "-", ecode, tcfdberrmsg(ecode));
-    tcwrite(fdb->dbgfd, obuf, osiz);
+    tcwrite(dbgfd, obuf, osiz);
   }
 }
 
@@ -2150,6 +2151,7 @@ static bool tcfdbforeachimpl(TCFDB *fdb, TCITER iter, void *op){
 void tcfdbprintmeta(TCFDB *fdb){
   assert(fdb);
   if(fdb->dbgfd < 0) return;
+  int dbgfd = (fdb->dbgfd == UINT16_MAX) ? 1 : fdb->dbgfd;
   char buf[FDBIOBUFSIZ];
   char *wp = buf;
   wp += sprintf(wp, "META:");
@@ -2183,7 +2185,7 @@ void tcfdbprintmeta(TCFDB *fdb){
   wp += sprintf(wp, " cnt_readrec=%lld", (long long)fdb->cnt_readrec);
   wp += sprintf(wp, " cnt_truncfile=%lld", (long long)fdb->cnt_truncfile);
   *(wp++) = '\n';
-  tcwrite(fdb->dbgfd, buf, wp - buf);
+  tcwrite(dbgfd, buf, wp - buf);
 }
 
 

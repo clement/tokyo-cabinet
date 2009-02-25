@@ -1213,11 +1213,12 @@ void tchdbsetecode(TCHDB *hdb, int ecode, const char *filename, int line, const 
     hdb->fatal = true;
     if(hdb->fd >= 0 && (hdb->omode & HDBOWRITER)) tchdbsetflag(hdb, HDBFFATAL, true);
   }
-  if(hdb->dbgfd >= 0){
+  if(hdb->dbgfd >= 0 && (hdb->dbgfd != UINT16_MAX || hdb->fatal)){
+    int dbgfd = (hdb->dbgfd == UINT16_MAX) ? 1 : hdb->dbgfd;
     char obuf[HDBIOBUFSIZ];
     int osiz = sprintf(obuf, "ERROR:%s:%d:%s:%s:%d:%s\n", filename, line, func,
                        hdb->path ? hdb->path : "-", ecode, tchdberrmsg(ecode));
-    tcwrite(hdb->dbgfd, obuf, osiz);
+    tcwrite(dbgfd, obuf, osiz);
   }
 }
 
@@ -4493,6 +4494,7 @@ static bool tchdbunlockwal(TCHDB *hdb){
 void tchdbprintmeta(TCHDB *hdb){
   assert(hdb);
   if(hdb->dbgfd < 0) return;
+  int dbgfd = (hdb->dbgfd == UINT16_MAX) ? 1 : hdb->dbgfd;
   char buf[HDBIOBUFSIZ];
   char *wp = buf;
   wp += sprintf(wp, "META:");
@@ -4554,7 +4556,7 @@ void tchdbprintmeta(TCHDB *hdb){
   wp += sprintf(wp, " cnt_flushdrp=%lld", (long long)hdb->cnt_flushdrp);
   wp += sprintf(wp, " cnt_adjrecc=%lld", (long long)hdb->cnt_adjrecc);
   *(wp++) = '\n';
-  tcwrite(hdb->dbgfd, buf, wp - buf);
+  tcwrite(dbgfd, buf, wp - buf);
 }
 
 
@@ -4564,6 +4566,7 @@ void tchdbprintmeta(TCHDB *hdb){
 void tchdbprintrec(TCHDB *hdb, TCHREC *rec){
   assert(hdb && rec);
   if(hdb->dbgfd < 0) return;
+  int dbgfd = (hdb->dbgfd == UINT16_MAX) ? 1 : hdb->dbgfd;
   char buf[HDBIOBUFSIZ];
   char *wp = buf;
   wp += sprintf(wp, "REC:");
@@ -4581,7 +4584,7 @@ void tchdbprintrec(TCHDB *hdb, TCHREC *rec){
   wp += sprintf(wp, " boff=%llu", (unsigned long long)rec->boff);
   wp += sprintf(wp, " bbuf=%p", (void *)rec->bbuf);
   *(wp++) = '\n';
-  tcwrite(hdb->dbgfd, buf, wp - buf);
+  tcwrite(dbgfd, buf, wp - buf);
 }
 
 

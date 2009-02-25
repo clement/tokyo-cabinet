@@ -1807,7 +1807,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
           err = true;
         }
         if(myrand(2) == 0 && !tcbdbout(bdb, kbuf, ksiz)){
-          eprint(bdb, "tcbdbget3");
+          eprint(bdb, "tcbdbout");
           err = true;
         }
         if(myrand(2) == 0 && !tcbdbputdup(bdb, kbuf, ksiz, kbuf, ksiz)){

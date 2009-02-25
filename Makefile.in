@@ -501,6 +501,7 @@ check-adb :
 	$(RUNENV) $(RUNCMD) ./tcatest misc '*' 5000
 	$(RUNENV) $(RUNCMD) ./tcatest wicked '*' 5000
 	$(RUNENV) $(RUNCMD) ./tcatest compare casket 50 500
+	$(RUNENV) $(RUNCMD) ./tcatest compare casket 5 5000
 	$(RUNENV) $(RUNCMD) ./tcamgr create 'casket.tch#mode=wct#bnum=3'
 	$(RUNENV) $(RUNCMD) ./tcamgr inform 'casket.tch'
 	$(RUNENV) $(RUNCMD) ./tcamgr put casket.tch one first

@@ -4456,7 +4456,8 @@ unsigned long tclrand(void){
     pthread_mutex_unlock(&mutex);
   }
   seed = seed * 123456789012301LL + 211;
-  return (mask ^ cnt++) ^ seed;
+  uint64_t num = (mask ^ cnt++) ^ seed;
+  return TCSWAB64(num);
 }
 
 
