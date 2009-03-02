@@ -3274,8 +3274,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.8"
-#define _TC_LIBVER     713
+#define _TC_VERSION    "1.4.9"
+#define _TC_LIBVER     714
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

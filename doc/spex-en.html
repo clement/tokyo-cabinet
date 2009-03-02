@@ -5983,7 +5983,7 @@ int main(int argc, char **argv){
 <li><code>-sc</code> : normalize keys as lower cases.</li>
 </ul>
 
-<p>The operator of the `search' subcommand is one of "STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", and "NUMOREQ".  The type of the `-ord' option is one of "STRASC", "STRDESC", "NUMASC", and "NUMDESC".  This command returns 0 on success, another on failure.</p>
+<p>The operator of the `search' subcommand is one of "STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", and "NUMOREQ".  If "~" preposes each operator, the logical meaning is reversed.  If "+" preposes each operator, no index is used for the operator.  The type of the `-ord' option is one of "STRASC", "STRDESC", "NUMASC", and "NUMDESC".  This command returns 0 on success, another on failure.</p>
 
 <hr />
 

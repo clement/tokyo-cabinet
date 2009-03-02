@@ -1,5 +1,13 @@
 2009-02-18  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
+	* tcbdb.c (tcbdbnodesubidx): a bug related to tree reconstruction was fixed.
+
+	* tcbdb.c (tcbdboptimizeimpl): memory usage was reduced.
+
+	- Release: 1.4.9
+
+2009-02-18  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
 	* tcutil.c (tclrand): bias of random numbers was lightened.
 
 	* tchdb.c (tchdbsetecode): a trick to print fatal errors only was added.

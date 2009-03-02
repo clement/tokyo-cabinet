@@ -97,9 +97,8 @@ static void *threadtypical(void *targ);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  g_dbgfd = -1;
   const char *ebuf = getenv("TCDBGFD");
-  if(ebuf) g_dbgfd = tcatoix(ebuf);
+  g_dbgfd = ebuf ? tcatoix(ebuf) : UINT16_MAX;
   srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;

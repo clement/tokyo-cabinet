@@ -64,9 +64,8 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  g_dbgfd = -1;
   const char *ebuf = getenv("TCDBGFD");
-  if(ebuf) g_dbgfd = tcatoix(ebuf);
+  g_dbgfd = ebuf ? tcatoix(ebuf) : UINT16_MAX;
   srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
@@ -1173,7 +1172,7 @@ static int procqueue(const char *path, int rnum, int lmemb, int nmemb, int bnum,
     eprint(bdb, "tcbdbopen");
     err = true;
   }
-  int deqfreq = (lmemb > 0) ? lmemb * 2 : 256;
+  int deqfreq = (lmemb > 0) ? lmemb * 10 : 256;
   BDBCUR *cur = tcbdbcurnew(bdb);
   for(int i = 1; i <= rnum; i++){
     char buf[RECBUFSIZ];

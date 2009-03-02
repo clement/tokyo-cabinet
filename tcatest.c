@@ -899,6 +899,7 @@ static int proccompare(const char *name, int tnum, int rnum){
   TCMDB *mdb = tcmdbnew2(rnum / 2);
   TCNDB *ndb = tcndbnew();
   TCHDB *hdb = tchdbnew();
+  tchdbsetdbgfd(hdb, UINT16_MAX);
   int hopts = 0;
   if(myrand(2) == 1) hopts |= HDBTLARGE;
   if(myrand(2) == 1) hopts |= HDBTBZIP;
@@ -922,6 +923,7 @@ static int proccompare(const char *name, int tnum, int rnum){
     err = true;
   }
   TCBDB *bdb = tcbdbnew();
+  tcbdbsetdbgfd(bdb, UINT16_MAX);
   int bopts = 0;
   if(myrand(2) == 1) bopts |= BDBTLARGE;
   if(myrand(2) == 1) bopts |= BDBTBZIP;

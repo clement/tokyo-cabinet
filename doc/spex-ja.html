@@ -5984,7 +5984,7 @@ int main(int argc, char **argv){
 <li><code>-sc</code> : キーを小文字に正規化する。</li>
 </ul>
 
-<p>`search' サブコマンドの演算子には、"STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ" のいずれかを用いることができます。`-ord' オプションの型指定には、"STRASC", "STRDESC", "NUMASC", "NUMDESC" のいずれかを用いることができます。このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
+<p>`search' サブコマンドの演算子には、"STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ" のいずれかを用いることができます。各演算子に "~" を接頭させると論理的な意味が反転されます。"+" を接頭させるとその演算子にはインデックスが適用されません。`-ord' オプションの型指定には、"STRASC", "STRDESC", "NUMASC", "NUMDESC" のいずれかを用いることができます。このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
 
 <hr />
 

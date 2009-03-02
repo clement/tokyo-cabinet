@@ -2426,13 +2426,13 @@ static BDBNODE *tcbdbnodeload(TCBDB *bdb, uint64_t id){
   rsiz = tchdbget3(bdb->hdb, hbuf, step, wbuf, BDBPAGEBUFSIZ);
   if(rsiz < 1){
     tcbdbsetecode(bdb, TCEMISC, __FILE__, __LINE__, __func__);
-    return false;
+    return NULL;
   } else if(rsiz < BDBPAGEBUFSIZ){
     rp = wbuf;
   } else {
     if(!(rbuf = tchdbget(bdb->hdb, hbuf, step, &rsiz))){
       tcbdbsetecode(bdb, TCEMISC, __FILE__, __LINE__, __func__);
-      return false;
+      return NULL;
     }
     rp = rbuf;
   }
@@ -2584,6 +2584,19 @@ static bool tcbdbnodesubidx(TCBDB *bdb, BDBNODE *node, uint64_t pid){
     }
     node->dead = true;
     bdb->root = pid;
+    while(pid > BDBNODEIDBASE){
+      node = tcbdbnodeload(bdb, pid);
+      if(!node){
+        tcbdbsetecode(bdb, TCEMISC, __FILE__, __LINE__, __func__);
+        return false;
+      }
+      if(node->dead){
+        pid = node->heir;
+        bdb->root = pid;
+      } else {
+        pid = 0;
+      }
+    }
     return false;
   }
   int ln = TCPTRLISTNUM(idxs);
@@ -3308,7 +3321,17 @@ static bool tcbdboptimizeimpl(TCBDB *bdb, int32_t lmemb, int32_t nmemb,
   if(fpow < 0) fpow = tclog2l(tchdbfbpmax(bdb->hdb));
   if(opts == UINT8_MAX) opts = bdb->opts;
   tcbdbtune(tbdb, lmemb, nmemb, bnum, apow, fpow, opts);
-  tcbdbsetlsmax(tbdb, bdb->lsmax);
+  if(bdb->lsmax > 0){
+    tcbdbsetlsmax(tbdb, bdb->lsmax);
+  } else {
+    tcbdbsetlsmax(tbdb, sysconf(_SC_PAGESIZE) * 2);
+  }
+  uint32_t lcnum = bdb->lcnum;
+  uint32_t ncnum = bdb->ncnum;
+  bdb->lcnum = BDBLEVELMAX;
+  bdb->ncnum = BDBCACHEOUT * 2;
+  tbdb->lcnum = BDBLEVELMAX;
+  tbdb->ncnum = BDBCACHEOUT * 2;
   if(!tcbdbopen(tbdb, tpath, BDBOWRITER | BDBOCREAT | BDBOTRUNC)){
     tcbdbsetecode(bdb, tcbdbecode(tbdb), __FILE__, __LINE__, __func__);
     tcbdbdel(tbdb);
@@ -3321,18 +3344,22 @@ static bool tcbdboptimizeimpl(TCBDB *bdb, int32_t lmemb, int32_t nmemb,
   tcbdbcurfirstimpl(cur);
   const char *kbuf, *vbuf;
   int ksiz, vsiz;
+  int cnt = 0;
   while(!err && cur->id > 0 && tcbdbcurrecimpl(cur, &kbuf, &ksiz, &vbuf, &vsiz)){
     if(!tcbdbputdup(tbdb, kbuf, ksiz, vbuf, vsiz)){
       tcbdbsetecode(bdb, tcbdbecode(tbdb), __FILE__, __LINE__, __func__);
       err = true;
     }
     tcbdbcurnextimpl(cur);
+    if((++cnt % 0xf == 0) && !tcbdbcacheadjust(bdb)) err = true;
   }
   tcbdbcurdel(cur);
   if(!tcbdbclose(tbdb)){
     tcbdbsetecode(bdb, tcbdbecode(tbdb), __FILE__, __LINE__, __func__);
     err = true;
   }
+  bdb->lcnum = lcnum;
+  bdb->ncnum = ncnum;
   tcbdbdel(tbdb);
   if(unlink(path) == -1){
     tcbdbsetecode(bdb, TCEUNLINK, __FILE__, __LINE__, __func__);
@@ -3475,7 +3502,7 @@ static bool tcbdbcurjumpimpl(BDBCUR *cur, const char *kbuf, int ksiz, bool forwa
     cur->vidx = 0;
     return false;
   }
-  if(TCPTRLISTNUM(leaf->recs) < 1){
+  if(leaf->dead || TCPTRLISTNUM(leaf->recs) < 1){
     cur->id = pid;
     cur->kidx = 0;
     cur->vidx = 0;
@@ -3543,7 +3570,17 @@ static bool tcbdbcuradjust(BDBCUR *cur, bool forward){
     if(!leaf) return false;
     TCPTRLIST *recs = leaf->recs;
     int knum = TCPTRLISTNUM(recs);
-    if(cur->kidx < 0){
+    if(leaf->dead){
+      if(forward){
+        cur->id = leaf->next;
+        cur->kidx = 0;
+        cur->vidx = 0;
+      } else {
+        cur->id = leaf->prev;
+        cur->kidx = INT_MAX;
+        cur->vidx = INT_MAX;
+      }
+    } else if(cur->kidx < 0){
       if(forward){
         cur->kidx = 0;
         cur->vidx = 0;
@@ -3854,9 +3891,9 @@ void tcbdbprintmeta(TCBDB *bdb){
   wp += sprintf(wp, " lmemb=%u", bdb->lmemb);
   wp += sprintf(wp, " nmemb=%u", bdb->nmemb);
   wp += sprintf(wp, " opts=%u", bdb->opts);
-  wp += sprintf(wp, " root=%llu", (unsigned long long)bdb->root);
-  wp += sprintf(wp, " first=%llu", (unsigned long long)bdb->first);
-  wp += sprintf(wp, " last=%llu", (unsigned long long)bdb->last);
+  wp += sprintf(wp, " root=%llx", (unsigned long long)bdb->root);
+  wp += sprintf(wp, " first=%llx", (unsigned long long)bdb->first);
+  wp += sprintf(wp, " last=%llx", (unsigned long long)bdb->last);
   wp += sprintf(wp, " lnum=%llu", (unsigned long long)bdb->lnum);
   wp += sprintf(wp, " nnum=%llu", (unsigned long long)bdb->nnum);
   wp += sprintf(wp, " rnum=%llu", (unsigned long long)bdb->rnum);
