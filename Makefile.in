@@ -464,7 +464,7 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tctmgr get casket 2 > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr get casket 3 > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr search casket > check.out
-	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -pv -ph casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -sk 1 -pv -ph casket > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket \
 	  name STRBW mi birth NUMBT 19700101,19791231 lang STRAND ja,en > check.out
@@ -474,7 +474,7 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tctmgr list -pv casket > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr optimize casket
 	$(RUNENV) $(RUNCMD) ./tctmgr put casket "" name tokyo country japan lang ja
-	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -pv -ph casket > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -sk 1 -pv -ph casket > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket \
 	  name STRBW mi birth NUMBT 19700101,19791231 lang STRAND ja,en > check.out
@@ -554,6 +554,13 @@ check-large :
 	rm -rf casket*
 
 
+check-compare :
+	$(RUNENV) $(RUNCMD) ./tcatest compare casket 5 10000
+	$(RUNENV) $(RUNCMD) ./tcatest compare casket 10 5000
+	$(RUNENV) $(RUNCMD) ./tcatest compare casket 50 1000
+	$(RUNENV) $(RUNCMD) ./tcatest compare casket 100 500
+
+
 check-thread :
 	rm -rf casket*
 	$(RUNENV) $(RUNCMD) ./tcumttest typical 5 500000 500000
@@ -567,23 +574,21 @@ check-thread :
 	rm -rf casket*
 
 
+check-race :
+	$(RUNENV) $(RUNCMD) ./tchmttest race casket 5 10000
+	$(RUNENV) $(RUNCMD) ./tcbmttest race casket 5 10000
+
+
 check-forever :
 	while true ; \
 	  do \
 	    make check || break ; \
 	    make check || break ; \
-	    make check || break ; \
-	    make check || break ; \
-	    make check || break ; \
 	    make check-thread || break ; \
-	  done
-
-
-check-race :
-	while true ; \
-	  do \
-	    ./tchmttest race casket 5 10000 || break ; \
-	    ./tcbmttest race casket 5 10000 || break ; \
+	    make check-race || break ; \
+	    make check-race || break ; \
+	    make check-compare || break ; \
+	    make check-compare || break ; \
 	  done
 
 

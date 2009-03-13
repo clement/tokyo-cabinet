@@ -128,7 +128,7 @@
 
 <p>Tokyo Cabinetにはデータベースに接続するモードとして、「リーダ」と「ライタ」の二種類があります。リーダは読み込み専用で、ライタは読み書き両用です。データベースにはファイルロックによってプロセス間での排他制御が行われます。ライタが接続している間は、他のプロセスはリーダとしてもライタとしても接続できません。リーダが接続している間は、他のプロセスのリーダは接続できるが、ライタは接続できません。この機構によって、マルチタスク環境での同時接続に伴うデータの整合性が保証されます。</p>
 
-<p>Tokyo CabinetのAPIの各関数はリエントラントであり、マルチスレッド環境で安全に利用することができます。別個のデータベースオブジェクトに対しては全ての操作を完全に並列に行うことができます。同一のデータベースオブジェクトに対しては、リードライトロックで排他制御を行います。すなわち、読み込みを行うスレッド同士は並列に実行でき、書き込みを行うスレッドは他の読み込みや書き込みをブロックします。</p>
+<p>Tokyo CabinetのAPIの各関数はリエントラントであり、マルチスレッド環境で安全に利用することができます。別個のデータベースオブジェクトに対しては全ての操作を完全に並列に行うことができます。同一のデータベースオブジェクトに対しては、リードライトロックで排他制御を行います。すなわち、読み込みを行うスレッド同士は並列に実行でき、書き込みを行うスレッドは他の読み込みや書き込みをブロックします。ロックの粒度は、ハッシュデータベースと固定長データベースではレコード単位、それ以外のデータベースではファイル単位です。</p>
 
 <h3 id="features_simple">単純だが多様なインタフェース群</h3>
 
@@ -5703,12 +5703,13 @@ int main(int argc, char **argv){
 <dd>`<var>type</var>' specifies the order type: `TDBQOSTRASC' for string ascending, `TDBQOSTRDESC' for string descending, `TDBQONUMASC' for number ascending, `TDBQONUMDESC' for number descending.</dd>
 </dl>
 
-<p>The function `tctdbqrysetmax' is used in order to set the maximum number of records of the result of a query object.</p>
+<p>The function `tctdbqrysetlimit' is used in order to set the limit number of records of the result of a query object.</p>
 
 <dl class="api">
-<dt><code>void tctdbqrysetmax(TDBQRY *<var>qry</var>, int <var>max</var>);</code></dt>
+<dt><code>void tctdbqrysetlimit(TDBQRY *<var>qry</var>, int <var>max</var>, int <var>skip</var>);</code></dt>
 <dd>`<var>qry</var>' specifies the query object.</dd>
-<dd>`<var>max</var>' specifies the maximum number of records of the result.</dd>
+<dd>`<var>max</var>' specifies the maximum number of records of the result.  If it is negative, no limit is specified.</dd>
+<dd>`<var>skip</var>' specifies the number of skipped records of the result.  If it is not more than 0, no record is skipped.</dd>
 </dl>
 
 <p>The function `tctdbqrysearch' is used in order to execute the search of a query object.</p>
@@ -5805,7 +5806,7 @@ int main(int argc, char **argv){
   tctdbqryaddcond(qry, "age", TDBQCNUMGE, "20");
   tctdbqryaddcond(qry, "lang", TDBQCSTROR, "ja,en");
   tctdbqrysetorder(qry, "name", TDBQOSTRASC);
-  tctdbqrysetmax(qry, 10);
+  tctdbqrysetlimit(qry, 10, 0);
   res = tctdbqrysearch(qry);
   for(i = 0; i &lt; tclistnum(res); i++){
     rbuf = tclistval(res, i, &amp;rsiz);
@@ -5942,7 +5943,7 @@ int main(int argc, char **argv){
 <dd>レコードの値を取得して標準出力する。</dd>
 <dt><code>tctmgr list [-nl|-nb] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>path</var></code></dt>
 <dd>全てのレコードの主キーを改行で区切って標準出力する。</dd>
-<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
+<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-sk <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
 <dd>検索条件に合致するレコードを改行で区切って標準出力する。</dd>
 <dt><code>tctmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>データベースを最適化する。</dd>
@@ -5975,6 +5976,7 @@ int main(int argc, char **argv){
 <li><code>-pv</code> : レコードの値も出力する。</li>
 <li><code>-fm <var>str</var></code> : キーの接頭辞を指定する。</li>
 <li><code>-ord <var>name</var> <var>type</var></code> : 結果の並び順を指定する。</li>
+<li><code>-sk <var>num</var></code> : 結果のスキップ件数を指定する。</li>
 <li><code>-ph</code> : ヒント情報も出力する。</li>
 <li><code>-bt</code> : ベンチマークテストの回数を指定する。</li>
 <li><code>-rm</code> : 結果のレコードを全て削除する。</li>
@@ -6659,7 +6661,7 @@ cp -f "$srcpath" "$destpath"
 
 <p>抽象データベースの接尾辞に ".tct" をつけるとテーブルデータベースになります。テーブルデータベースでは単一の文字列を値とする代わりにコラムの名前と値のマップが用いられます。抽象データベースでテーブルデータベースを扱う場合、単一の文字列とマップを同一のインターフェイスで扱うために、ゼロ文字（'\0'）を区切り文字としてコラムの名前と値を交互に並べて直列化した文字列を用います。レコードを格納する際（`<code>tcadbput</code>'）の引数やレコードを取得する際（`<code>tcadbget</code>'）の戻り値にはそのゼロ区切り文字列が使われます。</p>
 
-<p>レコードの検索は関数 `<code>tcadbmisc</code>' のサブ関数 "search" で行います。引数に "addcond" か "setorder" か "setmax" か "get" か "out" を接頭させてゼロ文字区切りで演算式を記述した文字列を与えることでクエリを組み立てます。例えば "addcond\0name\0STRBW\0john" と "setorder\0age\0NUMASC" を指定すると、「コラム "name" の値が "john" で始まるレコードをコラム "age" の数値の昇順で取り出す」というクエリになります。戻り値は該当するレコードの主キーのリストです。ただし、"get" が指定されると、コラム名と値のマップをゼロ区切り文字列で返します。"get\0name\0age" などとして特定のコラムに絞り込むこともできます。"out" が指定されると、該当のコラムを削除します。"get" と "out" を組み合わせるとキューとして利用することができます。サブ関数 "genuid" は、ユニークなID番号を採番して返します。</p>
+<p>レコードの検索は関数 `<code>tcadbmisc</code>' のサブ関数 "search" で行います。引数に "addcond" か "setorder" か "setlimit" か "get" か "out" を接頭させてゼロ文字区切りで演算式を記述した文字列を与えることでクエリを組み立てます。例えば "addcond\0name\0STRBW\0john" と "setorder\0age\0NUMASC" を指定すると、「コラム "name" の値が "john" で始まるレコードをコラム "age" の数値の昇順で取り出す」というクエリになります。戻り値は該当するレコードの主キーのリストです。ただし、"get" が指定されると、コラム名と値のマップをゼロ区切り文字列で返します。"get\0name\0age" などとして特定のコラムに絞り込むこともできます。"out" が指定されると、該当のコラムを削除します。"get" と "out" を組み合わせるとキューとして利用することができます。サブ関数 "genuid" は、ユニークなID番号を採番して返します。</p>
 
 <h3 id="tips_tcrdb">リモートインターフェイス</h3>
 

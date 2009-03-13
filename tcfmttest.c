@@ -62,6 +62,7 @@ typedef struct {                         // type of structure for typical thread
 
 /* global variables */
 const char *g_progname;                  // program name
+unsigned int g_randseed;                 // random seed
 int g_dbgfd;                             // debugging output
 
 
@@ -97,9 +98,11 @@ static void *threadtypical(void *targ);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  const char *ebuf = getenv("TCDBGFD");
+  const char *ebuf = getenv("TCRNDSEED");
+  g_randseed = ebuf ? tcatoix(ebuf) : tctime() * 1000;
+  srand(g_randseed);
+  ebuf = getenv("TCDBGFD");
   g_dbgfd = ebuf ? tcatoix(ebuf) : UINT16_MAX;
-  srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "write")){
@@ -405,8 +408,9 @@ static int runtypical(int argc, char **argv){
 /* perform write command */
 static int procwrite(const char *path, int tnum, int rnum, int width, int64_t limsiz,
                      int omode, bool rnd){
-  iprintf("<Writing Test>\n  path=%s  tnum=%d  rnum=%d  width=%d  limsiz=%lld"
-          "  omode=%d  rnd=%d\n\n", path, tnum, rnum, width, (long long)limsiz, omode, rnd);
+  iprintf("<Writing Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  width=%d  limsiz=%lld"
+          "  omode=%d  rnd=%d\n\n",
+          g_randseed, path, tnum, rnum, width, (long long)limsiz, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();
@@ -470,8 +474,8 @@ static int procwrite(const char *path, int tnum, int rnum, int width, int64_t li
 
 /* perform read command */
 static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
-  iprintf("<Reading Test>\n  path=%s  tnum=%d  omode=%d  wb=%d  rnd=%d\n\n",
-          path, tnum, omode, wb, rnd);
+  iprintf("<Reading Test>\n  seed=%u  path=%s  tnum=%d  omode=%d  wb=%d  rnd=%d\n\n",
+          g_randseed, path, tnum, omode, wb, rnd);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();
@@ -534,7 +538,8 @@ static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
 
 /* perform remove command */
 static int procremove(const char *path, int tnum, int omode, bool rnd){
-  iprintf("<Removing Test>\n  path=%s  tnum=%d  omode=%d  rnd=%d\n\n", path, tnum, omode, rnd);
+  iprintf("<Removing Test>\n  seed=%u  path=%s  tnum=%d  omode=%d  rnd=%d\n\n",
+          g_randseed, path, tnum, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();
@@ -595,8 +600,8 @@ static int procremove(const char *path, int tnum, int omode, bool rnd){
 
 /* perform wicked command */
 static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
-  iprintf("<Writing Test>\n  path=%s  tnum=%d  rnum=%d  omode=%d  nc=%d\n\n",
-          path, tnum, rnum, omode, nc);
+  iprintf("<Writing Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  omode=%d  nc=%d\n\n",
+          g_randseed, path, tnum, rnum, omode, nc);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();
@@ -708,9 +713,9 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
 /* perform typical command */
 static int proctypical(const char *path, int tnum, int rnum, int width, int64_t limsiz,
                        int omode, bool nc, int rratio){
-  iprintf("<Typical Access Test>\n  path=%s  tnum=%d  rnum=%d  width=%d  limsiz=%lld"
+  iprintf("<Typical Access Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  width=%d  limsiz=%lld"
           "  omode=%d  nc=%d  rratio=%d\n\n",
-          path, tnum, rnum, width, (long long)limsiz, omode, nc, rratio);
+          g_randseed, path, tnum, rnum, width, (long long)limsiz, omode, nc, rratio);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();

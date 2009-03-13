@@ -882,7 +882,8 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
    `map' specifies the map object.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
-   `vbuf' specifies the pointer to the region of the value.
+   `vbuf' specifies the pointer to the region of the value.  `NULL' means that record addition is
+   ommited if there is no corresponding record.
    `vsiz' specifies the size of the region of the value.
    `proc' specifies the pointer to the callback function to process duplication.  It receives
    four parameters.  The first parameter is the pointer to the region of the value.  The second
@@ -890,7 +891,7 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
    variable into which the size of the region of the return value is assigned.  The fourth
    parameter is the pointer to the optional opaque object.  It returns the pointer to the result
    object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
-   not modified.
+   not modified.  If it is `(void *)-1', the record is removed.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -1080,7 +1081,8 @@ void tctreeputcat2(TCTREE *tree, const char *kstr, const char *vstr);
    `tree' specifies the tree object.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
-   `vbuf' specifies the pointer to the region of the value.
+   `vbuf' specifies the pointer to the region of the value.  `NULL' means that record addition is
+   ommited if there is no corresponding record.
    `vsiz' specifies the size of the region of the value.
    `proc' specifies the pointer to the callback function to process duplication.  It receives
    four parameters.  The first parameter is the pointer to the region of the value.  The second
@@ -1088,7 +1090,7 @@ void tctreeputcat2(TCTREE *tree, const char *kstr, const char *vstr);
    variable into which the size of the region of the return value is assigned.  The fourth
    parameter is the pointer to the optional opaque object.  It returns the pointer to the result
    object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
-   not modified.
+   not modified.  If it is `(void *)-1', the record is removed.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -1662,7 +1664,8 @@ void tcmdbputcat3(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int 
    `mdb' specifies the on-memory hash database object.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
-   `vbuf' specifies the pointer to the region of the value.
+   `vbuf' specifies the pointer to the region of the value.  `NULL' means that record addition is
+   ommited if there is no corresponding record.
    `vsiz' specifies the size of the region of the value.
    `proc' specifies the pointer to the callback function to process duplication.  It receives
    four parameters.  The first parameter is the pointer to the region of the value.  The second
@@ -1670,7 +1673,7 @@ void tcmdbputcat3(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int 
    variable into which the size of the region of the return value is assigned.  The fourth
    parameter is the pointer to the optional opaque object.  It returns the pointer to the result
    object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
-   not modified.
+   not modified.  If it is `(void *)-1', the record is removed.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -2018,7 +2021,8 @@ void tcndbputcat3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int 
    `ndb' specifies the on-memory tree database.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
-   `vbuf' specifies the pointer to the region of the value.
+   `vbuf' specifies the pointer to the region of the value.  `NULL' means that record addition is
+   ommited if there is no corresponding record.
    `vsiz' specifies the size of the region of the value.
    `proc' specifies the pointer to the callback function to process duplication.  It receives
    four parameters.  The first parameter is the pointer to the region of the value.  The second
@@ -2026,7 +2030,7 @@ void tcndbputcat3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int 
    variable into which the size of the region of the return value is assigned.  The fourth
    parameter is the pointer to the optional opaque object.  It returns the pointer to the result
    object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
-   not modified.
+   not modified.  If it is `(void *)-1', the record is removed.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
@@ -3274,8 +3278,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.9"
-#define _TC_LIBVER     714
+#define _TC_VERSION    "1.4.10"
+#define _TC_LIBVER     801
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */
@@ -3743,6 +3747,8 @@ uint64_t tcpagealign(uint64_t off);
 #define tcbdbcmpint32     tccmpint32
 #define tcbdbcmpint64     tccmpint64
 #define tctdbqryprocout   tctdbqrysearchout
+#define tctdbqrysetmax(TC_tdb, TC_max) \
+  tctdbqrysetlimit((TC_tdb), (TC_max), 0)
 
 
 

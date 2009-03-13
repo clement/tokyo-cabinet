@@ -1,3 +1,23 @@
+2009-03-02  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcmdbputproc, tcndbputfunc): removing mechanism was added.
+
+	* tchdb.c (tchdbwalrestore): a bug of memory corruption was fixed.
+
+	* tchdb.c (tchdbremoverec): new function.
+
+	* tchdb.c (tchdbputproc): removing mechanism was added.
+
+	* tcbdb.c (tchdbputproc): removing mechanism was added.
+
+	* tcfdb.c (tcfdbputproc): removing mechanism was added.
+
+	* tctdb.c (tctdbsetlimit): new function instead of "tctdbqrysetmax".
+
+	* tcadb.c (tcadbmisc): "setlimit" parameter was added.
+
+	- Release: 1.4.10
+
 2009-02-18  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcbdb.c (tcbdbnodesubidx): a bug related to tree reconstruction was fixed.

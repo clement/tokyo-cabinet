@@ -24,6 +24,7 @@
 
 /* global variables */
 const char *g_progname;                  // program name
+unsigned int g_randseed;                 // random seed
 int g_dbgfd;                             // debugging output
 
 
@@ -56,9 +57,11 @@ static int procwicked(const char *path, int rnum, bool mt, int omode);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  const char *ebuf = getenv("TCDBGFD");
+  const char *ebuf = getenv("TCRNDSEED");
+  g_randseed = ebuf ? tcatoix(ebuf) : tctime() * 1000;
+  srand(g_randseed);
+  ebuf = getenv("TCDBGFD");
   g_dbgfd = ebuf ? tcatoix(ebuf) : UINT16_MAX;
-  srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "write")){
@@ -140,6 +143,7 @@ static void mprint(TCFDB *fdb){
 
 /* duplication callback function */
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(myrand(4) == 0) return (void *)-1;
   if(myrand(2) == 0) return NULL;
   int len = myrand(RECBUFSIZ);
   char buf[RECBUFSIZ];
@@ -403,8 +407,8 @@ static int runwicked(int argc, char **argv){
 /* perform write command */
 static int procwrite(const char *path, int rnum, int width, int64_t limsiz,
                      bool mt, int omode, bool rnd){
-  iprintf("<Writing Test>\n  path=%s  rnum=%d  width=%d  limsiz=%lld  mt=%d  omode=%d"
-          "  rnd=%d\n\n", path, rnum, width, (long long)limsiz, mt, omode, rnd);
+  iprintf("<Writing Test>\n  seed=%u  path=%s  rnum=%d  width=%d  limsiz=%lld  mt=%d  omode=%d"
+          "  rnd=%d\n\n", g_randseed, path, rnum, width, (long long)limsiz, mt, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();
@@ -451,8 +455,8 @@ static int procwrite(const char *path, int rnum, int width, int64_t limsiz,
 
 /* perform read command */
 static int procread(const char *path, bool mt, int omode, bool wb, bool rnd){
-  iprintf("<Reading Test>\n  path=%s  mt=%d  omode=%d  wb=%d  rnd=%d\n\n",
-          path, mt, omode, wb, rnd);
+  iprintf("<Reading Test>\n  seed=%u  path=%s  mt=%d  omode=%d  wb=%d  rnd=%d\n\n",
+          g_randseed, path, mt, omode, wb, rnd);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();
@@ -508,7 +512,8 @@ static int procread(const char *path, bool mt, int omode, bool wb, bool rnd){
 
 /* perform remove command */
 static int procremove(const char *path, bool mt, int omode, bool rnd){
-  iprintf("<Removing Test>\n  path=%s  mt=%d  omode=%d  rnd=%d\n\n", path, mt, omode, rnd);
+  iprintf("<Removing Test>\n  seed=%u  path=%s  mt=%d  omode=%d  rnd=%d\n\n",
+          g_randseed, path, mt, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();
@@ -553,9 +558,9 @@ static int procremove(const char *path, bool mt, int omode, bool rnd){
 static int procrcat(const char *path, int rnum, int width, int64_t limsiz,
                     bool mt, int omode, int pnum, bool dai, bool dad, bool rl, bool ru){
   iprintf("<Random Concatenating Test>\n"
-          "  path=%s  rnum=%d  width=%d  limsiz=%lld  mt=%d  omode=%d  pnum=%d"
+          "  seed=%u  path=%s  rnum=%d  width=%d  limsiz=%lld  mt=%d  omode=%d  pnum=%d"
           "  dai=%d  dad=%d  rl=%d  ru=%d\n\n",
-          path, rnum, width, (long long)limsiz, mt, omode, pnum, dai, dad, rl, ru);
+          g_randseed, path, rnum, width, (long long)limsiz, mt, omode, pnum, dai, dad, rl, ru);
   if(pnum < 1) pnum = rnum;
   bool err = false;
   double stime = tctime();
@@ -633,9 +638,18 @@ static int procrcat(const char *path, int rnum, int width, int64_t limsiz,
         }
         break;
       case 5:
-        if(!tcfdbputproc(fdb, id, kbuf, ksiz, pdprocfunc, NULL) && tcfdbecode(fdb) != TCEKEEP){
-          eprint(fdb, "tcfdbputproc");
-          err = true;
+        if(myrand(2) == 0){
+          if(!tcfdbputproc(fdb, id, kbuf, ksiz, pdprocfunc, NULL) &&
+             tcfdbecode(fdb) != TCEKEEP){
+            eprint(fdb, "tcfdbputproc");
+            err = true;
+          }
+        } else {
+          if(!tcfdbputproc(fdb, id, NULL, 0, pdprocfunc, NULL) &&
+             tcfdbecode(fdb) != TCEKEEP && tcfdbecode(fdb) != TCENOREC){
+            eprint(fdb, "tcfdbputproc");
+            err = true;
+          }
         }
         break;
       default:
@@ -674,7 +688,8 @@ static int procrcat(const char *path, int rnum, int width, int64_t limsiz,
 
 /* perform misc command */
 static int procmisc(const char *path, int rnum, bool mt, int omode){
-  iprintf("<Miscellaneous Test>\n  path=%s  rnum=%d  mt=%d  omode=%d\n\n", path, rnum, mt, omode);
+  iprintf("<Miscellaneous Test>\n  seed=%u  path=%s  rnum=%d  mt=%d  omode=%d\n\n",
+          g_randseed, path, rnum, mt, omode);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();
@@ -1031,8 +1046,8 @@ static int procmisc(const char *path, int rnum, bool mt, int omode){
 
 /* perform wicked command */
 static int procwicked(const char *path, int rnum, bool mt, int omode){
-  iprintf("<Wicked Writing Test>\n  path=%s  rnum=%d  mt=%d  omode=%d\n\n",
-          path, rnum, mt, omode);
+  iprintf("<Wicked Writing Test>\n  seed=%u  path=%s  rnum=%d  mt=%d  omode=%d\n\n",
+          g_randseed, path, rnum, mt, omode);
   bool err = false;
   double stime = tctime();
   TCFDB *fdb = tcfdbnew();

@@ -1970,7 +1970,7 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
 /* Store a record into a map object with a duplication handler. */
 bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
-  assert(map && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  assert(map && kbuf && ksiz >= 0 && proc);
   unsigned int hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
@@ -1997,6 +1997,31 @@ bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int 
         int psiz = TCALIGNPAD(ksiz);
         int nvsiz;
         char *nvbuf = proc(dbuf + ksiz + psiz, rec->vsiz, &nvsiz, op);
+        if(nvbuf == (void *)-1){
+          map->rnum--;
+          map->msiz -= rec->ksiz + rec->vsiz;
+          if(rec->prev) rec->prev->next = rec->next;
+          if(rec->next) rec->next->prev = rec->prev;
+          if(rec == map->first) map->first = rec->next;
+          if(rec == map->last) map->last = rec->prev;
+          if(rec == map->cur) map->cur = rec->next;
+          if(rec->left && !rec->right){
+            *entp = rec->left;
+          } else if(!rec->left && rec->right){
+            *entp = rec->right;
+          } else if(!rec->left && !rec->left){
+            *entp = NULL;
+          } else {
+            *entp = rec->left;
+            TCMAPREC *tmp = *entp;
+            while(tmp->right){
+              tmp = tmp->right;
+            }
+            tmp->right = rec->right;
+          }
+          TCFREE(rec);
+          return true;
+        }
         if(!nvbuf) return false;
         map->msiz += nvsiz - rec->vsiz;
         if(nvsiz > rec->vsiz){
@@ -2020,6 +2045,7 @@ bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int 
       }
     }
   }
+  if(!vbuf) return false;
   int psiz = TCALIGNPAD(ksiz);
   int asiz = sizeof(*rec) + ksiz + psiz + vsiz + 1;
   int unit = (asiz <= TCMAPCSUNIT) ? TCMAPCSUNIT : TCMAPCBUNIT;
@@ -2492,9 +2518,10 @@ void tctreeputcat2(TCTREE *tree, const char *kstr, const char *vstr){
 /* Store a record into a tree object with a duplication handler. */
 bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
                    TCPDPROC proc, void *op){
-  assert(tree && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  assert(tree && kbuf && ksiz >= 0 && proc);
   TCTREEREC *top = tctreesplay(tree, kbuf, ksiz);
   if(!top){
+    if(!vbuf) return false;
     int psiz = TCALIGNPAD(ksiz);
     TCTREEREC *rec;
     TCMALLOC(rec, sizeof(*rec) + ksiz + psiz + vsiz + 1);
@@ -2515,6 +2542,10 @@ bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const char *vbuf, i
   char *dbuf = (char *)top + sizeof(*top);
   int cv = tree->cmp(kbuf, ksiz, dbuf, top->ksiz, tree->cmpop);
   if(cv < 0){
+    if(!vbuf){
+      tree->root = top;
+      return false;
+    }
     int psiz = TCALIGNPAD(ksiz);
     TCTREEREC *rec;
     TCMALLOC(rec, sizeof(*rec) + ksiz + psiz + vsiz + 1);
@@ -2532,6 +2563,10 @@ bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const char *vbuf, i
     tree->msiz += ksiz + vsiz;
     tree->root = rec;
   } else if(cv > 0){
+    if(!vbuf){
+      tree->root = top;
+      return false;
+    }
     int psiz = TCALIGNPAD(ksiz);
     TCTREEREC *rec;
     TCMALLOC(rec, sizeof(*rec) + ksiz + psiz + vsiz + 1);
@@ -2552,6 +2587,31 @@ bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const char *vbuf, i
     int psiz = TCALIGNPAD(ksiz);
     int nvsiz;
     char *nvbuf = proc(dbuf + ksiz + psiz, top->vsiz, &nvsiz, op);
+    if(nvbuf == (void *)-1){
+      tree->rnum--;
+      tree->msiz -= top->ksiz + top->vsiz;
+      if(tree->cur == top){
+        TCTREEREC *rec = top->right;
+        if(rec){
+          while(rec->left){
+            rec = rec->left;
+          }
+        }
+        tree->cur = rec;
+      }
+      if(!top->left){
+        tree->root = top->right;
+      } else if(!top->right){
+        tree->root = top->left;
+      } else {
+        tree->root = top->left;
+        TCTREEREC *rec = tctreesplay(tree, kbuf, ksiz);
+        rec->right = top->right;
+        tree->root = rec;
+      }
+      TCFREE(top);
+      return true;
+    }
     if(!nvbuf){
       tree->root = top;
       return false;
@@ -2580,6 +2640,14 @@ bool tctreeout(TCTREE *tree, const void *kbuf, int ksiz){
   assert(tree && kbuf && ksiz >= 0);
   TCTREEREC *top = tctreesplay(tree, kbuf, ksiz);
   if(!top) return false;
+  char *dbuf = (char *)top + sizeof(*top);
+  int cv = tree->cmp(kbuf, ksiz, dbuf, top->ksiz, tree->cmpop);
+  if(cv != 0){
+    tree->root = top;
+    return false;
+  }
+  tree->rnum--;
+  tree->msiz -= top->ksiz + top->vsiz;
   if(tree->cur == top){
     TCTREEREC *rec = top->right;
     if(rec){
@@ -2589,14 +2657,6 @@ bool tctreeout(TCTREE *tree, const void *kbuf, int ksiz){
     }
     tree->cur = rec;
   }
-  char *dbuf = (char *)top + sizeof(*top);
-  int cv = tree->cmp(kbuf, ksiz, dbuf, top->ksiz, tree->cmpop);
-  if(cv != 0){
-    tree->root = top;
-    return false;
-  }
-  tree->rnum--;
-  tree->msiz -= top->ksiz + top->vsiz;
   if(!top->left){
     tree->root = top->right;
   } else if(!top->right){
@@ -3825,7 +3885,7 @@ void tcmdbputcat3(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int 
 /* Store a record into a on-memory hash database object with a duplication handler. */
 bool tcmdbputproc(TCMDB *mdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
-  assert(mdb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  assert(mdb && kbuf && ksiz >= 0 && proc);
   unsigned int mi;
   TCMDBHASH(mi, kbuf, ksiz);
   if(pthread_rwlock_wrlock((pthread_rwlock_t *)mdb->mmtxs + mi) != 0) return false;
@@ -4207,7 +4267,7 @@ void tcndbputcat3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int 
 /* Store a record into a on-memory tree database object with a duplication handler. */
 bool tcndbputproc(TCNDB *ndb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
-  assert(ndb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  assert(ndb && kbuf && ksiz >= 0 && proc);
   if(pthread_mutex_lock((pthread_mutex_t *)ndb->mmtx) != 0) return false;
   bool rv = tctreeputproc(ndb->tree, kbuf, ksiz, vbuf, vsiz, proc, op);
   pthread_mutex_unlock((pthread_mutex_t *)ndb->mmtx);

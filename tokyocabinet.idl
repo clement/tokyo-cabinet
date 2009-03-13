@@ -280,7 +280,7 @@ module TokyoCabinet {
     const long QPSTOP = 1 << 24;
     void addcond(in string name, in long op, in string expr);
     void setorder(in string name, in long type);
-    void setmax(in long max);
+    void setlimit(in long max, in long skip);
     List search();
     boolean searchout();
     string hint();

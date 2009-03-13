@@ -23,6 +23,7 @@
 
 /* global variables */
 const char *g_progname;                  // program name
+unsigned int g_randseed;                 // random seed
 
 
 /* function prototypes */
@@ -31,6 +32,7 @@ static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCADB *adb, const char *func);
+static void *pdprocfunccmp(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int myrand(int range);
 static int runwrite(int argc, char **argv);
@@ -52,7 +54,9 @@ static int proccompare(const char *name, int tnum, int rnum);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  srand((unsigned int)(tctime() * 1000) % UINT_MAX);
+  const char *ebuf = getenv("TCRNDSEED");
+  g_randseed = ebuf ? tcatoix(ebuf) : tctime() * 1000;
+  srand(g_randseed);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "write")){
@@ -113,6 +117,18 @@ static void iputchar(int c){
 /* print error message of abstract database */
 static void eprint(TCADB *adb, const char *func){
   fprintf(stderr, "%s: %s: error\n", g_progname, func);
+}
+
+
+/* duplication callback function for comparison */
+static void *pdprocfunccmp(const void *vbuf, int vsiz, int *sp, void *op){
+  switch(*(int *)op % 4){
+  case 1: return NULL;
+  case 2: return (void *)-1;
+  default: break;
+  }
+  *sp = vsiz;
+  return tcmemdup(vbuf, vsiz);
 }
 
 
@@ -292,7 +308,7 @@ static int runcompare(int argc, char **argv){
 
 /* perform write command */
 static int procwrite(const char *name, int rnum){
-  iprintf("<Writing Test>\n  name=%s  rnum=%d\n\n", name, rnum);
+  iprintf("<Writing Test>\n  seed=%u  name=%s  rnum=%d\n\n", g_randseed, name, rnum);
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
@@ -328,7 +344,7 @@ static int procwrite(const char *name, int rnum){
 
 /* perform read command */
 static int procread(const char *name){
-  iprintf("<Reading Test>\n  name=%s\n\n", name);
+  iprintf("<Reading Test>\n  seed=%u  name=%s\n\n", g_randseed, name);
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
@@ -368,7 +384,7 @@ static int procread(const char *name){
 
 /* perform remove command */
 static int procremove(const char *name){
-  iprintf("<Removing Test>\n  name=%s\n\n", name);
+  iprintf("<Removing Test>\n  seed=%u  name=%s\n\n", g_randseed, name);
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
@@ -405,7 +421,8 @@ static int procremove(const char *name){
 
 /* perform rcat command */
 static int procrcat(const char *name, int rnum){
-  iprintf("<Random Concatenating Test>\n  name=%s  rnum=%d\n\n", name, rnum);
+  iprintf("<Random Concatenating Test>\n  seed=%u  name=%s  rnum=%d\n\n",
+          g_randseed, name, rnum);
   int pnum = rnum / 5 + 1;
   bool err = false;
   double stime = tctime();
@@ -442,7 +459,7 @@ static int procrcat(const char *name, int rnum){
 
 /* perform misc command */
 static int procmisc(const char *name, int rnum){
-  iprintf("<Miscellaneous Test>\n  name=%s  rnum=%d\n\n", name, rnum);
+  iprintf("<Miscellaneous Test>\n  seed=%u  name=%s  rnum=%d\n\n", g_randseed, name, rnum);
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
@@ -703,7 +720,7 @@ static int procmisc(const char *name, int rnum){
 
 /* perform wicked command */
 static int procwicked(const char *name, int rnum){
-  iprintf("<Wicked Writing Test>\n  name=%s  rnum=%d\n\n", name, rnum);
+  iprintf("<Wicked Writing Test>\n  seed=%u  name=%s  rnum=%d\n\n", g_randseed, name, rnum);
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
@@ -892,7 +909,8 @@ static int procwicked(const char *name, int rnum){
 
 /* perform compare command */
 static int proccompare(const char *name, int tnum, int rnum){
-  iprintf("<Comparison Test>\n  name=%s  tnum=%d  rnum=%d\n\n", name, tnum, rnum);
+  iprintf("<Comparison Test>\n  seed=%u  name=%s  tnum=%d  rnum=%d\n\n",
+          g_randseed, name, tnum, rnum);
   bool err = false;
   double stime = tctime();
   char path[PATH_MAX];
@@ -917,7 +935,7 @@ static int proccompare(const char *name, int tnum, int rnum){
   }
   sprintf(path, "%s.tch", name);
   int homode = HDBOWRITER | HDBOCREAT | HDBOTRUNC;
-  if(myrand(20) == 1) homode |= HDBOTSYNC;
+  if(myrand(100) == 1) homode |= HDBOTSYNC;
   if(!tchdbopen(hdb, path, homode)){
     eprint(NULL, "tchdbopen");
     err = true;
@@ -933,12 +951,31 @@ static int proccompare(const char *name, int tnum, int rnum){
   }
   sprintf(path, "%s.tcb", name);
   int bomode = BDBOWRITER | BDBOCREAT | BDBOTRUNC;
-  if(myrand(20) == 1) bomode |= BDBOTSYNC;
+  if(myrand(100) == 1) bomode |= BDBOTSYNC;
   if(!tcbdbopen(bdb, path, bomode)){
     eprint(NULL, "tcbdbopen");
     err = true;
   }
   BDBCUR *cur = tcbdbcurnew(bdb);
+  TCADB *adb = tcadbnew();
+  switch(myrand(4)){
+  case 0:
+    sprintf(path, "%s.adb.tch#mode=wct#bnum=%d", name, rnum);
+    break;
+  case 1:
+    sprintf(path, "%s.adb.tcb#mode=wct#lmemb=256#nmemb=512", name);
+    break;
+  case 3:
+    sprintf(path, "+");
+    break;
+  default:
+    sprintf(path, "*");
+    break;
+  }
+  if(!tcadbopen(adb, path)){
+    eprint(NULL, "tcbdbopen");
+    err = true;
+  }
   for(int t = 1; !err && t <= tnum; t++){
     bool commit = myrand(2) == 0;
     iprintf("transaction %d (%s):\n", t, commit ? "commit" : "abort");
@@ -950,141 +987,226 @@ static int proccompare(const char *name, int tnum, int rnum){
       eprint(NULL, "tcbdbtranbegin");
       err = true;
     }
-    int act = myrand(6);
-    for(int i = 1; !err && i <= rnum; i++){
-      if(myrand(10) == 0) act = myrand(7);
-      char kbuf[RECBUFSIZ];
-      int ksiz = sprintf(kbuf, "%d", myrand(i) + 1);
-      char vbuf[RECBUFSIZ+256];
-      int vsiz = sprintf(vbuf, "%64d:%d:%d", t, i, myrand(i));
-      switch(act){
-      case 0:
-        if(!tchdbput(hdb, kbuf, ksiz, vbuf, vsiz)){
-          eprint(NULL, "tchdbput");
+    if(myrand(tnum) == 0){
+      bool all = myrand(2) == 0;
+      for(int i = 1; !err && i <= rnum; i++){
+        char kbuf[RECBUFSIZ];
+        int ksiz = sprintf(kbuf, "%d", all ? i : myrand(i) + 1);
+        if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
+          eprint(NULL, "tchdbout");
           err = true;
         }
-        if(!tcbdbput(bdb, kbuf, ksiz, vbuf, vsiz)){
-          eprint(NULL, "tcbdbput");
+        if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+          eprint(NULL, "tcbdbout");
           err = true;
         }
-        if(commit){
-          tcmdbput(mdb, kbuf, ksiz, vbuf, vsiz);
-          tcndbput(ndb, kbuf, ksiz, vbuf, vsiz);
-        }
-        break;
-      case 1:
-        if(!tchdbputkeep(hdb, kbuf, ksiz, vbuf, vsiz) && tchdbecode(hdb) != TCEKEEP){
-          eprint(NULL, "tchdbputkeep");
+        tcadbout(adb, kbuf, ksiz);
+        if(tchdbout(hdb, kbuf, ksiz) || tchdbecode(hdb) != TCENOREC){
+          eprint(NULL, "(validation)");
           err = true;
         }
-        if(!tcbdbputkeep(bdb, kbuf, ksiz, vbuf, vsiz) && tcbdbecode(bdb) != TCEKEEP){
-          eprint(NULL, "tcbdbputkeep");
+        if(tcbdbout(bdb, kbuf, ksiz) || tcbdbecode(bdb) != TCENOREC){
+          eprint(NULL, "(validation)");
+          err = true;
+        }
+        if(tcadbout(adb, kbuf, ksiz)){
+          eprint(NULL, "(validation)");
           err = true;
         }
         if(commit){
-          tcmdbputkeep(mdb, kbuf, ksiz, vbuf, vsiz);
-          tcndbputkeep(ndb, kbuf, ksiz, vbuf, vsiz);
+          tcmdbout(mdb, kbuf, ksiz);
+          tcndbout(ndb, kbuf, ksiz);
         }
-        break;
-      case 2:
-        if(!tchdbputcat(hdb, kbuf, ksiz, vbuf, vsiz)){
-          eprint(NULL, "tchdbputcat");
-          err = true;
+        if(rnum > 250 && i % (rnum / 250) == 0){
+          iputchar('.');
+          if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
         }
-        if(!tcbdbputcat(bdb, kbuf, ksiz, vbuf, vsiz)){
-          eprint(NULL, "tcbdbputcat");
-          err = true;
-        }
-        if(commit){
-          tcmdbputcat(mdb, kbuf, ksiz, vbuf, vsiz);
-          tcndbputcat(ndb, kbuf, ksiz, vbuf, vsiz);
-        }
-        break;
-      case 3:
-        if(tchdbaddint(hdb, kbuf, ksiz, 1) == INT_MIN && tchdbecode(hdb) != TCEKEEP){
-          eprint(NULL, "tchdbaddint");
-          err = true;
-        }
-        if(tcbdbaddint(bdb, kbuf, ksiz, 1) == INT_MIN && tcbdbecode(bdb) != TCEKEEP){
-          eprint(NULL, "tchdbaddint");
-          err = true;
-        }
-        if(commit){
-          tcmdbaddint(mdb, kbuf, ksiz, 1);
-          tcndbaddint(ndb, kbuf, ksiz, 1);
-        }
-        break;
-      case 4:
-        if(isnan(tchdbadddouble(hdb, kbuf, ksiz, 1.0)) && tchdbecode(hdb) != TCEKEEP){
-          eprint(NULL, "tchdbadddouble");
-          err = true;
-        }
-        if(isnan(tcbdbadddouble(bdb, kbuf, ksiz, 1.0)) && tcbdbecode(bdb) != TCEKEEP){
-          eprint(NULL, "tchdbadddouble");
-          err = true;
-        }
-        if(commit){
-          tcmdbadddouble(mdb, kbuf, ksiz, 1.0);
-          tcndbadddouble(ndb, kbuf, ksiz, 1.0);
-        }
-        break;
-      default:
-        if(myrand(20) == 0){
-          if(!tcbdbcurjump(cur, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
-            eprint(NULL, "tcbdbcurjump");
+      }
+    } else {
+      int act = myrand(7);
+      for(int i = 1; !err && i <= rnum; i++){
+        if(myrand(10) == 0) act = myrand(7);
+        char kbuf[RECBUFSIZ];
+        int ksiz = sprintf(kbuf, "%d", myrand(i) + 1);
+        char vbuf[RECBUFSIZ+256];
+        int vsiz = sprintf(vbuf, "%64d:%d:%d", t, i, myrand(i));
+        switch(act){
+        case 0:
+          if(!tchdbput(hdb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(NULL, "tchdbput");
             err = true;
           }
-          char *cbuf;
-          int csiz;
-          while((cbuf = tcbdbcurkey(cur, &csiz)) != NULL){
-            if(!tchdbout(hdb, cbuf, csiz)){
-              eprint(NULL, "tchdbout");
-              err = true;
-            }
-            if(!tcbdbout(bdb, cbuf, csiz)){
-              eprint(NULL, "tcbdbout");
-              err = true;
-            }
-            if(commit){
-              tcmdbout(mdb, cbuf, csiz);
-              tcndbout(ndb, cbuf, csiz);
-            }
-            tcfree(cbuf);
-            if(myrand(10) == 0) break;
-            switch(myrand(3)){
-            case 1:
-              if(!tcbdbcurprev(cur) && tcbdbecode(bdb) != TCENOREC){
-                eprint(NULL, "tcbdbcurprev");
-                err = true;
-              }
-              break;
-            case 2:
-              if(!tcbdbcurnext(cur) && tcbdbecode(bdb) != TCENOREC){
-                eprint(NULL, "tcbdbcurprev");
-                err = true;
-              }
-              break;
-            }
-          }
-        } else {
-          if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
-            eprint(NULL, "tchdbout");
+          if(!tcbdbput(bdb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(NULL, "tcbdbput");
             err = true;
           }
-          if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
-            eprint(NULL, "tcbdbout");
+          if(!tcadbput(adb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(NULL, "tcadbput");
             err = true;
           }
           if(commit){
-            tcmdbout(mdb, kbuf, ksiz);
-            tcndbout(ndb, kbuf, ksiz);
+            tcmdbput(mdb, kbuf, ksiz, vbuf, vsiz);
+            tcndbput(ndb, kbuf, ksiz, vbuf, vsiz);
           }
+          break;
+        case 1:
+          if(!tchdbputkeep(hdb, kbuf, ksiz, vbuf, vsiz) && tchdbecode(hdb) != TCEKEEP){
+            eprint(NULL, "tchdbputkeep");
+            err = true;
+          }
+          if(!tcbdbputkeep(bdb, kbuf, ksiz, vbuf, vsiz) && tcbdbecode(bdb) != TCEKEEP){
+            eprint(NULL, "tcbdbputkeep");
+            err = true;
+          }
+          tcadbputkeep(adb, kbuf, ksiz, vbuf, vsiz);
+          if(commit){
+            tcmdbputkeep(mdb, kbuf, ksiz, vbuf, vsiz);
+            tcndbputkeep(ndb, kbuf, ksiz, vbuf, vsiz);
+          }
+          break;
+        case 2:
+          if(!tchdbputcat(hdb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(NULL, "tchdbputcat");
+            err = true;
+          }
+          if(!tcbdbputcat(bdb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(NULL, "tcbdbputcat");
+            err = true;
+          }
+          if(!tcadbputcat(adb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(NULL, "tcadbputcat");
+            err = true;
+          }
+          if(commit){
+            tcmdbputcat(mdb, kbuf, ksiz, vbuf, vsiz);
+            tcndbputcat(ndb, kbuf, ksiz, vbuf, vsiz);
+          }
+          break;
+        case 3:
+          if(tchdbaddint(hdb, kbuf, ksiz, 1) == INT_MIN && tchdbecode(hdb) != TCEKEEP){
+            eprint(NULL, "tchdbaddint");
+            err = true;
+          }
+          if(tcbdbaddint(bdb, kbuf, ksiz, 1) == INT_MIN && tcbdbecode(bdb) != TCEKEEP){
+            eprint(NULL, "tchdbaddint");
+            err = true;
+          }
+          tcadbaddint(adb, kbuf, ksiz, 1);
+          if(commit){
+            tcmdbaddint(mdb, kbuf, ksiz, 1);
+            tcndbaddint(ndb, kbuf, ksiz, 1);
+          }
+          break;
+        case 4:
+          if(isnan(tchdbadddouble(hdb, kbuf, ksiz, 1.0)) && tchdbecode(hdb) != TCEKEEP){
+            eprint(NULL, "tchdbadddouble");
+            err = true;
+          }
+          if(isnan(tcbdbadddouble(bdb, kbuf, ksiz, 1.0)) && tcbdbecode(bdb) != TCEKEEP){
+            eprint(NULL, "tchdbadddouble");
+            err = true;
+          }
+          tcadbadddouble(adb, kbuf, ksiz, 1.0);
+          if(commit){
+            tcmdbadddouble(mdb, kbuf, ksiz, 1.0);
+            tcndbadddouble(ndb, kbuf, ksiz, 1.0);
+          }
+          break;
+        case 5:
+          if(myrand(2) == 0){
+            if(!tchdbputproc(hdb, kbuf, ksiz, vbuf, vsiz, pdprocfunccmp, &i) &&
+               tchdbecode(hdb) != TCEKEEP){
+              eprint(NULL, "tchdbputproc");
+              err = true;
+            }
+            if(!tcbdbputproc(bdb, kbuf, ksiz, vbuf, vsiz, pdprocfunccmp, &i) &&
+               tcbdbecode(bdb) != TCEKEEP){
+              eprint(NULL, "tcbdbputproc");
+              err = true;
+            }
+            tcadbputproc(adb, kbuf, ksiz, vbuf, vsiz, pdprocfunccmp, &i);
+            if(commit){
+              tcmdbputproc(mdb, kbuf, ksiz, vbuf, vsiz, pdprocfunccmp, &i);
+              tcndbputproc(ndb, kbuf, ksiz, vbuf, vsiz, pdprocfunccmp, &i);
+            }
+          } else {
+            if(!tchdbputproc(hdb, kbuf, ksiz, NULL, 0, pdprocfunccmp, &i) &&
+               tchdbecode(hdb) != TCEKEEP && tchdbecode(hdb) != TCENOREC){
+              eprint(NULL, "tchdbputproc");
+              err = true;
+            }
+            if(!tcbdbputproc(bdb, kbuf, ksiz, NULL, 0, pdprocfunccmp, &i) &&
+               tcbdbecode(bdb) != TCEKEEP && tchdbecode(hdb) != TCENOREC){
+              eprint(NULL, "tcbdbputproc");
+              err = true;
+            }
+            tcadbputproc(adb, kbuf, ksiz, NULL, 0, pdprocfunccmp, &i);
+            if(commit){
+              tcmdbputproc(mdb, kbuf, ksiz, NULL, 0, pdprocfunccmp, &i);
+              tcndbputproc(ndb, kbuf, ksiz, NULL, 0, pdprocfunccmp, &i);
+            }
+          }
+          break;
+        default:
+          if(myrand(20) == 0){
+            if(!tcbdbcurjump(cur, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+              eprint(NULL, "tcbdbcurjump");
+              err = true;
+            }
+            char *cbuf;
+            int csiz;
+            while((cbuf = tcbdbcurkey(cur, &csiz)) != NULL){
+              if(!tchdbout(hdb, cbuf, csiz)){
+                eprint(NULL, "tchdbout");
+                err = true;
+              }
+              if(!tcbdbout(bdb, cbuf, csiz)){
+                eprint(NULL, "tcbdbout");
+                err = true;
+              }
+              tcadbout(adb, cbuf, csiz);
+              if(commit){
+                tcmdbout(mdb, cbuf, csiz);
+                tcndbout(ndb, cbuf, csiz);
+              }
+              tcfree(cbuf);
+              if(myrand(10) == 0) break;
+              switch(myrand(3)){
+              case 1:
+                if(!tcbdbcurprev(cur) && tcbdbecode(bdb) != TCENOREC){
+                  eprint(NULL, "tcbdbcurprev");
+                  err = true;
+                }
+                break;
+              case 2:
+                if(!tcbdbcurnext(cur) && tcbdbecode(bdb) != TCENOREC){
+                  eprint(NULL, "tcbdbcurprev");
+                  err = true;
+                }
+                break;
+              }
+            }
+          } else {
+            if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
+              eprint(NULL, "tchdbout");
+              err = true;
+            }
+            if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+              eprint(NULL, "tcbdbout");
+              err = true;
+            }
+            tcadbout(adb, kbuf, ksiz);
+            if(commit){
+              tcmdbout(mdb, kbuf, ksiz);
+              tcndbout(ndb, kbuf, ksiz);
+            }
+          }
+          break;
         }
-        break;
-      }
-      if(rnum > 250 && i % (rnum / 250) == 0){
-        iputchar('.');
-        if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+        if(rnum > 250 && i % (rnum / 250) == 0){
+          iputchar('.');
+          if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+        }
       }
     }
     if(commit){
@@ -1271,6 +1393,10 @@ static int proccompare(const char *name, int tnum, int rnum){
     tcbdbcurnext(cur);
   }
   if(rnum > 250) iprintf(" (%08d)\n", inum);
+  if(!tcadbclose(adb)){
+    eprint(NULL, "tcadbclose");
+    err = true;
+  }
   tcbdbcurdel(cur);
   if(!tcbdbclose(bdb)){
     eprint(NULL, "tcbdbclose");
@@ -1280,6 +1406,7 @@ static int proccompare(const char *name, int tnum, int rnum){
     eprint(NULL, "tcbdbclose");
     err = true;
   }
+  tcadbdel(adb);
   tcmdbdel(mdb);
   tcndbdel(ndb);
   tchdbdel(hdb);

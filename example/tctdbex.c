@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   tctdbqryaddcond(qry, "age", TDBQCNUMGE, "20");
   tctdbqryaddcond(qry, "lang", TDBQCSTROR, "ja,en");
   tctdbqrysetorder(qry, "name", TDBQOSTRASC);
-  tctdbqrysetmax(qry, 10);
+  tctdbqrysetlimit(qry, 10, 0);
   res = tctdbqrysearch(qry);
   for(i = 0; i < tclistnum(res); i++){
     rbuf = tclistval(res, i, &rsiz);

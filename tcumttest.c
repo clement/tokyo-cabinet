@@ -39,6 +39,7 @@ typedef struct {                         // type of structure for typical thread
 
 /* global variables */
 const char *g_progname;                  // program name
+unsigned int g_randseed;                 // random seed
 
 
 /* function prototypes */
@@ -62,7 +63,9 @@ static void *threadtypical(void *targ);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  srand((unsigned int)(tctime() * 1000) % UINT_MAX);
+  const char *ebuf = getenv("TCRNDSEED");
+  g_randseed = ebuf ? tcatoix(ebuf) : tctime() * 1000;
+  srand(g_randseed);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "combo")){
@@ -202,8 +205,8 @@ static int runtypical(int argc, char **argv){
 
 /* perform combo command */
 static int proccombo(int tnum, int rnum, int bnum, bool tr, bool rnd){
-  iprintf("<Combination Test>\n  tnum=%d  rnum=%d  bnum=%d  tr=%d  rnd=%d\n\n",
-          tnum, rnum, bnum, tr, rnd);
+  iprintf("<Combination Test>\n  seed=%u  tnum=%d  rnum=%d  bnum=%d  tr=%d  rnd=%d\n\n",
+          g_randseed, tnum, rnum, bnum, tr, rnd);
   bool err = false;
   double stime = tctime();
   TCMDB *mdb = (bnum > 0) ? tcmdbnew2(bnum) : tcmdbnew();
@@ -320,8 +323,8 @@ static int proccombo(int tnum, int rnum, int bnum, bool tr, bool rnd){
 
 /* perform typical command */
 static int proctypical(int tnum, int rnum, int bnum, bool tr, bool nc, int rratio){
-  iprintf("<Typical Access Test>\n  tnum=%d  rnum=%d  bnum=%d  tr=%d  nc=%d  rratio=%d\n\n",
-          tnum, rnum, bnum, tr, nc, rratio);
+  iprintf("<Typical Access Test>\n  seed=%u  tnum=%d  rnum=%d  bnum=%d  tr=%d  nc=%d"
+          "  rratio=%d\n\n", g_randseed, tnum, rnum, bnum, tr, nc, rratio);
   bool err = false;
   double stime = tctime();
   TCMDB *mdb = (bnum > 0) ? tcmdbnew2(bnum) : tcmdbnew();

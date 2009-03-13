@@ -67,6 +67,7 @@ typedef struct {                         // type of structure for race thread
 
 /* global variables */
 const char *g_progname;                  // program name
+unsigned int g_randseed;                 // random seed
 int g_dbgfd;                             // debugging output
 
 
@@ -106,10 +107,11 @@ static void *threadrace(void *targ);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  const char *ebuf = getenv("TCDBGFD");
+  const char *ebuf = getenv("TCRNDSEED");
+  g_randseed = ebuf ? tcatoix(ebuf) : tctime() * 1000;
+  srand(g_randseed);
+  ebuf = getenv("TCDBGFD");
   g_dbgfd = ebuf ? tcatoix(ebuf) : UINT16_MAX;
-  if(ebuf) g_dbgfd = tcatoix(ebuf);
-  srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "write")){
@@ -561,9 +563,9 @@ static int runrace(int argc, char **argv){
 /* perform write command */
 static int procwrite(const char *path, int tnum, int rnum, int lmemb, int nmemb,
                      int bnum, int apow, int fpow, int opts, int omode, bool rnd){
-  iprintf("<Writing Test>\n  path=%s  tnum=%d  rnum=%d  lmemb=%d  nmemb=%d"
+  iprintf("<Writing Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  lmemb=%d  nmemb=%d"
           "  bnum=%d  apow=%d  fpow=%d  opts=%d  omode=%d  rnd=%d\n\n",
-          path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode, rnd);
+          g_randseed, path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();
@@ -631,8 +633,8 @@ static int procwrite(const char *path, int tnum, int rnum, int lmemb, int nmemb,
 
 /* perform read command */
 static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
-  iprintf("<Reading Test>\n  path=%s  tnum=%d  omode=%d  wb=%d  rnd=%d\n\n",
-          path, tnum, omode, wb, rnd);
+  iprintf("<Reading Test>\n  seed=%u  path=%s  tnum=%d  omode=%d  wb=%d  rnd=%d\n\n",
+          g_randseed, path, tnum, omode, wb, rnd);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();
@@ -699,7 +701,8 @@ static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
 
 /* perform remove command */
 static int procremove(const char *path, int tnum, int omode, bool rnd){
-  iprintf("<Removing Test>\n  path=%s  tnum=%d  omode=%d  rnd=%d\n\n", path, tnum, omode, rnd);
+  iprintf("<Removing Test>\n  seed=%u  path=%s  tnum=%d  omode=%d  rnd=%d\n\n",
+          g_randseed, path, tnum, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();
@@ -764,8 +767,8 @@ static int procremove(const char *path, int tnum, int omode, bool rnd){
 
 /* perform wicked command */
 static int procwicked(const char *path, int tnum, int rnum, int opts, int omode, bool nc){
-  iprintf("<Writing Test>\n  path=%s  tnum=%d  rnum=%d  opts=%d  omode=%d  nc=%d\n\n",
-          path, tnum, rnum, opts, omode, nc);
+  iprintf("<Writing Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  opts=%d  omode=%d  nc=%d\n\n",
+          g_randseed, path, tnum, rnum, opts, omode, nc);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();
@@ -876,9 +879,9 @@ static int procwicked(const char *path, int tnum, int rnum, int opts, int omode,
 /* perform typical command */
 static int proctypical(const char *path, int tnum, int rnum, int lmemb, int nmemb,
                        int bnum, int apow, int fpow, int opts, int omode, bool nc, int rratio){
-  iprintf("<Typical Access Test>\n  path=%s  tnum=%d  rnum=%d  lmemb=%d  nmemb=%d"
+  iprintf("<Typical Access Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  lmemb=%d  nmemb=%d"
           "  bnum=%d  apow=%d  fpow=%d  opts=%d  omode=%d  nc=%d  rratio=%d\n\n",
-          path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode, nc, rratio);
+          g_randseed, path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode, nc, rratio);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();
@@ -949,9 +952,9 @@ static int proctypical(const char *path, int tnum, int rnum, int lmemb, int nmem
 /* perform race command */
 static int procrace(const char *path, int tnum, int rnum, int lmemb, int nmemb,
                     int bnum, int apow, int fpow, int opts, int omode){
-  iprintf("<Race Condition Test>\n  path=%s  tnum=%d  rnum=%d  lmemb=%d  nmemb=%d"
+  iprintf("<Race Condition Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  lmemb=%d  nmemb=%d"
           "  bnum=%d  apow=%d  fpow=%d  opts=%d  omode=%d\n\n",
-          path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode);
+          g_randseed, path, tnum, rnum, lmemb, nmemb, bnum, apow, fpow, opts, omode);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();

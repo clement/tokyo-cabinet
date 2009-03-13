@@ -7,11 +7,11 @@
 #================================================================
 
 # Package name
-AC_INIT(tokyocabinet, 1.4.9)
+AC_INIT(tokyocabinet, 1.4.10)
 
 # Package information
-MYLIBVER=7
-MYLIBREV=14
+MYLIBVER=8
+MYLIBREV=1
 MYFORMATVER="1.0"
 
 # Targets
@@ -41,9 +41,8 @@ MYLDLIBPATHENV="LD_LIBRARY_PATH"
 MYPOSTCMD="true"
 
 # Building paths
-pathtmp="$PATH"
-PATH="$HOME/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
-PATH="$PATH:/usr/ccs/bin:/usr/ucb:/usr/xpg4/bin:/usr/xpg6/bin:$pathtmp"
+PATH="$PATH:$HOME/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
+PATH="$PATH:/opt/SUNWspro/bin:/usr/ccs/bin:/usr/xpg4/bin:/usr/xpg6/bin:/usr/ucb"
 CPATH="$HOME/include:/usr/local/include:$CPATH"
 LIBRARY_PATH="$HOME/lib:/usr/local/lib:$LIBRARY_PATH"
 LD_LIBRARY_PATH="$HOME/lib:/usr/local/lib:$LD_LIBRARY_PATH"
@@ -226,13 +225,18 @@ printf '#================================================================\n'
 # Checking Commands and Libraries
 #================================================================
 
+# C compiler
+AC_PROG_CC
+
 # Reset variables
+if test "$GCC" != "yes"
+then
+  AC_MSG_WARN([another compiler except for GCC was detected])
+  MYCFLAGS=""
+fi
 test -n "$CFLAGS" && MYCFLAGS="$CFLAGS $MYCFLAGS"
 test -n "$CPPFLAGS" && MYCPPFLAGS="$CPPFLAGS $MYCPPFLAGS"
 test -n "$LDFLAGS" && MYLDFLAGS="$LDFLAGS $MYLDFLAGS"
-
-# C compiler
-AC_PROG_CC
 
 # Byte order
 AC_C_BIGENDIAN(MYCPPFLAGS="$MYCPPFLAGS -D_MYBIGEND")

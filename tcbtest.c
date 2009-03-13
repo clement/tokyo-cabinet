@@ -23,6 +23,7 @@
 
 /* global variables */
 const char *g_progname;                  // program name
+unsigned int g_randseed;                 // random seed
 int g_dbgfd;                             // debugging output
 
 
@@ -64,9 +65,11 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  const char *ebuf = getenv("TCDBGFD");
+  const char *ebuf = getenv("TCRNDSEED");
+  g_randseed = ebuf ? tcatoix(ebuf) : tctime() * 1000;
+  srand(g_randseed);
+  ebuf = getenv("TCDBGFD");
   g_dbgfd = ebuf ? tcatoix(ebuf) : UINT16_MAX;
-  srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "write")){
@@ -176,6 +179,7 @@ static void mprint(TCBDB *bdb){
 
 /* duplication callback function */
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(myrand(4) == 0) return (void *)-1;
   if(myrand(2) == 0) return NULL;
   int len = myrand(RECBUFSIZ);
   char buf[RECBUFSIZ];
@@ -694,9 +698,10 @@ static int runwicked(int argc, char **argv){
 static int procwrite(const char *path, int rnum, int lmemb, int nmemb, int bnum,
                      int apow, int fpow, bool mt, TCCMP cmp, int opts, int lcnum, int ncnum,
                      int xmsiz, int lsmax, int capnum, int omode, bool rnd){
-  iprintf("<Writing Test>\n  path=%s  rnum=%d  lmemb=%d  nmemb=%d  bnum=%d  apow=%d  fpow=%d"
-          "  mt=%d  cmp=%p  opts=%d  lcnum=%d  ncnum=%d  xmsiz=%d  lsmax=%d  capnum=%d  omode=%d"
-          "  rnd=%d\n\n", path, rnum, lmemb, nmemb, bnum, apow, fpow, mt, (void *)(intptr_t)cmp,
+  iprintf("<Writing Test>\n  seed=%u  path=%s  rnum=%d  lmemb=%d  nmemb=%d  bnum=%d  apow=%d"
+          "  fpow=%d  mt=%d  cmp=%p  opts=%d  lcnum=%d  ncnum=%d  xmsiz=%d  lsmax=%d  capnum=%d"
+          "  omode=%d  rnd=%d\n\n",
+          g_randseed, path, rnum, lmemb, nmemb, bnum, apow, fpow, mt, (void *)(intptr_t)cmp,
           opts, lcnum, ncnum, xmsiz, lsmax, capnum, omode, rnd);
   bool err = false;
   double stime = tctime();
@@ -782,9 +787,9 @@ static int procwrite(const char *path, int rnum, int lmemb, int nmemb, int bnum,
 /* perform read command */
 static int procread(const char *path, bool mt, TCCMP cmp, int lcnum, int ncnum, int xmsiz,
                     int omode, bool wb, bool rnd){
-  iprintf("<Reading Test>\n  path=%s  mt=%d  cmp=%p  lcnum=%d  ncnum=%d  xmsiz=%d  omode=%d"
-          "  wb=%d  rnd=%d\n\n",
-          path, mt, (void *)(intptr_t)cmp, lcnum, ncnum, xmsiz, omode, wb, rnd);
+  iprintf("<Reading Test>\n  seed=%u  path=%s  mt=%d  cmp=%p  lcnum=%d  ncnum=%d  xmsiz=%d"
+          "  omode=%d  wb=%d  rnd=%d\n\n",
+          g_randseed, path, mt, (void *)(intptr_t)cmp, lcnum, ncnum, xmsiz, omode, wb, rnd);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();
@@ -870,9 +875,9 @@ static int procread(const char *path, bool mt, TCCMP cmp, int lcnum, int ncnum, 
 /* perform remove command */
 static int procremove(const char *path, bool mt, TCCMP cmp, int lcnum, int ncnum, int xmsiz,
                       int omode, bool rnd){
-  iprintf("<Removing Test>\n  path=%s  mt=%d  cmp=%p  lcnum=%d  ncnum=%d  xmsiz=%d"
+  iprintf("<Removing Test>\n  seed=%u  path=%s  mt=%d  cmp=%p  lcnum=%d  ncnum=%d  xmsiz=%d"
           "  omode=%d  rnd=%d\n\n",
-          path, mt, (void *)(intptr_t)cmp, lcnum, ncnum, xmsiz, omode, rnd);
+          g_randseed, path, mt, (void *)(intptr_t)cmp, lcnum, ncnum, xmsiz, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();
@@ -948,10 +953,10 @@ static int procrcat(const char *path, int rnum,
                     bool mt, TCCMP cmp, int opts, int lcnum, int ncnum, int xmsiz, int lsmax,
                     int capnum, int omode, int pnum, bool dai, bool dad, bool rl, bool ru){
   iprintf("<Random Concatenating Test>\n"
-          "  path=%s  rnum=%d  lmemb=%d  nmemb=%d  bnum=%d  apow=%d  fpow=%d"
+          "  seed=%u  path=%s  rnum=%d  lmemb=%d  nmemb=%d  bnum=%d  apow=%d  fpow=%d"
           "  mt=%d  cmp=%p  opts=%d  lcnum=%d  ncnum=%d  xmsiz=%d  lsmax=%d  capnum=%d"
           "  omode=%d  pnum=%d  dai=%d  dad=%d  rl=%d  ru=%d\n\n",
-          path, rnum, lmemb, nmemb, bnum, apow, fpow, mt, (void *)(intptr_t)cmp,
+          g_randseed, path, rnum, lmemb, nmemb, bnum, apow, fpow, mt, (void *)(intptr_t)cmp,
           opts, lcnum, ncnum, xmsiz, lsmax, capnum, omode, pnum, dai, dad, rl, ru);
   if(pnum < 1) pnum = rnum;
   bool err = false;
@@ -1044,10 +1049,18 @@ static int procrcat(const char *path, int rnum,
         }
         break;
       case 7:
-        if(!tcbdbputproc(bdb, kbuf, ksiz, kbuf, ksiz, pdprocfunc, NULL) &&
-           tcbdbecode(bdb) != TCEKEEP){
-          eprint(bdb, "tcbdbputproc");
-          err = true;
+        if(myrand(2) == 0){
+          if(!tcbdbputproc(bdb, kbuf, ksiz, kbuf, ksiz, pdprocfunc, NULL) &&
+             tcbdbecode(bdb) != TCEKEEP){
+            eprint(bdb, "tcbdbputproc");
+            err = true;
+          }
+        } else {
+          if(!tcbdbputproc(bdb, kbuf, ksiz, NULL, 0, pdprocfunc, NULL) &&
+             tcbdbecode(bdb) != TCEKEEP && tcbdbecode(bdb) != TCENOREC){
+            eprint(bdb, "tcbdbputproc");
+            err = true;
+          }
         }
         break;
       default:
@@ -1128,9 +1141,10 @@ static int procrcat(const char *path, int rnum,
 static int procqueue(const char *path, int rnum, int lmemb, int nmemb, int bnum,
                      int apow, int fpow, bool mt, TCCMP cmp, int opts,
                      int lcnum, int ncnum, int xmsiz, int lsmax, int capnum, int omode){
-  iprintf("<Queueing Test>\n  path=%s  rnum=%d  lmemb=%d  nmemb=%d  bnum=%d  apow=%d  fpow=%d"
-          "  mt=%d  cmp=%p  opts=%d  lcnum=%d  ncnum=%d  xmsiz=%d  lsmax=%d  capnum=%d"
-          "  omode=%d\n\n", path, rnum, lmemb, nmemb, bnum, apow, fpow, mt, (void *)(intptr_t)cmp,
+  iprintf("<Queueing Test>\n  seed=%u  path=%s  rnum=%d  lmemb=%d  nmemb=%d  bnum=%d  apow=%d"
+          "  fpow=%d  mt=%d  cmp=%p  opts=%d  lcnum=%d  ncnum=%d  xmsiz=%d  lsmax=%d  capnum=%d"
+          "  omode=%d\n\n",
+          g_randseed, path, rnum, lmemb, nmemb, bnum, apow, fpow, mt, (void *)(intptr_t)cmp,
           opts, lcnum, ncnum, xmsiz, lsmax, capnum, omode);
   bool err = false;
   double stime = tctime();
@@ -1249,8 +1263,8 @@ static int procqueue(const char *path, int rnum, int lmemb, int nmemb, int bnum,
 
 /* perform misc command */
 static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
-  iprintf("<Miscellaneous Test>\n  path=%s  rnum=%d  mt=%d  opts=%d  omode=%d\n\n",
-          path, rnum, mt, opts, omode);
+  iprintf("<Miscellaneous Test>\n  seed=%u  path=%s  rnum=%d  mt=%d  opts=%d  omode=%d\n\n",
+          g_randseed, path, rnum, mt, opts, omode);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();
@@ -1876,8 +1890,8 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
 
 /* perform wicked command */
 static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
-  iprintf("<Wicked Writing Test>\n  path=%s  rnum=%d  mt=%d  opts=%d  omode=%d\n\n",
-          path, rnum, mt, opts, omode);
+  iprintf("<Wicked Writing Test>\n  seed=%u  path=%s  rnum=%d  mt=%d  opts=%d  omode=%d\n\n",
+          g_randseed, path, rnum, mt, opts, omode);
   bool err = false;
   double stime = tctime();
   TCBDB *bdb = tcbdbnew();

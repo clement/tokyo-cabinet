@@ -1110,7 +1110,7 @@ char *tcfdbopaque(TCFDB *fdb){
 
 /* Store a record into a fixed-length database object with a duplication handler. */
 bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC proc, void *op){
-  assert(fdb && vbuf && vsiz >= 0 && proc);
+  assert(fdb && proc);
   if(!FDBLOCKMETHOD(fdb, id < 1)) return false;
   if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER)){
     tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
@@ -1141,16 +1141,23 @@ bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC p
   FDBPDPROCOP *procptr = &procop;
   char stack[FDBDEFWIDTH+TCNUMBUFSIZ];
   char *rbuf;
-  if(vsiz <= sizeof(stack) - sizeof(procptr)){
-    rbuf = stack;
+  if(vbuf){
+    if(vsiz <= sizeof(stack) - sizeof(procptr)){
+      rbuf = stack;
+    } else {
+      TCMALLOC(rbuf, vsiz + sizeof(procptr));
+    }
+    char *wp = rbuf;
+    memcpy(wp, &procptr, sizeof(procptr));
+    wp += sizeof(procptr);
+    memcpy(wp, vbuf, vsiz);
+    vbuf = rbuf + sizeof(procptr);
   } else {
-    TCMALLOC(rbuf, vsiz + sizeof(procptr));
+    rbuf = stack;
+    memcpy(rbuf, &procptr, sizeof(procptr));
+    vbuf = rbuf + sizeof(procptr);
+    vsiz = -1;
   }
-  char *wp = rbuf;
-  memcpy(wp, &procptr, sizeof(procptr));
-  wp += sizeof(procptr);
-  memcpy(wp, vbuf, vsiz);
-  vbuf = rbuf + sizeof(procptr);
   bool rv = tcfdbputimpl(fdb, id, vbuf, vsiz, FDBPDPROC);
   if(rbuf != stack) TCFREE(rbuf);
   FDBUNLOCKRECORD(fdb, id);
@@ -1654,8 +1661,8 @@ static int64_t tcfdbnextid(TCFDB *fdb, int64_t id){
    `dmode' specifies behavior when the key overlaps.
    If successful, the return value is true, else, it is false. */
 static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int dmode){
-  assert(fdb && id > 0 && vbuf && vsiz >= 0);
-  if(vsiz > fdb->width) vsiz = fdb->width;
+  assert(fdb && id > 0);
+  if(vsiz > (int64_t)fdb->width) vsiz = fdb->width;
   TCDODEBUG(fdb->cnt_readrec++);
   unsigned char *rec = fdb->array + (id - 1) * (fdb->rsiz);
   uint64_t nsiz = FDBHEADSIZ + id * fdb->rsiz;
@@ -1666,6 +1673,11 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
     }
     if(!FDBLOCKATTR(fdb)) return false;
     if(nsiz > fdb->fsiz){
+      if(vsiz < 0){
+        tcfdbsetecode(fdb, TCENOREC, __FILE__, __LINE__, __func__);
+        FDBUNLOCKATTR(fdb);
+        return false;
+      }
       if(nsiz + fdb->rsiz * FDBTRUNCALW < fdb->limsiz) nsiz += fdb->rsiz * FDBTRUNCALW;
       if(ftruncate(fdb->fd, nsiz) == -1){
         tcfdbsetecode(fdb, TCETRUNC, __FILE__, __LINE__, __func__);
@@ -1796,6 +1808,27 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
       FDBPDPROCOP *procptr = *(FDBPDPROCOP **)((char *)vbuf - sizeof(procptr));
       int nvsiz;
       char *nvbuf = procptr->proc(rp, osiz, &nvsiz, procptr->op);
+      if(nvbuf == (void *)-1){
+        memset(rec, 0, fdb->wsiz + 1);
+        TCDODEBUG(fdb->cnt_writerec++);
+        if(!FDBLOCKATTR(fdb)) return false;
+        fdb->rnum--;
+        if(fdb->rnum < 1){
+          fdb->min = 0;
+          fdb->max = 0;
+        } else if(fdb->rnum < 2){
+          if(fdb->min == id){
+            fdb->min = fdb->max;
+          } else if(fdb->max == id){
+            fdb->max = fdb->min;
+          }
+        } else {
+          if(id == fdb->min) fdb->min = tcfdbnextid(fdb, id);
+          if(id == fdb->max) fdb->max = tcfdbprevid(fdb, id);
+        }
+        FDBUNLOCKATTR(fdb);
+        return true;
+      }
       if(!nvbuf){
         tcfdbsetecode(fdb, TCEKEEP, __FILE__, __LINE__, __func__);
         return false;
@@ -1826,6 +1859,10 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
       TCDODEBUG(fdb->cnt_writerec++);
       return true;
     }
+  }
+  if(vsiz < 0){
+    tcfdbsetecode(fdb, TCENOREC, __FILE__, __LINE__, __func__);
+    return false;
   }
   unsigned char *wp = rec;
   switch(fdb->wsiz){

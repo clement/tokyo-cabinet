@@ -1756,10 +1756,16 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
             const char *typestr = TCLISTVALPTR(tokens, 2);
             int type = tctdbqrystrtoordertype(typestr);
             if(type >= 0) tctdbqrysetorder(qry, name, type);
-          } else if((!strcmp(cmd, "setmax") || !strcmp(cmd, "max")) && tnum > 1){
+          } else if((!strcmp(cmd, "setlimit") || !strcmp(cmd, "limit") ||
+                     !strcmp(cmd, "setmax") || !strcmp(cmd, "max") ) && tnum > 1){
             const char *maxstr = TCLISTVALPTR(tokens, 1);
-            int64_t max = tcatoi(maxstr);
-            if(max >= 0) tctdbqrysetmax(qry, max);
+            int max = tcatoi(maxstr);
+            int skip = 0;
+            if(tnum > 2){
+              maxstr = TCLISTVALPTR(tokens, 2);
+              skip = tcatoi(maxstr);
+            }
+            tctdbqrysetlimit(qry, max, skip);
           } else if(!strcmp(cmd, "get") || !strcmp(cmd, "columns")){
             if(!cnames) cnames = tclistnew();
             for(int j = 1; j < tnum; j++){
@@ -1894,7 +1900,7 @@ void *tcadbreveal(TCADB *adb){
 /* Store a record into an abstract database object with a duplication handler. */
 bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
-  assert(adb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0 && proc);
+  assert(adb && kbuf && ksiz >= 0 && proc);
   bool err = false;
   switch(adb->omode){
   case ADBOMDB:

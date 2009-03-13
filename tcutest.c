@@ -22,6 +22,7 @@
 
 /* global variables */
 const char *g_progname;                  // program name
+unsigned int g_randseed;                 // random seed
 
 
 /* function prototypes */
@@ -53,7 +54,9 @@ static int procwicked(int rnum);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  srand((unsigned int)(tctime() * 1000) % UINT_MAX);
+  const char *ebuf = getenv("TCRNDSEED");
+  g_randseed = ebuf ? tcatoix(ebuf) : tctime() * 1000;
+  srand(g_randseed);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "xstr")){
@@ -120,6 +123,7 @@ static void iputchar(int c){
 
 /* duplication callback function */
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(myrand(4) == 0) return (void *)-1;
   if(myrand(2) == 0) return NULL;
   int len = myrand(RECBUFSIZ);
   char buf[RECBUFSIZ];
@@ -415,7 +419,7 @@ static int runwicked(int argc, char **argv){
 
 /* perform xstr command */
 static int procxstr(int rnum){
-  iprintf("<Extensible String Writing Test>\n  rnum=%d\n\n", rnum);
+  iprintf("<Extensible String Writing Test>\n  seed=%u  rnum=%d\n\n", g_randseed, rnum);
   double stime = tctime();
   TCXSTR *xstr = tcxstrnew();
   for(int i = 1; i <= rnum; i++){
@@ -437,7 +441,8 @@ static int procxstr(int rnum){
 
 /* perform list command */
 static int proclist(int rnum, int anum, bool rd){
-  iprintf("<List Writing Test>\n  rnum=%d  anum=%d  rd=%d\n\n", rnum, anum, rd);
+  iprintf("<List Writing Test>\n  seed=%u  rnum=%d  anum=%d  rd=%d\n\n",
+          g_randseed, rnum, anum, rd);
   double stime = tctime();
   TCLIST *list = (anum > 0) ? tclistnew2(anum) : tclistnew();
   for(int i = 1; i <= rnum; i++){
@@ -472,8 +477,8 @@ static int proclist(int rnum, int anum, bool rd){
 
 /* perform map command */
 static int procmap(int rnum, int bnum, bool rd, bool tr, bool rnd, int dmode){
-  iprintf("<Map Writing Test>\n  rnum=%d  bnum=%d  rd=%d  tr=%d  rnd=%d  dmode=%d\n\n",
-          rnum, bnum, rd, tr, rnd, dmode);
+  iprintf("<Map Writing Test>\n  seed=%u  rnum=%d  bnum=%d  rd=%d  tr=%d  rnd=%d  dmode=%d\n\n",
+          g_randseed, rnum, bnum, rd, tr, rnd, dmode);
   double stime = tctime();
   TCMAP *map = (bnum > 0) ? tcmapnew2(bnum) : tcmapnew();
   for(int i = 1; i <= rnum; i++){
@@ -547,8 +552,8 @@ static int procmap(int rnum, int bnum, bool rd, bool tr, bool rnd, int dmode){
 
 /* perform tree command */
 static int proctree(int rnum, bool rd, bool tr, bool rnd, int dmode){
-  iprintf("<Tree Writing Test>\n  rnum=%d  rd=%d  tr=%d  rnd=%d  dmode=%d\n\n",
-          rnum, rd, tr, rnd, dmode);
+  iprintf("<Tree Writing Test>\n  seed=%u  rnum=%d  rd=%d  tr=%d  rnd=%d  dmode=%d\n\n",
+          g_randseed, rnum, rd, tr, rnd, dmode);
   double stime = tctime();
   TCTREE *tree = tctreenew();
   for(int i = 1; i <= rnum; i++){
@@ -622,8 +627,8 @@ static int proctree(int rnum, bool rd, bool tr, bool rnd, int dmode){
 
 /* perform mdb command */
 static int procmdb(int rnum, int bnum, bool rd, bool tr, bool rnd, int dmode){
-  iprintf("<On-memory Hash Database Writing Test>\n  rnum=%d  bnum=%d  rd=%d  tr=%d  rnd=%d"
-          "  dmode=%d\n\n", rnum, bnum, rd, tr, rnd, dmode);
+  iprintf("<On-memory Hash Database Writing Test>\n  seed=%u  rnum=%d  bnum=%d  rd=%d  tr=%d"
+          "  rnd=%d  dmode=%d\n\n", g_randseed, rnum, bnum, rd, tr, rnd, dmode);
   double stime = tctime();
   TCMDB *mdb = (bnum > 0) ? tcmdbnew2(bnum) : tcmdbnew();
   for(int i = 1; i <= rnum; i++){
@@ -697,8 +702,8 @@ static int procmdb(int rnum, int bnum, bool rd, bool tr, bool rnd, int dmode){
 
 /* perform ndb command */
 static int procndb(int rnum, bool rd, bool tr, bool rnd, int dmode){
-  iprintf("<On-memory Tree Database Writing Test>\n  rnum=%d  rd=%d  tr=%d  rnd=%d  dmode=%d\n\n",
-          rnum, rd, tr, rnd, dmode);
+  iprintf("<On-memory Tree Database Writing Test>\n  seed=%u  rnum=%d  rd=%d  tr=%d"
+          "  rnd=%d  dmode=%d\n\n", g_randseed, rnum, rd, tr, rnd, dmode);
   double stime = tctime();
   TCNDB *ndb = tcndbnew();
   for(int i = 1; i <= rnum; i++){
@@ -772,7 +777,7 @@ static int procndb(int rnum, bool rd, bool tr, bool rnd, int dmode){
 
 /* perform misc command */
 static int procmisc(int rnum){
-  iprintf("<Miscellaneous Test>\n  rnum=%d\n\n", rnum);
+  iprintf("<Miscellaneous Test>\n  seed=%u  rnum=%d\n\n", g_randseed, rnum);
   double stime = tctime();
   bool err = false;
   for(int i = 1; i <= rnum && !err; i++){
@@ -1178,7 +1183,7 @@ static int procmisc(int rnum){
 
 /* perform wicked command */
 static int procwicked(int rnum){
-  iprintf("<Wicked Writing Test>\n  rnum=%d\n\n", rnum);
+  iprintf("<Wicked Writing Test>\n  seed=%u  rnum=%d\n\n", g_randseed, rnum);
   double stime = tctime();
   TCMPOOL *mpool = tcmpoolglobal();
   TCXSTR *xstr = myrand(2) > 0 ? tcxstrnew() : tcxstrnew2("hello world");

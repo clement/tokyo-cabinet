@@ -968,16 +968,19 @@ The function `tctdbqrysetorder' is used in order to set the order of a query obj
 .RE
 .RE
 .PP
-The function `tctdbqrysetmax' is used in order to set the maximum number of records of the result of a query object.
+The function `tctdbqrysetlimit' is used in order to set the limit number of records of the result of a query object.
 .PP
 .RS
 .br
-\fBvoid tctdbqrysetmax(TDBQRY *\fIqry\fB, int \fImax\fB);\fR
+\fBvoid tctdbqrysetlimit(TDBQRY *\fIqry\fB, int \fImax\fB, int \fIskip\fB);\fR
 .RS
 `\fIqry\fR' specifies the query object.
 .RE
 .RS
-`\fImax\fR' specifies the maximum number of records of the result.
+`\fImax\fR' specifies the maximum number of records of the result.  If it is negative, no limit is specified.
+.RE
+.RS
+`\fIskip\fR' specifies the number of skipped records of the result.  If it is not more than 0, no record is skipped.
 .RE
 .RE
 .PP

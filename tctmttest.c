@@ -57,6 +57,7 @@ typedef struct {                         // type of structure for typical thread
 
 /* global variables */
 const char *g_progname;                  // program name
+unsigned int g_randseed;                 // random seed
 int g_dbgfd;                             // debugging output
 
 
@@ -94,9 +95,11 @@ static void *threadtypical(void *targ);
 /* main routine */
 int main(int argc, char **argv){
   g_progname = argv[0];
-  const char *ebuf = getenv("TCDBGFD");
+  const char *ebuf = getenv("TCRNDSEED");
+  g_randseed = ebuf ? tcatoix(ebuf) : tctime() * 1000;
+  srand(g_randseed);
+  ebuf = getenv("TCDBGFD");
   g_dbgfd = ebuf ? tcatoix(ebuf) : UINT16_MAX;
-  srand((unsigned int)(tctime() * 1000) % UINT_MAX);
   if(argc < 2) usage();
   int rv = 0;
   if(!strcmp(argv[1], "write")){
@@ -488,9 +491,9 @@ static int runtypical(int argc, char **argv){
 static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
                      int opts, int rcnum, int lcnum, int ncnum, int xmsiz,
                      int iflags, int omode, bool rnd){
-  iprintf("<Writing Test>\n  path=%s  tnum=%d  rnum=%d  bnum=%d  apow=%d  fpow=%d"
+  iprintf("<Writing Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  bnum=%d  apow=%d  fpow=%d"
           "  opts=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d  iflags=%d  omode=%d  rnd=%d\n\n",
-          path, tnum, rnum, bnum, apow, fpow, opts, rcnum, lcnum, ncnum, xmsiz,
+          g_randseed, path, tnum, rnum, bnum, apow, fpow, opts, rcnum, lcnum, ncnum, xmsiz,
           iflags, omode, rnd);
   bool err = false;
   double stime = tctime();
@@ -587,8 +590,9 @@ static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, i
 /* perform read command */
 static int procread(const char *path, int tnum, int rcnum, int lcnum, int ncnum, int xmsiz,
                     int omode, bool rnd){
-  iprintf("<Reading Test>\n  path=%s  tnum=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d"
-          "  omode=%d  rnd=%d\n\n", path, tnum, rcnum, lcnum, ncnum, xmsiz, omode, rnd);
+  iprintf("<Reading Test>\n  seed=%u  path=%s  tnum=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d"
+          "  omode=%d  rnd=%d\n\n",
+          g_randseed, path, tnum, rcnum, lcnum, ncnum, xmsiz, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCTDB *tdb = tctdbnew();
@@ -661,8 +665,9 @@ static int procread(const char *path, int tnum, int rcnum, int lcnum, int ncnum,
 /* perform remove command */
 static int procremove(const char *path, int tnum, int rcnum, int lcnum, int ncnum, int xmsiz,
                       int omode, bool rnd){
-  iprintf("<Removing Test>\n  path=%s  tnum=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d"
-          "  omode=%d  rnd=%d\n\n", path, tnum, rcnum, lcnum, ncnum, xmsiz, omode, rnd);
+  iprintf("<Removing Test>\n  seed=%u  path=%s  tnum=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d"
+          "  omode=%d  rnd=%d\n\n",
+          g_randseed, path, tnum, rcnum, lcnum, ncnum, xmsiz, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCTDB *tdb = tctdbnew();
@@ -734,8 +739,8 @@ static int procremove(const char *path, int tnum, int rcnum, int lcnum, int ncnu
 
 /* perform wicked command */
 static int procwicked(const char *path, int tnum, int rnum, int opts, int omode){
-  iprintf("<Writing Test>\n  path=%s  tnum=%d  rnum=%d  opts=%d  omode=%d\n\n",
-          path, tnum, rnum, opts, omode);
+  iprintf("<Writing Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  opts=%d  omode=%d\n\n",
+          g_randseed, path, tnum, rnum, opts, omode);
   bool err = false;
   double stime = tctime();
   TCTDB *tdb = tctdbnew();
@@ -834,9 +839,10 @@ static int procwicked(const char *path, int tnum, int rnum, int opts, int omode)
 static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
                        int opts, int rcnum, int lcnum, int ncnum, int xmsiz, int omode,
                        int rratio){
-  iprintf("<Typical Access Test>\n  path=%s  tnum=%d  rnum=%d  bnum=%d  apow=%d  fpow=%d"
-          "  opts=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d  omode=%d  rratio=%d\n\n",
-          path, tnum, rnum, bnum, apow, fpow, opts, rcnum, lcnum, ncnum, xmsiz, omode, rratio);
+  iprintf("<Typical Access Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  bnum=%d  apow=%d"
+          "  fpow=%d  opts=%d  rcnum=%d  lcnum=%d  ncnum=%d  xmsiz=%d  omode=%d  rratio=%d\n\n",
+          g_randseed, path, tnum, rnum, bnum, apow, fpow, opts, rcnum, lcnum, ncnum, xmsiz,
+          omode, rratio);
   bool err = false;
   double stime = tctime();
   TCTDB *tdb = tctdbnew();
@@ -1248,7 +1254,7 @@ static void *threadwicked(void *targ){
           tctdbqrysetorder(qry, "num", TDBQONUMDESC);
           break;
         }
-        tctdbqrysetmax(qry, 10);
+        tctdbqrysetlimit(qry, 10, myrand(10));
       } else {
         int cnum = myrand(4);
         if(cnum < 1 && myrand(5) != 0) cnum = 1;
@@ -1269,7 +1275,7 @@ static void *threadwicked(void *targ){
           int type = types[myrand(sizeof(types) / sizeof(*types))];
           tctdbqrysetorder(qry, name, type);
         }
-        if(myrand(3) != 0) tctdbqrysetmax(qry, myrand(i));
+        if(myrand(3) != 0) tctdbqrysetlimit(qry, myrand(i), myrand(10));
       }
       if(myrand(10) == 0){
         TCLIST *res = tctdbqrysearch(qry);
@@ -1373,8 +1379,6 @@ static void *threadtypical(void *targ){
       TDBQRY *qry = tctdbqrynew(tdb);
       char expr[RECBUFSIZ];
       sprintf(expr, "%d", myrand(i) + 1);
-
-      // hoge
       switch(myrand(6) * 1){
       default:
         tctdbqryaddcond(qry, "str", TDBQCSTREQ, expr);
@@ -1395,27 +1399,8 @@ static void *threadtypical(void *targ){
         tctdbqryaddcond(qry, "num", TDBQCNUMLT, expr);
         break;
       }
-      /*
-      switch(myrand(5)){
-      case 0:
-        tctdbqrysetorder(qry, "str", TDBQOSTRASC);
-        break;
-      case 1:
-        tctdbqrysetorder(qry, "str", TDBQOSTRDESC);
-        break;
-      case 2:
-        tctdbqrysetorder(qry, "num", TDBQONUMASC);
-        break;
-      case 3:
-        tctdbqrysetorder(qry, "num", TDBQONUMDESC);
-        break;
-      }
-      */
-      tctdbqrysetmax(qry, 10);
+      tctdbqrysetlimit(qry, 10, myrand(5) * 10);
       TCLIST *res = tctdbqrysearch(qry);
-
-      //printf("%s", tctdbqryhint(qry));
-
       tclistdel(res);
       tctdbqrydel(qry);
     }

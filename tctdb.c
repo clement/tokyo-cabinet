@@ -745,6 +745,7 @@ TDBQRY *tctdbqrynew(TCTDB *tdb){
   qry->oname = NULL;
   qry->otype = TDBQOSTRASC;
   qry->max = INT_MAX;
+  qry->skip = 0;
   qry->hint = tcxstrnew();
   return qry;
 }
@@ -805,10 +806,11 @@ void tctdbqrysetorder(TDBQRY *qry, const char *name, int type){
 }
 
 
-/* Set the maximum number of records of the result of a query object. */
-void tctdbqrysetmax(TDBQRY *qry, int max){
+/* Set the limit number of records of the result of a query object. */
+void tctdbqrysetlimit(TDBQRY *qry, int max, int skip){
   assert(qry);
-  qry->max = max;
+  qry->max = (max >= 0) ? max : INT_MAX;
+  qry->skip = (skip > 0) ? skip : 0;
 }
 
 
@@ -1951,6 +1953,7 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
   int cnum = qry->cnum;
   int acnum = cnum;
   int max = qry->max;
+  if(max < INT_MAX - qry->skip) max += qry->skip;
   const char *oname = qry->oname;
   int otype = qry->otype;
   TCXSTR *hint = qry->hint;
@@ -2709,6 +2712,13 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
     tcxstrprintf(hint, "leaving the index order\n");
   } else {
     tcxstrprintf(hint, "leaving the natural order\n");
+  }
+  if(qry->skip > 0){
+    int left = tclmin(TCLISTNUM(res), qry->skip);
+    while(left-- > 0){
+      int rsiz;
+      TCFREE(tclistshift(res, &rsiz));
+    }
   }
   if(TCLISTNUM(res) > max){
     int left = TCLISTNUM(res) - max;

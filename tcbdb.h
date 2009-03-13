@@ -1018,7 +1018,8 @@ bool tcbdbputdupback2(TCBDB *bdb, const char *kstr, const char *vstr);
    `bdb' specifies the B+ tree database object connected as a writer.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
-   `vbuf' specifies the pointer to the region of the value.
+   `vbuf' specifies the pointer to the region of the value.  `NULL' means that record addition is
+   ommited if there is no corresponding record.
    `vsiz' specifies the size of the region of the value.
    `proc' specifies the pointer to the callback function to process duplication.  It receives
    four parameters.  The first parameter is the pointer to the region of the value.  The second
@@ -1026,7 +1027,7 @@ bool tcbdbputdupback2(TCBDB *bdb, const char *kstr, const char *vstr);
    variable into which the size of the region of the return value is assigned.  The fourth
    parameter is the pointer to the optional opaque object.  It returns the pointer to the result
    object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
-   not modified.
+   not modified.  If it is `(void *)-1', the record is removed.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
