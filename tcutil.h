@@ -2420,6 +2420,18 @@ char *tcregexreplace(const char *str, const char *regex, const char *alt);
 void tcmd5hash(const void *ptr, int size, char *buf);
 
 
+/* Sort top records of an array.
+   `base' spacifies the pointer to an array.
+   `nmemb' specifies the number of elements of the array.
+   `size' specifies the size of each element.
+   `top' specifies the number of top records.
+   `compar' specifies the pointer to comparing function.  The two arguments specify the pointers
+   of elements.  The comparing function should returns positive if the former is big, negative
+   if the latter is big, 0 if both are equal. */
+void tctopsort(void *base, size_t nmemb, size_t size, size_t top,
+               int(*compar)(const void *, const void *));
+
+
 /* Create a consistent hashing object.
    `range' specifies the number of nodes.  It should be more than 0.  The range of hash values is
    from 0 to less than the specified number.
@@ -3278,8 +3290,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.10"
-#define _TC_LIBVER     801
+#define _TC_VERSION    "1.4.11"
+#define _TC_LIBVER     802
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

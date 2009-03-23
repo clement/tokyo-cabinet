@@ -2206,6 +2206,17 @@
 <dd>`<var>buf</var>' specifies the pointer to the region into which the result string is written.  The size of the buffer should be equal to or more than 48 bytes.</dd>
 </dl>
 
+<p>The function `tctopsort' is used in order to sort top records of an array.</p>
+
+<dl class="api">
+<dt><code>void tctopsort(void *<var>base</var>, size_t <var>nmemb</var>, size_t <var>size</var>, size_t <var>top</var>, int(*<var>compar</var>)(const void *, const void *));</code></dt>
+<dd>`<var>base</var>' spacifies the pointer to an array.</dd>
+<dd>`<var>nmemb</var>' specifies the number of elements of the array.</dd>
+<dd>`<var>size</var>' specifies the size of each element.</dd>
+<dd>`<var>top</var>' specifies the number of top records.</dd>
+<dd>`<var>compar</var>' specifies the pointer to comparing function.  The two arguments specify the pointers of elements.  The comparing function should returns positive if the former is big, negative if the latter is big, 0 if both are equal.</dd>
+</dl>
+
 <p>The function `tcchidxnew' is used in order to create a consistent hashing object.</p>
 
 <dl class="api">
@@ -5235,7 +5246,7 @@ int main(int argc, char **argv){
 <dt><code>int tctdbecode(TCTDB *<var>tdb</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object.</dd>
 <dd>The return value is the last happened error code.</dd>
-<dd>The following error code is defined: `TCESUCCESS' for success, `TCETHREAD' for threading error, `TCEINVALID' for invalid operation, `TCENOFILE' for file not found, `TCENOPERM' for no permission, `TCEMETA' for invalid meta data, `TCERHEAD' for invalid record header, `TCEOPEN' for open error, `TCECLOSE' for close error, `TCETRUNC' for trunc error, `TCESYNC' for sync error, `TCESTAT' for stat error, `TCESEEK' for seek error, `TCEREAD' for read error, `TCEWRITE' for write error, `TCEMMAP' for mmap error, `TCELOCK' for lock error, `TCEUNLINK' for unlink error, `TCERENAME' for rename error, `TCEMKDIR' for mkdir error, `TCERMDIR' for rmdir error, `TCEKEEP' for existing record, `TCENOREC' for no record found, and `TCEMISC' for miscellaneous error.</dd>
+<dd>The following error codes are defined: `TCESUCCESS' for success, `TCETHREAD' for threading error, `TCEINVALID' for invalid operation, `TCENOFILE' for file not found, `TCENOPERM' for no permission, `TCEMETA' for invalid meta data, `TCERHEAD' for invalid record header, `TCEOPEN' for open error, `TCECLOSE' for close error, `TCETRUNC' for trunc error, `TCESYNC' for sync error, `TCESTAT' for stat error, `TCESEEK' for seek error, `TCEREAD' for read error, `TCEWRITE' for write error, `TCEMMAP' for mmap error, `TCELOCK' for lock error, `TCEUNLINK' for unlink error, `TCERENAME' for rename error, `TCEMKDIR' for mkdir error, `TCERMDIR' for rmdir error, `TCEKEEP' for existing record, `TCENOREC' for no record found, and `TCEMISC' for miscellaneous error.</dd>
 </dl>
 
 <p>The function `tctdbsetmutex' is used in order to set mutual exclusion control of a table database object for threading.</p>

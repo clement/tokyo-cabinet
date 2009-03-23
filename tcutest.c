@@ -33,6 +33,7 @@ static void iputchar(int c);
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int myrand(int range);
+static int intcompar(const void *ap, const void *bp);
 static int runxstr(int argc, char **argv);
 static int runlist(int argc, char **argv);
 static int runmap(int argc, char **argv);
@@ -149,6 +150,12 @@ static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, voi
 /* get a random number */
 static int myrand(int range){
   return (int)((double)range * rand() / (RAND_MAX + 1.0));
+}
+
+
+/* compare two integers */
+static int intcompar(const void *ap, const void *bp){
+  return *(int *)ap - *(int *)bp;
 }
 
 
@@ -885,6 +892,23 @@ static int procmisc(int rnum){
         tcmd5hash(kbuf, ksiz, buf);
       }
       tcfree(buf);
+      anum = myrand(30) + 1;
+      int tary[anum], qary[anum];
+      for(int j = 0; j < anum; j++){
+        int val = myrand(anum * 2 + 1);
+        tary[j] = val;
+        qary[j] = val;
+      }
+      int tnum = myrand(anum);
+      tctopsort(tary, anum, sizeof(*tary), tnum, intcompar);
+      qsort(qary, anum, sizeof(*qary), intcompar);
+      for(int j = 0; j < tnum; j++){
+        if(tary[j] != qary[j]) err = true;
+      }
+      qsort(tary, anum, sizeof(*tary), intcompar);
+      for(int j = 0; j < anum; j++){
+        if(tary[j] != qary[j]) err = true;
+      }
       TCCHIDX *chidx = tcchidxnew(5);
       for(int i = 0; i < 10; i++){
         char kbuf[RECBUFSIZ];

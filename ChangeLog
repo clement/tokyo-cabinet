@@ -1,3 +1,17 @@
+2009-03-11  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tctopsort): new function.
+
+	* tchdb.c (tchdbfbpinsert, tchdbfbpsearch, tchdbfbpsplice): performance was improved.
+
+	* tchdb.c (tchdbwriterec): concurrency was improved.
+
+	* tctdb.c (tctdbqrysearchimpl): a bug related to the skip parameter was fixed.
+
+	* tctdb.c (tctdbputimpl, tctdbidxout, tctdbqrysearchimpl): performance was improved.
+
+	- Release: 1.4.11
+
 2009-03-02  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tcmdbputproc, tcndbputfunc): removing mechanism was added.

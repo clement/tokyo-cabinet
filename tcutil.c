@@ -5083,6 +5083,68 @@ void tcmd5hash(const void *ptr, int size, char *buf){
 }
 
 
+/* Sort top records of an array. */
+void tctopsort(void *base, size_t nmemb, size_t size, size_t top,
+               int(*compar)(const void *, const void *)){
+  assert(base && size > 0 && compar);
+  if(nmemb < 1) return;
+  if(top > nmemb) top = nmemb;
+  char *bp = base;
+  char *ep = bp + nmemb * size;
+  char *rp = bp + size;
+  int num = 1;
+  char swap[size];
+  while(rp < ep){
+    if(num < top){
+      int cidx = num;
+      while(cidx > 0){
+        int pidx = (cidx - 1) / 2;
+        if(compar(bp + cidx * size, bp + pidx * size) <= 0) break;
+        memcpy(swap, bp + cidx * size, size);
+        memcpy(bp + cidx * size, bp + pidx * size, size);
+        memcpy(bp + pidx * size, swap, size);
+        cidx = pidx;
+      }
+      num++;
+    } else if(compar(rp, bp) < 0){
+      memcpy(swap, bp, size);
+      memcpy(bp, rp, size);
+      memcpy(rp, swap, size);
+      int pidx = 0;
+      int bot = num / 2;
+      while(pidx < bot){
+        int cidx = pidx * 2 + 1;
+        if(cidx < num - 1 && compar(bp + cidx * size, bp + (cidx + 1) * size) < 0) cidx++;
+        if(compar(bp + pidx * size, bp + cidx * size) > 0) break;
+        memcpy(swap, bp + pidx * size, size);
+        memcpy(bp + pidx * size, bp + cidx * size, size);
+        memcpy(bp + cidx * size, swap, size);
+        pidx = cidx;
+      }
+    }
+    rp += size;
+  }
+  num = top - 1;
+  while(num > 0){
+    memcpy(swap, bp, size);
+    memcpy(bp, bp + num * size, size);
+    memcpy(bp + num * size, swap, size);
+    int pidx = 0;
+    int bot = num / 2;
+    while(pidx < bot){
+      int cidx = pidx * 2 + 1;
+      if(cidx < num - 1 && compar(bp + cidx * size, bp + (cidx + 1) * size) < 0) cidx++;
+      if(compar(bp + pidx * size, bp + cidx * size) > 0) break;
+      memcpy(swap, bp + pidx * size, size);
+      memcpy(bp + pidx * size, bp + cidx * size, size);
+      memcpy(bp + cidx * size, swap, size);
+      pidx = cidx;
+    }
+    num--;
+  }
+}
+
+
 /* Create a consistent hashing object. */
 TCCHIDX *tcchidxnew(int range){
   assert(range > 0);

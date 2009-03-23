@@ -44,9 +44,10 @@
 #define HDBXFSIZINC    32768             // increment of extra file size
 #define HDBMINRUNIT    48                // minimum record reading unit
 #define HDBMAXHSIZ     32                // maximum record header size
+#define HDBFBPALWRAT   2                 // allowance ratio of the free block pool
 #define HDBFBPBSIZ     64                // base region size of the free block pool
 #define HDBFBPESIZ     4                 // size of each region of the free block pool
-#define HDBFBPMGFREQ   256               // frequency to merge the free block pool
+#define HDBFBPMGFREQ   4096              // frequency to merge the free block pool
 #define HDBDRPUNIT     65536             // unit size of the delayed record pool
 #define HDBDRPLAT      2048              // latitude size of the delayed record pool
 #define HDBCACHEOUT    128               // number of records in a process of cacheout
@@ -2039,7 +2040,7 @@ static void tchdbsetbucket(TCHDB *hdb, uint64_t bidx, uint64_t off){
    The return value is true if successful, else, it is false. */
 static bool tchdbsavefbp(TCHDB *hdb){
   assert(hdb);
-  if(hdb->fbpnum > (hdb->fbpmax >> 1)){
+  if(hdb->fbpnum > hdb->fbpmax){
     tchdbfbpmerge(hdb);
   } else if(hdb->fbpnum > 1){
     tcfbpsortbyoff(hdb->fbpool, hdb->fbpnum);
@@ -2089,7 +2090,7 @@ static bool tchdbloadfbp(TCHDB *hdb){
   }
   const char *rp = buf;
   HDBFB *cur = hdb->fbpool;
-  HDBFB *end = cur + hdb->fbpmax;
+  HDBFB *end = cur + hdb->fbpmax * HDBFBPALWRAT;
   uint64_t base = 0;
   while(cur < end && *rp != '\0'){
     int step;
@@ -2106,6 +2107,7 @@ static bool tchdbloadfbp(TCHDB *hdb){
   }
   hdb->fbpnum = cur - (HDBFB *)hdb->fbpool;
   TCFREE(buf);
+  tcfbpsortbyrsiz(hdb->fbpool, hdb->fbpnum);
   return true;
 }
 
@@ -2199,7 +2201,6 @@ static void tcfbpsortbyrsiz(HDBFB *fbpool, int fbpnum){
 static void tchdbfbpmerge(TCHDB *hdb){
   assert(hdb);
   TCDODEBUG(hdb->cnt_mergefbp++);
-  int32_t onum = hdb->fbpnum;
   tcfbpsortbyoff(hdb->fbpool, hdb->fbpnum);
   HDBFB *wp = hdb->fbpool;;
   HDBFB *cur = wp;
@@ -2218,7 +2219,7 @@ static void tchdbfbpmerge(TCHDB *hdb){
   }
   if(end->off > 0) *(wp++) = *end;
   hdb->fbpnum = wp - (HDBFB *)hdb->fbpool;
-  hdb->fbpmis = (hdb->fbpnum < onum) ? 0 : hdb->fbpnum * -2;
+  hdb->fbpmis = hdb->fbpnum * -1;
 }
 
 
@@ -2231,18 +2232,41 @@ static void tchdbfbpinsert(TCHDB *hdb, uint64_t off, uint32_t rsiz){
   TCDODEBUG(hdb->cnt_insertfbp++);
   if(hdb->fpow < 1) return;
   HDBFB *pv = hdb->fbpool;
-  if(hdb->fbpnum >= hdb->fbpmax){
+  if(hdb->fbpnum >= hdb->fbpmax * HDBFBPALWRAT){
     tchdbfbpmerge(hdb);
     tcfbpsortbyrsiz(hdb->fbpool, hdb->fbpnum);
-    if(hdb->fbpnum >= hdb->fbpmax){
+    int diff = hdb->fbpnum - hdb->fbpmax;
+    if(diff > 0){
       TCDODEBUG(hdb->cnt_reducefbp++);
-      int32_t dnum = (hdb->fbpmax >> 2) + 1;
-      memmove(pv, pv + dnum, (hdb->fbpnum - dnum) * sizeof(*pv));
-      hdb->fbpnum -= dnum;
+      memmove(pv, pv + diff, (hdb->fbpnum - diff) * sizeof(*pv));
+      hdb->fbpnum -= diff;
     }
     hdb->fbpmis = 0;
   }
-  pv = pv + hdb->fbpnum;
+  int num = hdb->fbpnum;
+  int left = 0;
+  int right = num;
+  int i = (left + right) / 2;
+  int cand = -1;
+  while(right >= left && i < num){
+    int rv = (int)rsiz - (int)pv[i].rsiz;
+    if(rv == 0){
+      cand = i;
+      break;
+    } else if(rv <= 0){
+      cand = i;
+      right = i - 1;
+    } else {
+      left = i + 1;
+    }
+    i = (left + right) / 2;
+  }
+  if(cand >= 0){
+    pv += cand;
+    memmove(pv + 1, pv, sizeof(*pv) * (num - cand));
+  } else {
+    pv += num;
+  }
   pv->off = off;
   pv->rsiz = rsiz;
   hdb->fbpnum++;
@@ -2263,30 +2287,43 @@ static bool tchdbfbpsearch(TCHDB *hdb, TCHREC *rec){
   }
   uint32_t rsiz = rec->rsiz;
   HDBFB *pv = hdb->fbpool;
-  HDBFB *ep = pv + hdb->fbpnum;
-  while(pv < ep){
-    if(pv->rsiz >= rsiz){
-      if(pv->rsiz > rsiz * 2){
-        uint32_t psiz = tchdbpadsize(hdb, pv->off + rsiz);
-        uint64_t noff = pv->off + rsiz + psiz;
-        if(pv->rsiz >= (noff - pv->off) * 2){
-          TCDODEBUG(hdb->cnt_dividefbp++);
-          rec->off = pv->off;
-          rec->rsiz = noff - pv->off;
-          pv->off = noff;
-          pv->rsiz -= rec->rsiz;
-          return tchdbwritefb(hdb, pv->off, pv->rsiz);
-        }
-      }
-      rec->off = pv->off;
-      rec->rsiz = pv->rsiz;
-      ep--;
-      pv->off = ep->off;
-      pv->rsiz = ep->rsiz;
-      hdb->fbpnum--;
-      return true;
+  int num = hdb->fbpnum;
+  int left = 0;
+  int right = num;
+  int i = (left + right) / 2;
+  int cand = -1;
+  while(right >= left && i < num){
+    int rv = (int)rsiz - (int)pv[i].rsiz;
+    if(rv == 0){
+      cand = i;
+      break;
+    } else if(rv <= 0){
+      cand = i;
+      right = i - 1;
+    } else {
+      left = i + 1;
     }
-    pv++;
+    i = (left + right) / 2;
+  }
+  if(cand >= 0){
+    pv += cand;
+    if(pv->rsiz > rsiz * 2){
+      uint32_t psiz = tchdbpadsize(hdb, pv->off + rsiz);
+      uint64_t noff = pv->off + rsiz + psiz;
+      if(pv->rsiz >= (noff - pv->off) * 2){
+        TCDODEBUG(hdb->cnt_dividefbp++);
+        rec->off = pv->off;
+        rec->rsiz = noff - pv->off;
+        pv->off = noff;
+        pv->rsiz -= rec->rsiz;
+        return tchdbwritefb(hdb, pv->off, pv->rsiz);
+      }
+    }
+    rec->off = pv->off;
+    rec->rsiz = pv->rsiz;
+    memmove(pv, pv + 1, sizeof(*pv) * (num - cand - 1));
+    hdb->fbpnum--;
+    return true;
   }
   rec->off = hdb->fsiz;
   rec->rsiz = 0;
@@ -2306,24 +2343,62 @@ static bool tchdbfbpsearch(TCHDB *hdb, TCHREC *rec){
    The return value is whether splicing succeeded or not. */
 static bool tchdbfbpsplice(TCHDB *hdb, TCHREC *rec, uint32_t nsiz){
   assert(hdb && rec && nsiz > 0);
-  if(hdb->fbpnum < 1) return false;
-  uint64_t off = rec->off + rec->rsiz;
-  uint32_t rsiz = rec->rsiz;
-  HDBFB *pv = hdb->fbpool;
-  HDBFB *ep = pv + hdb->fbpnum;
-  while(pv < ep){
-    if(pv->off == off && rsiz + pv->rsiz >= nsiz){
-      if(hdb->iter == pv->off) hdb->iter += pv->rsiz;
-      rec->rsiz += pv->rsiz;
-      ep--;
-      pv->off = ep->off;
-      pv->rsiz = ep->rsiz;
-      hdb->fbpnum--;
-      return true;
+  if(hdb->mmtx){
+    if(hdb->fbpnum < 1) return false;
+    uint64_t off = rec->off + rec->rsiz;
+    uint32_t rsiz = rec->rsiz;
+    uint8_t magic;
+    if(tchdbseekreadtry(hdb, off, &magic, sizeof(magic)) && magic != HDBMAGICFB) return false;
+    HDBFB *pv = hdb->fbpool;
+    HDBFB *ep = pv + hdb->fbpnum;
+    while(pv < ep){
+      if(pv->off == off && rsiz + pv->rsiz >= nsiz){
+        if(hdb->iter == pv->off) hdb->iter += pv->rsiz;
+        rec->rsiz += pv->rsiz;
+        ep--;
+        pv->off = ep->off;
+        pv->rsiz = ep->rsiz;
+        hdb->fbpnum--;
+        return true;
+      }
+      pv++;
     }
-    pv++;
+    return false;
   }
-  return false;
+  uint64_t off = rec->off + rec->rsiz;
+  TCHREC nrec;
+  char nbuf[HDBIOBUFSIZ];
+  while(off < hdb->fsiz){
+    nrec.off = off;
+    if(!tchdbreadrec(hdb, &nrec, nbuf)) return false;
+    if(nrec.magic != HDBMAGICFB) break;
+    if(hdb->iter == off) hdb->iter += nrec.rsiz;
+    off += nrec.rsiz;
+  }
+  uint32_t jsiz = off - rec->off;
+  if(jsiz < nsiz) return false;
+  rec->rsiz = jsiz;
+  uint64_t base = rec->off;
+  HDBFB *wp = hdb->fbpool;;
+  HDBFB *cur = wp;
+  HDBFB *end = wp + hdb->fbpnum;
+  while(cur < end){
+    if(cur->off < base || cur->off > off) *(wp++) = *cur;
+    cur++;
+  }
+  hdb->fbpnum = wp - (HDBFB *)hdb->fbpool;
+  if(jsiz > nsiz * 2){
+    uint32_t psiz = tchdbpadsize(hdb, rec->off + nsiz);
+    uint64_t noff = rec->off + nsiz + psiz;
+    if(jsiz >= (noff - rec->off) * 2){
+      TCDODEBUG(hdb->cnt_dividefbp++);
+      nsiz = off - noff;
+      if(!tchdbwritefb(hdb, noff, nsiz)) return false;
+      rec->rsiz = noff - rec->off;
+      tchdbfbpinsert(hdb, noff, nsiz);
+    }
+  }
+  return true;
 }
 
 
@@ -2404,16 +2479,27 @@ static bool tchdbwriterec(TCHDB *hdb, TCHREC *rec, uint64_t bidx, off_t entoff){
     finc = rec->rsiz;
   } else if(rsiz > rec->rsiz){
     if(rbuf != stack) TCFREE(rbuf);
+    if(!HDBLOCKDB(hdb)) return false;
     if(tchdbfbpsplice(hdb, rec, rsiz)){
       TCDODEBUG(hdb->cnt_splicefbp++);
-      return tchdbwriterec(hdb, rec, bidx, entoff);
+      bool rv = tchdbwriterec(hdb, rec, bidx, entoff);
+      HDBUNLOCKDB(hdb);
+      return rv;
     }
     TCDODEBUG(hdb->cnt_moverec++);
-    if(!tchdbwritefb(hdb, rec->off, rec->rsiz)) return false;
+    if(!tchdbwritefb(hdb, rec->off, rec->rsiz)){
+      HDBUNLOCKDB(hdb);
+      return false;
+    }
     tchdbfbpinsert(hdb, rec->off, rec->rsiz);
     rec->rsiz = rsiz;
-    if(!tchdbfbpsearch(hdb, rec)) return false;
-    return tchdbwriterec(hdb, rec, bidx, entoff);
+    if(!tchdbfbpsearch(hdb, rec)){
+      HDBUNLOCKDB(hdb);
+      return false;
+    }
+    bool rv = tchdbwriterec(hdb, rec, bidx, entoff);
+    HDBUNLOCKDB(hdb);
+    return rv;
   } else {
     TCDODEBUG(hdb->cnt_reuserec++);
     uint32_t psiz = rec->rsiz - rsiz;
@@ -2424,8 +2510,16 @@ static bool tchdbwriterec(TCHDB *hdb, TCHREC *rec, uint64_t bidx, off_t entoff){
       uint32_t nsiz = rec->rsiz - rsiz - psiz;
       rec->rsiz = noff - rec->off;
       rec->psiz = psiz;
-      if(!tchdbwritefb(hdb, noff, nsiz)) return false;
+      if(!tchdbwritefb(hdb, noff, nsiz)){
+        if(rbuf != stack) TCFREE(rbuf);
+        return false;
+      }
+      if(!HDBLOCKDB(hdb)){
+        if(rbuf != stack) TCFREE(rbuf);
+        return false;
+      }
       tchdbfbpinsert(hdb, noff, nsiz);
+      HDBUNLOCKDB(hdb);
     }
     rec->psiz = psiz;
   }
@@ -3056,7 +3150,7 @@ static bool tchdbopenimpl(TCHDB *hdb, const char *path, int omode){
   }
   hdb->fbpmax = 1 << hdb->fpow;;
   if(omode & HDBOWRITER){
-    TCMALLOC(hdb->fbpool, hdb->fbpmax * sizeof(HDBFB));
+    TCMALLOC(hdb->fbpool, hdb->fbpmax * HDBFBPALWRAT * sizeof(HDBFB));
   } else {
     hdb->fbpool = NULL;
   }
@@ -3208,7 +3302,7 @@ static bool tchdbputimpl(TCHDB *hdb, const char *kbuf, int ksiz, uint64_t bidx, 
         entoff = rec.off + (sizeof(uint8_t) + sizeof(uint8_t)) +
           (hdb->ba64 ? sizeof(uint64_t) : sizeof(uint32_t));
       } else {
-        bool rv, lock;
+        bool rv;
         int nvsiz;
         char *nvbuf;
         HDBPDPROCOP *procptr;
@@ -3227,7 +3321,6 @@ static bool tchdbputimpl(TCHDB *hdb, const char *kbuf, int ksiz, uint64_t bidx, 
             return false;
           }
           nvsiz = rec.vsiz + vsiz;
-          lock = vsiz + TCCALCVNUMSIZE(nvsiz) - TCCALCVNUMSIZE(rec.vsiz) > rec.psiz;
           if(rec.bbuf){
             TCREALLOC(rec.bbuf, rec.bbuf, rec.ksiz + nvsiz);
             memcpy(rec.bbuf + rec.ksiz + rec.vsiz, vbuf, vsiz);
@@ -3240,16 +3333,6 @@ static bool tchdbputimpl(TCHDB *hdb, const char *kbuf, int ksiz, uint64_t bidx, 
             memcpy(rec.bbuf + rec.vsiz, vbuf, vsiz);
             rec.vbuf = rec.bbuf;
             rec.vsiz = nvsiz;
-          }
-          if(lock){
-            if(!HDBLOCKDB(hdb)){
-              TCFREE(rec.bbuf);
-              return false;
-            }
-            rv = tchdbwriterec(hdb, &rec, bidx, entoff);
-            HDBUNLOCKDB(hdb);
-            TCFREE(rec.bbuf);
-            return rv;
           }
           rv = tchdbwriterec(hdb, &rec, bidx, entoff);
           TCFREE(rec.bbuf);
@@ -3311,22 +3394,10 @@ static bool tchdbputimpl(TCHDB *hdb, const char *kbuf, int ksiz, uint64_t bidx, 
           if(nvbuf == (void *)-1){
             return tchdbremoverec(hdb, &rec, rbuf, bidx, entoff);
           } else if(nvbuf){
-            lock = nvsiz + TCCALCVNUMSIZE(nvsiz) - TCCALCVNUMSIZE(rec.vsiz) >
-              rec.vsiz + rec.psiz;
             rec.kbuf = kbuf;
             rec.ksiz = ksiz;
             rec.vbuf = nvbuf;
             rec.vsiz = nvsiz;
-            if(lock){
-              if(!HDBLOCKDB(hdb)){
-                TCFREE(nvbuf);
-                return false;
-              }
-              rv = tchdbwriterec(hdb, &rec, bidx, entoff);
-              HDBUNLOCKDB(hdb);
-              TCFREE(nvbuf);
-              return rv;
-            }
             rv = tchdbwriterec(hdb, &rec, bidx, entoff);
             TCFREE(nvbuf);
             return rv;
@@ -3337,17 +3408,10 @@ static bool tchdbputimpl(TCHDB *hdb, const char *kbuf, int ksiz, uint64_t bidx, 
           break;
         }
         TCFREE(rec.bbuf);
-        lock = vsiz + TCCALCVNUMSIZE(vsiz) - TCCALCVNUMSIZE(rec.vsiz) > rec.vsiz + rec.psiz;
         rec.ksiz = ksiz;
         rec.vsiz = vsiz;
         rec.kbuf = kbuf;
         rec.vbuf = vbuf;
-        if(lock){
-          if(!HDBLOCKDB(hdb)) return false;
-          rv = tchdbwriterec(hdb, &rec, bidx, entoff);
-          HDBUNLOCKDB(hdb);
-          return rv;
-        }
         return tchdbwriterec(hdb, &rec, bidx, entoff);
       }
     }

@@ -3543,6 +3543,28 @@ The function `tcmd5hash' is used in order to get the MD5 hash value of a record.
 .RE
 .RE
 .PP
+The function `tctopsort' is used in order to sort top records of an array.
+.PP
+.RS
+.br
+\fBvoid tctopsort(void *\fIbase\fB, size_t \fInmemb\fB, size_t \fIsize\fB, size_t \fItop\fB, int(*\fIcompar\fB)(const void *, const void *));\fR
+.RS
+`\fIbase\fR' spacifies the pointer to an array.
+.RE
+.RS
+`\fInmemb\fR' specifies the number of elements of the array.
+.RE
+.RS
+`\fIsize\fR' specifies the size of each element.
+.RE
+.RS
+`\fItop\fR' specifies the number of top records.
+.RE
+.RS
+`\fIcompar\fR' specifies the pointer to comparing function.  The two arguments specify the pointers of elements.  The comparing function should returns positive if the former is big, negative if the latter is big, 0 if both are equal.
+.RE
+.RE
+.PP
 The function `tcchidxnew' is used in order to create a consistent hashing object.
 .PP
 .RS

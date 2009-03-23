@@ -18,7 +18,7 @@ use constant {
 my @commands = (
                 "./tchtest write casket 1000000 1000000",
                 "./tchtest read casket",
-                "./tchtest rcat casket 100000",
+                "./tchtest rcat casket 1000000",
                 "./tcbtest write casket 1000000",
                 "./tcbtest read casket",
                 "./tcbtest rcat -lc 256 -nc 128 casket 100000",
