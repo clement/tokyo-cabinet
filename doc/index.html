@@ -49,24 +49,11 @@
       case 1: text = "much quicker database manager"; break;
       case 3: text = "the ultimate database manager"; break;
       case 5: text = "the supreme database manager"; break;
-      case 7: text = "the lightening database manager"; break;
+      case 7: text = "the lightning database manager"; break;
       case 9: text = "the mighty unbeatable invincible database manager"; break;
       case 11: text = "the dinosaur wing of database managers"; break;
       }
       elem.firstChild.nodeValue = label + ": " + text;
-    }
-  }
-  elem = document.getElementById("logo");
-  if(elem){
-    var rnd = Math.floor(Math.random() * 5);
-    if(rnd == 0){
-      elem.src = "logo-g.png";
-      elem.removeAttribute("height");
-      elem.removeAttribute("width");
-    } else if(rnd == 1){
-      elem.src = "logo-y.png";
-      elem.removeAttribute("height");
-      elem.removeAttribute("width");
     }
   }
 }
@@ -139,7 +126,7 @@
 <p>The following are the source packages of Tokyo Cabinet.  As for binary packages, see the site of each distributor.</p>
 
 <ul>
-<li><a href="tokyocabinet-1.4.11.tar.gz">Latest Source Package (version 1.4.11)</a></li>
+<li><a href="tokyocabinet-1.4.12.tar.gz">Latest Source Package (version 1.4.12)</a></li>
 <li><a href="pastpkg/">Past Versions</a></li>
 </ul>
 

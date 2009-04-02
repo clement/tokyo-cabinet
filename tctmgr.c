@@ -952,6 +952,7 @@ static int procsearch(const char *path, TCLIST *conds, const char *oname, const 
         printf("\t:::: %s\n", hint);
       }
       tclistdel(hints);
+      printf("\t:::: number of records: %d\n", tctdbqrycount(qry));
       printf("\t:::: elapsed time: %.5f\n", etime - stime);
     }
   } else if(bt > 0){
@@ -1003,6 +1004,7 @@ static int procsearch(const char *path, TCLIST *conds, const char *oname, const 
         printf("\t:::: %s\n", hint);
       }
       tclistdel(hints);
+      printf("\t:::: number of records: %d\n", tctdbqrycount(qry));
       printf("\t:::: elapsed time: %.5f\n", etime - stime);
     }
     tclistdel(res);

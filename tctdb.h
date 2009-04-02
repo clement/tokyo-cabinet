@@ -114,6 +114,7 @@ typedef struct {                         /* type of structure for a query */
   int max;                               /* max number of retrieval */
   int skip;                              /* skipping number of retrieval */
   TCXSTR *hint;                          /* hint string */
+  int count;                             /* count of corresponding records */
 } TDBQRY;
 
 enum {                                   /* enumeration for query conditions */
@@ -704,7 +705,9 @@ bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op);
 
 /* Get the hint of a query object.
    `qry' specifies the query object.
-   The return value is the hint string. */
+   The return value is the hint string.
+   This function should be called after the query execution by `tctdbqrysearch' and so on.  The
+   region of the return value is overwritten when this function is called again. */
 const char *tctdbqryhint(TDBQRY *qry);
 
 
@@ -864,6 +867,12 @@ bool tctdbforeach(TCTDB *tdb, TCITER iter, void *op);
    `str' specifies a string.
    The return value is the index type number or -1 on failure. */
 int tctdbstrtoindextype(const char *str);
+
+
+/* Get the count of corresponding records of a query object.
+   `qry' specifies the query object.
+   The return value is the count of corresponding records. */
+int tctdbqrycount(TDBQRY *qry);
 
 
 /* Convert a string into the query operation number.

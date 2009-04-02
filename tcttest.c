@@ -33,8 +33,8 @@ static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCTDB *tdb, const char *func);
-static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int myrand(int range);
+static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int runwrite(int argc, char **argv);
 static int runread(int argc, char **argv);
 static int runremove(int argc, char **argv);
@@ -133,6 +133,16 @@ static void eprint(TCTDB *tdb, const char *func){
 }
 
 
+/* get a random number */
+static int myrand(int range){
+  if(range < 2) return 0;
+  int high = (unsigned int)rand() >> 4;
+  int low = range * (rand() / (RAND_MAX + 1.0));
+  low &= (unsigned int)INT_MAX >> 4;
+  return (high + low) % range;
+}
+
+
 /* iterator function */
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op){
   unsigned int sum = 0;
@@ -143,12 +153,6 @@ static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, voi
     sum += ((char *)vbuf)[vsiz];
   }
   return myrand(100 + (sum & 0xff)) > 0;
-}
-
-
-/* get a random number */
-static int myrand(int range){
-  return (int)((double)range * rand() / (RAND_MAX + 1.0));
 }
 
 

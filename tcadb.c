@@ -1735,6 +1735,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       }
     } else if(!strcmp(name, "search")){
       bool toout = false;
+      bool tocnt = false;
       TDBQRY *qry = tctdbqrynew(adb->tdb);
       TCLIST *cnames = NULL;
       for(int i = 0; i < argc; i++){
@@ -1776,6 +1777,8 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
             }
           } else if(!strcmp(cmd, "out") || !strcmp(cmd, "remove")){
             toout = true;
+          } else if(!strcmp(cmd, "count")){
+            tocnt = true;
           }
         }
         tclistdel(tokens);
@@ -1833,6 +1836,12 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
           tclistdel(rv);
           rv = nrv;
         }
+      }
+      if(tocnt && rv){
+        tclistclear(rv);
+        char numbuf[TCNUMBUFSIZ];
+        int len = sprintf(numbuf, "%d", tctdbqrycount(qry));
+        tclistpush(rv, numbuf, len);
       }
       if(cnames) tclistdel(cnames);
       tctdbqrydel(qry);

@@ -1,3 +1,11 @@
+2009-03-21  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tctdb.c (tctdbqrycount): new function.
+
+	* tcadb.c (tcadbmisc): "count" option was added.
+
+	- Release: 1.4.21
+
 2009-03-11  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tctopsort): new function.

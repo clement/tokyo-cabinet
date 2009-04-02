@@ -116,7 +116,11 @@ static void eprint(const char *func){
 
 /* get a random number */
 static int myrand(int range){
-  return (int)((double)range * rand() / (RAND_MAX + 1.0));
+  if(range < 2) return 0;
+  int high = (unsigned int)rand() >> 4;
+  int low = range * (rand() / (RAND_MAX + 1.0));
+  low &= (unsigned int)INT_MAX >> 4;
+  return (high + low) % range;
 }
 
 

@@ -34,9 +34,9 @@ static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCHDB *hdb, const char *func);
 static void mprint(TCHDB *hdb);
+static int myrand(int range);
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
-static int myrand(int range);
 static int runwrite(int argc, char **argv);
 static int runread(int argc, char **argv);
 static int runremove(int argc, char **argv);
@@ -151,6 +151,16 @@ static void mprint(TCHDB *hdb){
 }
 
 
+/* get a random number */
+static int myrand(int range){
+  if(range < 2) return 0;
+  int high = (unsigned int)rand() >> 4;
+  int low = range * (rand() / (RAND_MAX + 1.0));
+  low &= (unsigned int)INT_MAX >> 4;
+  return (high + low) % range;
+}
+
+
 /* duplication callback function */
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
   if(myrand(4) == 0) return (void *)-1;
@@ -173,12 +183,6 @@ static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, voi
     sum += ((char *)vbuf)[vsiz];
   }
   return myrand(100 + (sum & 0xff)) > 0;
-}
-
-
-/* get a random number */
-static int myrand(int range){
-  return (int)((double)range * rand() / (RAND_MAX + 1.0));
 }
 
 

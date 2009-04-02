@@ -33,6 +33,7 @@
 #define TDBIDXSUFFIX   "idx"             // suffix of column index file
 #define TDBNUMCNTCOL   "_num"            // column name of number counting
 #define TDBCNTBUFSIZ   1024              // size of a buffer for number counting
+#define TDBHINTUSIZ    256               // unit size of the hint string
 #define TDBORDRATIO    0.2               // ratio of records to use the order index
 
 enum {                                   // enumeration for duplication behavior
@@ -746,7 +747,8 @@ TDBQRY *tctdbqrynew(TCTDB *tdb){
   qry->otype = TDBQOSTRASC;
   qry->max = INT_MAX;
   qry->skip = 0;
-  qry->hint = tcxstrnew();
+  qry->hint = tcxstrnew3(TDBHINTUSIZ);
+  qry->count = 0;
   return qry;
 }
 
@@ -1148,6 +1150,13 @@ int tctdbstrtoindextype(const char *str){
     type = tcatoi(str);
   }
   return type | flags;
+}
+
+
+/* Get the count of corresponding records of a query object. */
+int tctdbqrycount(TDBQRY *qry){
+  assert(qry);
+  return qry->count;
 }
 
 
@@ -2750,6 +2759,7 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
       TCFREE(tclistpop(res, &rsiz));
     }
   }
+  qry->count = TCLISTNUM(res);
   return res;
 }
 
