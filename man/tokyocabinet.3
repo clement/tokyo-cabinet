@@ -82,7 +82,7 @@ You can create indexes for arbitrary columns to improve performance of search an
 
 .SH PRACTICAL FUNCTIONALITY
 .PP
-Hash database and B+ tree database feature transaction mechanisms.  It is possible to commit a series of operations between the beginning and the end of the transaction in a lump, or to abort the transaction and perform rollback to the state before the transaction.  Two isolation levels are supported; serializable and read uncommitted.  Durability is secured by write ahead logging and shadow paging.
+Databases on the filesystem feature transaction mechanisms.  It is possible to commit a series of operations between the beginning and the end of the transaction in a lump, or to abort the transaction and perform rollback to the state before the transaction.  Two isolation levels are supported; serializable and read uncommitted.  Durability is secured by write ahead logging and shadow paging.
 .PP
 Tokyo Cabinet provides two modes to connect to a database: `reader' and `writer'.  A reader can perform retrieving but neither storing nor deleting.  A writer can perform all access methods.  Exclusion control between processes is performed when connecting to a database by file locking.  While a writer is connected to a database, neither readers nor writers can be connected.  While a reader is connected to a database, other readers can be connect, but writers can not.  According to this mechanism, data consistency is guaranteed with simultaneous connections in multitasking environment.
 .PP

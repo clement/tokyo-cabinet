@@ -5,7 +5,7 @@ tcamgr \- the command line utility of the abstract database API
 
 .SH DESCRIPTION
 .PP
-The command `\fBtcamgr\fR' is a utility for test and debugging of the abstract database API and its applications.  `\fIname\fR' specifies the name of a database.  `\fIkey\fR' specifies the key of a record.  `\fIvalue\fR' specifies the value of a record.  `\fIfunc\fR' specifies the name of a function.  `\fIarg\fR' specifies the arguments of the function.
+The command `\fBtcamgr\fR' is a utility for test and debugging of the abstract database API and its applications.  `\fIname\fR' specifies the name of a database.  `\fIkey\fR' specifies the key of a record.  `\fIvalue\fR' specifies the value of a record.  `\fIfunc\fR' specifies the name of a function.  `\fIarg\fR' specifies the arguments of the function.  `\fIdest\fR' specifies the path of the destination file.
 .PP
 .RS
 .br
@@ -42,6 +42,11 @@ Print keys of all records, separated by line feeds.
 \fBtcamgr misc \fR[\fB\-sx\fR]\fB \fR[\fB\-sep \fIchr\fB\fR]\fB \fR[\fB\-px\fR]\fB \fIname\fB \fIfunc\fB \fR[\fB\fIarg\fB...\fR]\fB\fR
 .RS
 Call a versatile function for miscellaneous operations.
+.RE
+.br
+\fBtcamgr map \fR[\fB\-fm \fIstr\fB\fR]\fB \fIname\fB \fIdest\fB\fR
+.RS
+Map records into another B+ tree database.
 .RE
 .br
 \fBtcamgr version\fR

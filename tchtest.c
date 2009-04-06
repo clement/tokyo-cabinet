@@ -163,6 +163,22 @@ static int myrand(int range){
 
 /* duplication callback function */
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(op){
+    char *buf = NULL;
+    int len = 0;
+    switch((int)(intptr_t)op){
+    case 1:
+      len = vsiz + 1;
+      buf = tcmalloc(len + 1);
+      memset(buf, '*', len);
+      break;
+    case 2:
+      buf = (void *)-1;
+      break;
+    }
+    *sp = len;
+    return buf;
+  }
   if(myrand(4) == 0) return (void *)-1;
   if(myrand(2) == 0) return NULL;
   int len = myrand(RECBUFSIZ);
@@ -1267,7 +1283,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(hdb, "(validation)");
     err = true;
   }
-  if(!tchdbsync(hdb)){
+  if(myrand(10) == 0 && !tchdbsync(hdb)){
     eprint(hdb, "tchdbsync");
     err = true;
   }
@@ -1327,7 +1343,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     int ksiz = sprintf(kbuf, "%d", myrand(rnum));
     char vbuf[RECBUFSIZ];
     int vsiz = sprintf(vbuf, "[%d]", myrand(rnum));
-    switch(myrand(4)){
+    switch(myrand(7)){
     case 0:
       if(!tchdbput(hdb, kbuf, ksiz, vbuf, vsiz)){
         eprint(hdb, "tchdbput");
@@ -1350,6 +1366,40 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
       tcmapputcat(map, kbuf, ksiz, vbuf, vsiz);
       break;
     case 3:
+      if(tchdbaddint(hdb, kbuf, ksiz, 1) == INT_MIN && tchdbecode(hdb) != TCEKEEP){
+        eprint(hdb, "tchdbaddint");
+        err = true;
+      }
+      tcmapaddint(map, kbuf, ksiz, 1);
+      break;
+    case 4:
+      if(isnan(tchdbadddouble(hdb, kbuf, ksiz, 1.0)) && tchdbecode(hdb) != TCEKEEP){
+        eprint(hdb, "tchdbadddouble");
+        err = true;
+      }
+      tcmapadddouble(map, kbuf, ksiz, 1.0);
+      break;
+    case 5:
+      if(myrand(2) == 0){
+        void *op = (void *)(intptr_t)(myrand(3) + 1);
+        if(!tchdbputproc(hdb, kbuf, ksiz, vbuf, vsiz, pdprocfunc, op) &&
+           tchdbecode(hdb) != TCEKEEP){
+          eprint(hdb, "tchdbputproc");
+          err = true;
+        }
+        tcmapputproc(map, kbuf, ksiz, vbuf, vsiz, pdprocfunc, op);
+      } else {
+        vsiz = myrand(10);
+        void *op = (void *)(intptr_t)(myrand(3) + 1);
+        if(!tchdbputproc(hdb, kbuf, ksiz, NULL, vsiz, pdprocfunc, op) &&
+           tchdbecode(hdb) != TCEKEEP && tchdbecode(hdb) != TCENOREC){
+          eprint(hdb, "tchdbputproc");
+          err = true;
+        }
+        tcmapputproc(map, kbuf, ksiz, NULL, vsiz, pdprocfunc, op);
+      }
+      break;
+    case 6:
       if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
         eprint(hdb, "tchdbout");
         err = true;
@@ -1378,7 +1428,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     int ksiz = sprintf(kbuf, "%d", myrand(rnum));
     char vbuf[RECBUFSIZ];
     int vsiz = sprintf(vbuf, "((%d))", myrand(rnum));
-    switch(myrand(4)){
+    switch(myrand(7)){
     case 0:
       if(!tchdbput(hdb, kbuf, ksiz, vbuf, vsiz)){
         eprint(hdb, "tchdbput");
@@ -1398,6 +1448,36 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
       }
       break;
     case 3:
+      if(tchdbaddint(hdb, kbuf, ksiz, 1) == INT_MIN && tchdbecode(hdb) != TCEKEEP){
+        eprint(hdb, "tchdbaddint");
+        err = true;
+      }
+      break;
+    case 4:
+      if(isnan(tchdbadddouble(hdb, kbuf, ksiz, 1.0)) && tchdbecode(hdb) != TCEKEEP){
+        eprint(hdb, "tchdbadddouble");
+        err = true;
+      }
+      break;
+    case 5:
+      if(myrand(2) == 0){
+        void *op = (void *)(intptr_t)(myrand(3) + 1);
+        if(!tchdbputproc(hdb, kbuf, ksiz, vbuf, vsiz, pdprocfunc, op) &&
+           tchdbecode(hdb) != TCEKEEP){
+          eprint(hdb, "tchdbputproc");
+          err = true;
+        }
+      } else {
+        vsiz = myrand(10);
+        void *op = (void *)(intptr_t)(myrand(3) + 1);
+        if(!tchdbputproc(hdb, kbuf, ksiz, NULL, vsiz, pdprocfunc, op) &&
+           tchdbecode(hdb) != TCEKEEP && tchdbecode(hdb) != TCENOREC){
+          eprint(hdb, "tchdbputproc");
+          err = true;
+        }
+      }
+      break;
+    case 6:
       if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
         eprint(hdb, "tchdbout");
         err = true;

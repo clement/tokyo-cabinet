@@ -121,7 +121,7 @@
 
 <h3 id="features_practical">Practical Functionality</h3>
 
-<p>Hash database and B+ tree database feature transaction mechanisms.  It is possible to commit a series of operations between the beginning and the end of the transaction in a lump, or to abort the transaction and perform rollback to the state before the transaction.  Two isolation levels are supported; serializable and read uncommitted.  Durability is secured by write ahead logging and shadow paging.</p>
+<p>Databases on the filesystem feature transaction mechanisms.  It is possible to commit a series of operations between the beginning and the end of the transaction in a lump, or to abort the transaction and perform rollback to the state before the transaction.  Two isolation levels are supported; serializable and read uncommitted.  Durability is secured by write ahead logging and shadow paging.</p>
 
 <p>Tokyo Cabinet provides two modes to connect to a database: `reader' and `writer'.  A reader can perform retrieving but neither storing nor deleting.  A writer can perform all access methods.  Exclusion control between processes is performed when connecting to a database by file locking.  While a writer is connected to a database, neither readers nor writers can be connected.  While a reader is connected to a database, other readers can be connect, but writers can not.  According to this mechanism, data consistency is guaranteed with simultaneous connections in multitasking environment.</p>
 
@@ -4614,7 +4614,7 @@ int main(int argc, char **argv){
 <dt><code>bool tcfdbopen(TCFDB *<var>fdb</var>, const char *<var>path</var>, int <var>omode</var>);</code></dt>
 <dd>`<var>fdb</var>' specifies the fixed-length database object which is not opened.</dd>
 <dd>`<var>path</var>' specifies the path of the database file.</dd>
-<dd>`<var>omode</var>' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.  If the mode is `FDBOWRITER', the following may be added by bitwise-or: `FDBOCREAT', which means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new database regardless if one exists.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by bitwise-or: `FDBONOLCK', which means it opens the database file without file locking, or `FDBOLCKNB', which means locking is performed without blocking.</dd>
+<dd>`<var>omode</var>' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.  If the mode is `FDBOWRITER', the following may be added by bitwise-or: `FDBOCREAT', which means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new database regardless if one exists, `FDBOTSYNC', which means every transaction synchronizes updated contents with the device.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by bitwise-or: `FDBONOLCK', which means it opens the database file without file locking, or `FDBOLCKNB', which means locking is performed without blocking.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
@@ -4992,6 +4992,33 @@ int main(int argc, char **argv){
 <dd>`<var>path</var>' specifies the path of the destination file.  If it begins with `@', the trailing substring is executed as a command line.</dd>
 <dd>If successful, the return value is true, else, it is false.  False is returned if the executed command returns non-zero code.</dd>
 <dd>The database file is assured to be kept synchronized and not modified while the copying or executing operation is in progress.  So, this function is useful to create a backup file of the database file.</dd>
+</dl>
+
+<p>The function `tcfdbtranbegin' is used in order to begin the transaction of a fixed-length database object.</p>
+
+<dl class="api">
+<dt><code>bool tcfdbtranbegin(TCFDB *<var>fdb</var>);</code></dt>
+<dd>`<var>fdb</var>' specifies the fixed-length database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The database is locked by the thread while the transaction so that only one transaction can be activated with a database object at the same time.  Thus, the serializable isolation level is assumed if every database operation is performed in the transaction.  All updated regions are kept track of by write ahead logging while the transaction.  If the database is closed during transaction, the transaction is aborted implicitly.</dd>
+</dl>
+
+<p>The function `tcfdbtrancommit' is used in order to commit the transaction of a fixed-length database object.</p>
+
+<dl class="api">
+<dt><code>bool tcfdbtrancommit(TCFDB *<var>fdb</var>);</code></dt>
+<dd>`<var>fdb</var>' specifies the fixed-length database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is fixed when it is committed successfully.</dd>
+</dl>
+
+<p>The function `tcfdbtranabort' is used in order to abort the transaction of a fixed-length database object.</p>
+
+<dl class="api">
+<dt><code>bool tcfdbtranabort(TCFDB *<var>fdb</var>);</code></dt>
+<dd>`<var>fdb</var>' specifies the fixed-length database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.</dd>
 </dl>
 
 <p>The function `tcfdbpath' is used in order to get the file path of a fixed-length database object.</p>
@@ -6242,7 +6269,7 @@ int main(int argc, char **argv){
 
 <dl class="api">
 <dt><code>int tcadbaddint(TCADB *<var>adb</var>, const void *<var>kbuf</var>, int <var>ksiz</var>, int <var>num</var>);</code></dt>
-<dd>`<var>adb</var>' specifies the abstract database object connected as a writer.</dd>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
 <dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
 <dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
 <dd>`<var>num</var>' specifies the additional value.</dd>
@@ -6254,7 +6281,7 @@ int main(int argc, char **argv){
 
 <dl class="api">
 <dt><code>double tcadbadddouble(TCADB *<var>adb</var>, const void *<var>kbuf</var>, int <var>ksiz</var>, double <var>num</var>);</code></dt>
-<dd>`<var>adb</var>' specifies the abstract database object connected as a writer.</dd>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
 <dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
 <dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
 <dd>`<var>num</var>' specifies the additional value.</dd>
@@ -6286,6 +6313,33 @@ int main(int argc, char **argv){
 <dd>`<var>path</var>' specifies the path of the destination file.  If it begins with `@', the trailing substring is executed as a command line.</dd>
 <dd>If successful, the return value is true, else, it is false.  False is returned if the executed command returns non-zero code.</dd>
 <dd>The database file is assured to be kept synchronized and not modified while the copying or executing operation is in progress.  So, this function is useful to create a backup file of the database file.</dd>
+</dl>
+
+<p>The function `tcadbtranbegin' is used in order to begin the transaction of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>bool tcadbtranbegin(TCADB *<var>adb</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The database is locked by the thread while the transaction so that only one transaction can be activated with a database object at the same time.  Thus, the serializable isolation level is assumed if every database operation is performed in the transaction.  All updated regions are kept track of by write ahead logging while the transaction.  If the database is closed during transaction, the transaction is aborted implicitly.</dd>
+</dl>
+
+<p>The function `tcadbtrancommit' is used in order to commit the transaction of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>bool tcadbtrancommit(TCADB *<var>adb</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is fixed when it is committed successfully.</dd>
+</dl>
+
+<p>The function `tcadbtranabort' is used in order to abort the transaction of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>bool tcadbtranabort(TCADB *<var>adb</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.</dd>
 </dl>
 
 <p>The function `tcadbrnum' is used in order to get the number of records of an abstract database object.</p>
@@ -6401,7 +6455,7 @@ int main(int argc, char **argv){
 
 <p>This command returns 0 on success, another on failure.</p>
 
-<p>The command `<code>tcamgr</code>' is a utility for test and debugging of the abstract database API and its applications.  `<var>name</var>' specifies the name of a database.  `<var>key</var>' specifies the key of a record.  `<var>value</var>' specifies the value of a record.  `<var>func</var>' specifies the name of a function.  `<var>arg</var>' specifies the arguments of the function.</p>
+<p>The command `<code>tcamgr</code>' is a utility for test and debugging of the abstract database API and its applications.  `<var>name</var>' specifies the name of a database.  `<var>key</var>' specifies the key of a record.  `<var>value</var>' specifies the value of a record.  `<var>func</var>' specifies the name of a function.  `<var>arg</var>' specifies the arguments of the function.  `<var>dest</var>' specifies the path of the destination file.</p>
 
 <dl class="api">
 <dt><code>tcamgr create <var>name</var></code></dt>
@@ -6418,6 +6472,8 @@ int main(int argc, char **argv){
 <dd>Print keys of all records, separated by line feeds.</dd>
 <dt><code>tcamgr misc [-sx] [-sep <var>chr</var>] [-px] <var>name</var> <var>func</var> [<var>arg</var>...]</code></dt>
 <dd>Call a versatile function for miscellaneous operations.</dd>
+<dt><code>tcamgr map [-fm <var>str</var>] <var>name</var> <var>dest</var></code></dt>
+<dd>Map records into another B+ tree database.</dd>
 <dt><code>tcamgr version</code></dt>
 <dd>Print the version information of Tokyo Cabinet.</dd>
 </dl>

@@ -297,7 +297,7 @@ TCLIST *tcadbfwmkeys2(TCADB *adb, const char *pstr, int max);
 
 
 /* Add an integer to a record in an abstract database object.
-   `adb' specifies the abstract database object connected as a writer.
+   `adb' specifies the abstract database object.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
    `num' specifies the additional value.
@@ -308,7 +308,7 @@ int tcadbaddint(TCADB *adb, const void *kbuf, int ksiz, int num);
 
 
 /* Add a real number to a record in an abstract database object.
-   `adb' specifies the abstract database object connected as a writer.
+   `adb' specifies the abstract database object.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
    `num' specifies the additional value.
@@ -340,6 +340,32 @@ bool tcadbvanish(TCADB *adb);
    executing operation is in progress.  So, this function is useful to create a backup file of
    the database file. */
 bool tcadbcopy(TCADB *adb, const char *path);
+
+
+/* Begin the transaction of an abstract database object.
+   `adb' specifies the abstract database object.
+   If successful, the return value is true, else, it is false.
+   The database is locked by the thread while the transaction so that only one transaction can be
+   activated with a database object at the same time.  Thus, the serializable isolation level is
+   assumed if every database operation is performed in the transaction.  All updated regions are
+   kept track of by write ahead logging while the transaction.  If the database is closed during
+   transaction, the transaction is aborted implicitly. */
+bool tcadbtranbegin(TCADB *adb);
+
+
+/* Commit the transaction of an abstract database object.
+   `adb' specifies the abstract database object.
+   If successful, the return value is true, else, it is false.
+   Update in the transaction is fixed when it is committed successfully. */
+bool tcadbtrancommit(TCADB *adb);
+
+
+/* Abort the transaction of an abstract database object.
+   `adb' specifies the abstract database object.
+   If successful, the return value is true, else, it is false.
+   Update in the transaction is discarded when it is aborted.  The state of the database is
+   rollbacked to before transaction. */
+bool tcadbtranabort(TCADB *adb);
 
 
 /* Get the number of records of an abstract database object.
@@ -379,11 +405,23 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args);
  *************************************************************************************************/
 
 
+/* type of the pointer to a mapping function.
+   `map' specifies the pointer to the destination manager.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   `op' specifies the pointer to the optional opaque object.
+   The return value is true to continue iteration or false to stop iteration. */
+typedef bool (*ADBMAPPROC)(void *map, const char *kbuf, int ksiz, const char *vbuf, int vsiz,
+                           void *op);
+
+
 /* Get the open mode of an abstract database object.
    `adb' specifies the abstract database object.
    The return value is `ADBOVOID' for not opened database, `ADBOMDB' for on-memory hash database,
   `ADBONDB' for on-memory tree database, `ADBOHDB' for hash database, `ADBOBDB' for B+ tree
-  database, `ADBOFDB' for fixed-length database. */
+  database, `ADBOFDB' for fixed-length database, `ADBOTDB' for table database. */
 int tcadbomode(TCADB *adb);
 
 
@@ -395,7 +433,7 @@ void *tcadbreveal(TCADB *adb);
 
 
 /* Store a record into an abstract database object with a duplication handler.
-   `adb' specifies the abstract database object connected as a writer.
+   `adb' specifies the abstract database object.
    `kbuf' specifies the pointer to the region of the key.
    `ksiz' specifies the size of the region of the key.
    `vbuf' specifies the pointer to the region of the value.
@@ -416,6 +454,29 @@ bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int 
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
 bool tcadbforeach(TCADB *adb, TCITER iter, void *op);
+
+
+/* Map records of an abstract database object into another B+ tree database.
+   `adb' specifies the abstract database object.
+   `keys' specifies a list object of the keys of the target records.  If it is `NULL', every
+   record is processed.
+   `bdb' specifies the B+ tree database object into which records emitted by the mapping function
+   are stored.
+   `proc' specifies the pointer to the mapping function called for each record.
+   `op' specifies specifies the pointer to the optional opaque object for the mapping function.
+   `csiz' specifies the size of the cache to sort emitted records.  If it is negative, the
+   default size is specified.  The default size is 268435456.
+   If successful, the return value is true, else, it is false. */
+bool tcadbmapbdb(TCADB *adb, TCLIST *keys, TCBDB *bdb, ADBMAPPROC proc, void *op, int64_t csiz);
+
+
+/* Emit records generated by the mapping function into the result map.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   `vbuf' specifies the pointer to the region of the value.
+   `vsiz' specifies the size of the region of the value.
+   If successful, the return value is true, else, it is false. */
+bool tcadbmapbdbemit(void *map, const char *kbuf, int ksiz, const char *vbuf, int vsiz);
 
 
 

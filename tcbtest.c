@@ -189,6 +189,22 @@ static int myrand(int range){
 
 /* duplication callback function */
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(op){
+    char *buf = NULL;
+    int len = 0;
+    switch((int)(intptr_t)op){
+    case 1:
+      len = vsiz + 1;
+      buf = tcmalloc(len + 1);
+      memset(buf, '*', len);
+      break;
+    case 2:
+      buf = (void *)-1;
+      break;
+    }
+    *sp = len;
+    return buf;
+  }
   if(myrand(4) == 0) return (void *)-1;
   if(myrand(2) == 0) return NULL;
   int len = myrand(RECBUFSIZ);
@@ -1717,7 +1733,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(bdb, "(validation)");
     err = true;
   }
-  if(!tcbdbsync(bdb)){
+  if(myrand(10) == 0 && !tcbdbsync(bdb)){
     eprint(bdb, "tcbdbsync");
     err = true;
   }
@@ -1762,6 +1778,52 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(bdb, "tcbdbcurput2");
     err = true;
   }
+  if(!tcbdbvanish(bdb)){
+    eprint(bdb, "tcbdbvanish");
+    err = true;
+  }
+  TCMAP *map = tcmapnew();
+  iprintf("random writing:\n");
+  for(int i = 1; i <= rnum; i++){
+    char kbuf[RECBUFSIZ];
+    int ksiz = sprintf(kbuf, "%d", myrand(rnum));
+    char vbuf[RECBUFSIZ];
+    int vsiz = sprintf(vbuf, "%d", myrand(rnum));
+    switch(myrand(4)){
+    case 0:
+      if(!tcbdbput(bdb, kbuf, ksiz, vbuf, vsiz)){
+        eprint(bdb, "tcbdbput");
+        err = true;
+      }
+      tcmapput(map, kbuf, ksiz, vbuf, vsiz);
+      break;
+    case 1:
+      if(!tcbdbputkeep(bdb, kbuf, ksiz, vbuf, vsiz) && tcbdbecode(bdb) != TCEKEEP){
+        eprint(bdb, "tcbdbputkeep");
+        err = true;
+      }
+      tcmapputkeep(map, kbuf, ksiz, vbuf, vsiz);
+      break;
+    case 2:
+      if(!tcbdbputcat(bdb, kbuf, ksiz, vbuf, vsiz)){
+        eprint(bdb, "tcbdbputcat");
+        err = true;
+      }
+      tcmapputcat(map, kbuf, ksiz, vbuf, vsiz);
+      break;
+    case 3:
+      if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+        eprint(bdb, "tcbdbout");
+        err = true;
+      }
+      tcmapout(map, kbuf, ksiz);
+      break;
+    }
+    if(rnum > 250 && i % (rnum / 250) == 0){
+      iputchar('.');
+      if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+    }
+  }
   iprintf("checking transaction commit:\n");
   if(!tcbdbtranbegin(bdb)){
     eprint(bdb, "tcbdbtranbegin");
@@ -1770,9 +1832,70 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
   for(int i = 1; i <= rnum; i++){
     char kbuf[RECBUFSIZ];
     int ksiz = sprintf(kbuf, "%d", myrand(rnum));
-    if(!tcbdbputdup(bdb, kbuf, ksiz, kbuf, ksiz)){
-      eprint(bdb, "tcbdbputdup");
-      err = true;
+    char vbuf[RECBUFSIZ];
+    int vsiz = sprintf(vbuf, "[%d]", myrand(rnum));
+    switch(myrand(7)){
+    case 0:
+      if(!tcbdbput(bdb, kbuf, ksiz, vbuf, vsiz)){
+        eprint(bdb, "tcbdbput");
+        err = true;
+      }
+      tcmapput(map, kbuf, ksiz, vbuf, vsiz);
+      break;
+    case 1:
+      if(!tcbdbputkeep(bdb, kbuf, ksiz, vbuf, vsiz) && tcbdbecode(bdb) != TCEKEEP){
+        eprint(bdb, "tcbdbputkeep");
+        err = true;
+      }
+      tcmapputkeep(map, kbuf, ksiz, vbuf, vsiz);
+      break;
+    case 2:
+      if(!tcbdbputcat(bdb, kbuf, ksiz, vbuf, vsiz)){
+        eprint(bdb, "tcbdbputcat");
+        err = true;
+      }
+      tcmapputcat(map, kbuf, ksiz, vbuf, vsiz);
+      break;
+    case 3:
+      if(tcbdbaddint(bdb, kbuf, ksiz, 1) == INT_MIN && tcbdbecode(bdb) != TCEKEEP){
+        eprint(bdb, "tcbdbaddint");
+        err = true;
+      }
+      tcmapaddint(map, kbuf, ksiz, 1);
+      break;
+    case 4:
+      if(isnan(tcbdbadddouble(bdb, kbuf, ksiz, 1.0)) && tcbdbecode(bdb) != TCEKEEP){
+        eprint(bdb, "tcbdbadddouble");
+        err = true;
+      }
+      tcmapadddouble(map, kbuf, ksiz, 1.0);
+      break;
+    case 5:
+      if(myrand(2) == 0){
+        void *op = (void *)(intptr_t)(myrand(3) + 1);
+        if(!tcbdbputproc(bdb, kbuf, ksiz, vbuf, vsiz, pdprocfunc, op) &&
+           tcbdbecode(bdb) != TCEKEEP){
+          eprint(bdb, "tcbdbputproc");
+          err = true;
+        }
+        tcmapputproc(map, kbuf, ksiz, vbuf, vsiz, pdprocfunc, op);
+      } else {
+        vsiz = myrand(10);
+        void *op = (void *)(intptr_t)(myrand(3) + 1);
+        if(!tcbdbputproc(bdb, kbuf, ksiz, NULL, vsiz, pdprocfunc, op) &&
+           tcbdbecode(bdb) != TCEKEEP && tcbdbecode(bdb) != TCENOREC){
+          eprint(bdb, "tcbdbputproc");
+          err = true;
+        }
+        tcmapputproc(map, kbuf, ksiz, NULL, vsiz, pdprocfunc, op);
+      }
+      break;
+    case 6:
+      if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+        eprint(bdb, "tcbdbout");
+        err = true;
+      }
+      tcmapout(map, kbuf, ksiz);
       break;
     }
     if(rnum > 250 && i % (rnum / 250) == 0){
@@ -1786,6 +1909,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
   }
   iprintf("checking transaction abort:\n");
   uint64_t ornum = tcbdbrnum(bdb);
+  uint64_t ofsiz = tcbdbfsiz(bdb);
   if(!tcbdbtranbegin(bdb)){
     eprint(bdb, "tcbdbtranbegin");
     err = true;
@@ -1793,9 +1917,68 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
   for(int i = 1; i <= rnum; i++){
     char kbuf[RECBUFSIZ];
     int ksiz = sprintf(kbuf, "%d", myrand(rnum));
-    if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
-      eprint(bdb, "tcbdbout");
-      err = true;
+    char vbuf[RECBUFSIZ];
+    int vsiz = sprintf(vbuf, "((%d))", myrand(rnum));
+    switch(myrand(8)){
+    case 0:
+      if(!tcbdbput(bdb, kbuf, ksiz, vbuf, vsiz)){
+        eprint(bdb, "tcbdbput");
+        err = true;
+      }
+      break;
+    case 1:
+      if(!tcbdbputkeep(bdb, kbuf, ksiz, vbuf, vsiz) && tcbdbecode(bdb) != TCEKEEP){
+        eprint(bdb, "tcbdbputkeep");
+        err = true;
+      }
+      break;
+    case 2:
+      if(!tcbdbputcat(bdb, kbuf, ksiz, vbuf, vsiz)){
+        eprint(bdb, "tcbdbputcat");
+        err = true;
+      }
+      break;
+    case 3:
+      if(!tcbdbputdup(bdb, kbuf, ksiz, vbuf, vsiz)){
+        eprint(bdb, "tcbdbputdup");
+        err = true;
+      }
+      break;
+    case 4:
+      if(tcbdbaddint(bdb, kbuf, ksiz, 1) == INT_MIN && tcbdbecode(bdb) != TCEKEEP){
+        eprint(bdb, "tcbdbaddint");
+        err = true;
+      }
+      break;
+    case 5:
+      if(isnan(tcbdbadddouble(bdb, kbuf, ksiz, 1.0)) && tcbdbecode(bdb) != TCEKEEP){
+        eprint(bdb, "tcbdbadddouble");
+        err = true;
+      }
+      break;
+    case 6:
+      if(myrand(2) == 0){
+        void *op = (void *)(intptr_t)(myrand(3) + 1);
+        if(!tcbdbputproc(bdb, kbuf, ksiz, vbuf, vsiz, pdprocfunc, op) &&
+           tcbdbecode(bdb) != TCEKEEP){
+          eprint(bdb, "tcbdbputproc");
+          err = true;
+        }
+      } else {
+        vsiz = myrand(10);
+        void *op = (void *)(intptr_t)(myrand(3) + 1);
+        if(!tcbdbputproc(bdb, kbuf, ksiz, NULL, vsiz, pdprocfunc, op) &&
+           tcbdbecode(bdb) != TCEKEEP && tcbdbecode(bdb) != TCENOREC){
+          eprint(bdb, "tcbdbputproc");
+          err = true;
+        }
+      }
+      break;
+    case 7:
+      if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+        eprint(bdb, "tcbdbout");
+        err = true;
+      }
       break;
     }
     if(rnum > 250 && i % (rnum / 250) == 0){
@@ -1807,43 +1990,60 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(bdb, "tcbdbtranabort");
     err = true;
   }
-  if(tcbdbrnum(bdb) != ornum){
+  iprintf("checking consistency:\n");
+  if(tcbdbrnum(bdb) != ornum || tcbdbfsiz(bdb) != ofsiz || tcbdbrnum(bdb) != tcmaprnum(map)){
     eprint(bdb, "(validation)");
     err = true;
   }
-  if(ornum > 1000){
-    if(!tcbdbcurfirst(cur)){
-      eprint(bdb, "tcbdbcurfirst");
+  inum = 0;
+  tcmapiterinit(map);
+  const char *tkbuf;
+  int tksiz;
+  for(int i = 1; (tkbuf = tcmapiternext(map, &tksiz)) != NULL; i++, inum++){
+    int tvsiz;
+    const char *tvbuf = tcmapiterval(tkbuf, &tvsiz);
+    int rsiz;
+    char *rbuf = tcbdbget(bdb, tkbuf, tksiz, &rsiz);
+    if(!rbuf || rsiz != tvsiz || memcmp(rbuf, tvbuf, rsiz)){
+      eprint(bdb, "(validation)");
       err = true;
+      tcfree(rbuf);
+      break;
     }
-    for(int i = 1; i < 500 && !err && (kbuf = tcbdbcurkey(cur, &ksiz)) != NULL; i++){
-      int vsiz;
-      if(myrand(20) == 0){
-        if(!tcbdbget3(bdb, kbuf, ksiz, &vsiz)){
-          eprint(bdb, "tcbdbget3");
-          err = true;
-        }
-        if(myrand(2) == 0 && !tcbdbout(bdb, kbuf, ksiz)){
-          eprint(bdb, "tcbdbout");
-          err = true;
-        }
-        if(myrand(2) == 0 && !tcbdbputdup(bdb, kbuf, ksiz, kbuf, ksiz)){
-          eprint(bdb, "tcbdbput");
-          err = true;
-        }
-      } else {
-        if(!tcbdbcurout(cur)){
-          eprint(bdb, "tcbdbcurout");
-          err = true;
-        }
-      }
-      tcfree(kbuf);
-      if(myrand(30) == 0 && !tcbdbcurfirst(cur)){
-        eprint(bdb, "tcbdbcurfirst");
-        err = true;
-      }
+    tcfree(rbuf);
+    if(rnum > 250 && i % (rnum / 250) == 0){
+      iputchar('.');
+      if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
     }
   }
+  if(rnum > 250) iprintf(" (%08d)\n", inum);
+  inum = 0;
+  if(!tcbdbcurfirst(cur)){
+    eprint(bdb, "tcbdbcurfirst");
+    err = true;
+  }
+  for(int i = 1; (kbuf = tcbdbcurkey(cur, &ksiz)) != NULL; i++, inum++){
+    int vsiz;
+    char *vbuf = tcbdbcurval(cur, &vsiz);
+    int rsiz;
+    const char *rbuf = tcmapget(map, kbuf, ksiz, &rsiz);
+    if(!rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
+      eprint(bdb, "(validation)");
+      err = true;
+      tcfree(vbuf);
+      tcfree(kbuf);
+      break;
+    }
+    tcfree(vbuf);
+    tcfree(kbuf);
+    tcbdbcurnext(cur);
+    if(rnum > 250 && i % (rnum / 250) == 0){
+      iputchar('.');
+      if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+    }
+  }
+  if(rnum > 250) iprintf(" (%08d)\n", inum);
+  tcmapdel(map);
   if(!tcbdbvanish(bdb)){
     eprint(bdb, "tcbdbvanish");
     err = true;

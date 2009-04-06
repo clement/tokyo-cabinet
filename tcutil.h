@@ -3290,8 +3290,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.12"
-#define _TC_LIBVER     803
+#define _TC_VERSION    "1.4.13"
+#define _TC_LIBVER     804
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */
@@ -3384,7 +3384,7 @@ int tcnumtostrbin(uint64_t num, char *buf, int col, int fc);
    `asiz' specifies the size of the region of one key.
    `bptr' specifies the pointer to the region of the other key.
    `bsiz' specifies the size of the region of the other key.
-   `op' specifies the pointer to the optional opaque object.
+   `op' is ignored.
    The return value is positive if the former is big, negative if the latter is big, 0 if both
    are equivalent. */
 int tccmplexical(const char *aptr, int asiz, const char *bptr, int bsiz, void *op);

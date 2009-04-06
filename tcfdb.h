@@ -46,6 +46,8 @@ typedef struct {                         /* type of structure for a fixed-length
   void *mmtx;                            /* mutex for method */
   void *amtx;                            /* mutex for attribute */
   void *rmtxs;                           /* mutexes for records */
+  void *tmtx;                            /* mutex for transaction */
+  void *wmtx;                            /* mutex for write ahead logging */
   void *eckey;                           /* key for thread specific error code */
   uint8_t type;                          /* database type */
   uint8_t flags;                         /* additional flags */
@@ -68,6 +70,9 @@ typedef struct {                         /* type of structure for a fixed-length
   bool fatal;                            /* whether a fatal error occured */
   uint64_t inode;                        /* inode number */
   time_t mtime;                          /* modification time */
+  bool tran;                             /* whether in the transaction */
+  int walfd;                             /* file descriptor of write ahead logging */
+  uint64_t walend;                       /* end offset of write ahead logging */
   int dbgfd;                             /* file descriptor for debugging */
   int64_t cnt_writerec;                  /* tesing counter for record write times */
   int64_t cnt_readrec;                   /* tesing counter for record read times */
@@ -85,7 +90,8 @@ enum {                                   /* enumeration for open modes */
   FDBOCREAT = 1 << 2,                    /* writer creating */
   FDBOTRUNC = 1 << 3,                    /* writer truncating */
   FDBONOLCK = 1 << 4,                    /* open without locking */
-  FDBOLCKNB = 1 << 5                     /* lock without blocking */
+  FDBOLCKNB = 1 << 5,                    /* lock without blocking */
+  FDBOTSYNC = 1 << 6                     /* synchronize every transaction */
 };
 
 enum {                                   /* enumeration for ID constants */
@@ -154,7 +160,8 @@ bool tcfdbtune(TCFDB *fdb, int32_t width, int64_t limsiz);
    `omode' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.
    If the mode is `FDBOWRITER', the following may be added by bitwise-or: `FDBOCREAT', which
    means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new
-   database regardless if one exists.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by
+   database regardless if one exists, `FDBOTSYNC', which means every transaction synchronizes
+   updated contents with the device.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by
    bitwise-or: `FDBONOLCK', which means it opens the database file without file locking, or
    `FDBOLCKNB', which means locking is performed without blocking.
    If successful, the return value is true, else, it is false. */
@@ -606,6 +613,32 @@ bool tcfdbvanish(TCFDB *fdb);
    executing operation is in progress.  So, this function is useful to create a backup file of
    the database file. */
 bool tcfdbcopy(TCFDB *fdb, const char *path);
+
+
+/* Begin the transaction of a fixed-length database object.
+   `fdb' specifies the fixed-length database object connected as a writer.
+   If successful, the return value is true, else, it is false.
+   The database is locked by the thread while the transaction so that only one transaction can be
+   activated with a database object at the same time.  Thus, the serializable isolation level is
+   assumed if every database operation is performed in the transaction.  All updated regions are
+   kept track of by write ahead logging while the transaction.  If the database is closed during
+   transaction, the transaction is aborted implicitly. */
+bool tcfdbtranbegin(TCFDB *fdb);
+
+
+/* Commit the transaction of a fixed-length database object.
+   `fdb' specifies the fixed-length database object connected as a writer.
+   If successful, the return value is true, else, it is false.
+   Update in the transaction is fixed when it is committed successfully. */
+bool tcfdbtrancommit(TCFDB *fdb);
+
+
+/* Abort the transaction of a fixed-length database object.
+   `fdb' specifies the fixed-length database object connected as a writer.
+   If successful, the return value is true, else, it is false.
+   Update in the transaction is discarded when it is aborted.  The state of the database is
+   rollbacked to before transaction. */
+bool tcfdbtranabort(TCFDB *fdb);
 
 
 /* Get the file path of a fixed-length database object.

@@ -451,7 +451,7 @@ The function `tcadbaddint' is used in order to add an integer to a record in an 
 .br
 \fBint tcadbaddint(TCADB *\fIadb\fB, const void *\fIkbuf\fB, int \fIksiz\fB, int \fInum\fB);\fR
 .RS
-`\fIadb\fR' specifies the abstract database object connected as a writer.
+`\fIadb\fR' specifies the abstract database object.
 .RE
 .RS
 `\fIkbuf\fR' specifies the pointer to the region of the key.
@@ -476,7 +476,7 @@ The function `tcadbadddouble' is used in order to add a real number to a record 
 .br
 \fBdouble tcadbadddouble(TCADB *\fIadb\fB, const void *\fIkbuf\fB, int \fIksiz\fB, double \fInum\fB);\fR
 .RS
-`\fIadb\fR' specifies the abstract database object connected as a writer.
+`\fIadb\fR' specifies the abstract database object.
 .RE
 .RS
 `\fIkbuf\fR' specifies the pointer to the region of the key.
@@ -537,6 +537,54 @@ If successful, the return value is true, else, it is false.  False is returned i
 .RE
 .RS
 The database file is assured to be kept synchronized and not modified while the copying or executing operation is in progress.  So, this function is useful to create a backup file of the database file.
+.RE
+.RE
+.PP
+The function `tcadbtranbegin' is used in order to begin the transaction of an abstract database object.
+.PP
+.RS
+.br
+\fBbool tcadbtranbegin(TCADB *\fIadb\fB);\fR
+.RS
+`\fIadb\fR' specifies the abstract database object.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+The database is locked by the thread while the transaction so that only one transaction can be activated with a database object at the same time.  Thus, the serializable isolation level is assumed if every database operation is performed in the transaction.  All updated regions are kept track of by write ahead logging while the transaction.  If the database is closed during transaction, the transaction is aborted implicitly.
+.RE
+.RE
+.PP
+The function `tcadbtrancommit' is used in order to commit the transaction of an abstract database object.
+.PP
+.RS
+.br
+\fBbool tcadbtrancommit(TCADB *\fIadb\fB);\fR
+.RS
+`\fIadb\fR' specifies the abstract database object.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+Update in the transaction is fixed when it is committed successfully.
+.RE
+.RE
+.PP
+The function `tcadbtranabort' is used in order to abort the transaction of an abstract database object.
+.PP
+.RS
+.br
+\fBbool tcadbtranabort(TCADB *\fIadb\fB);\fR
+.RS
+`\fIadb\fR' specifies the abstract database object.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.
 .RE
 .RE
 .PP

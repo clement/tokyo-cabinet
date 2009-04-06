@@ -1,10 +1,20 @@
+2009-04-02  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* configure.in: a bug related to support for traditional shells was fixed.
+
+	* tcfdb.c (tcfdbtranbegin, tcfdbtrancommit, tcfdbtranabort): new functions.
+
+	* tcadb.c (tcadbtranbegin, tcadbtrancommit, tcadbtranabort): new functions.
+
+	- Release: 1.4.13
+
 2009-03-21  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tctdb.c (tctdbqrycount): new function.
 
 	* tcadb.c (tcadbmisc): "count" option was added.
 
-	- Release: 1.4.21
+	- Release: 1.4.12
 
 2009-03-11  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 

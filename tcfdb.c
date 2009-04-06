@@ -38,6 +38,7 @@
 #define FDBRMTXNUM     127               // number of record mutexes
 #define FDBTRUNCALW    256               // number of record for truncate allowance
 #define FDBIDARYUNIT   2048              // size of ID array allocation unit
+#define FDBWALSUFFIX   "wal"             // suffix of write ahead logging file
 
 enum {                                   // enumeration for duplication behavior
   FDBPDOVER,                             // overwrite an existing value
@@ -71,6 +72,14 @@ typedef struct {                         // type of structure for a duplication 
   ((TC_fdb)->mmtx ? tcfdblockallrecords((TC_fdb), (TC_wr)) : true)
 #define FDBUNLOCKALLRECORDS(TC_fdb) \
   ((TC_fdb)->mmtx ? tcfdbunlockallrecords(TC_fdb) : true)
+#define FDBLOCKTRAN(TC_fdb) \
+  ((TC_fdb)->mmtx ? tcfdblocktran(TC_fdb) : true)
+#define FDBUNLOCKTRAN(TC_fdb) \
+  ((TC_fdb)->mmtx ? tcfdbunlocktran(TC_fdb) : true)
+#define FDBLOCKWAL(TC_fdb) \
+  ((TC_fdb)->mmtx ? tcfdblockwal(TC_fdb) : true)
+#define FDBUNLOCKWAL(TC_fdb) \
+  ((TC_fdb)->mmtx ? tcfdbunlockwal(TC_fdb) : true)
 #define FDBTHREADYIELD(TC_fdb) \
   do { if((TC_fdb)->mmtx) sched_yield(); } while(false)
 
@@ -80,14 +89,10 @@ static void tcfdbdumpmeta(TCFDB *fdb, char *hbuf);
 static void tcfdbloadmeta(TCFDB *fdb, const char *hbuf);
 static void tcfdbclear(TCFDB *fdb);
 static void tcfdbsetflag(TCFDB *fdb, int flag, bool sign);
-static bool tcfdblockmethod(TCFDB *fdb, bool wr);
-static bool tcfdbunlockmethod(TCFDB *fdb);
-static bool tcfdblockattr(TCFDB *fdb);
-static bool tcfdbunlockattr(TCFDB *fdb);
-static bool tcfdblockrecord(TCFDB *fdb, bool wr, uint64_t id);
-static bool tcfdbunlockrecord(TCFDB *fdb, uint64_t id);
-static bool tcfdblockallrecords(TCFDB *fdb, bool wr);
-static bool tcfdbunlockallrecords(TCFDB *fdb);
+static bool tcfdbwalinit(TCFDB *fdb);
+static bool tcfdbwalwrite(TCFDB *fdb, uint64_t off, int64_t size);
+static int tcfdbwalrestore(TCFDB *fdb, const char *path);
+static bool tcfdbwalremove(TCFDB *fdb, const char *path);
 static bool tcfdbopenimpl(TCFDB *fdb, const char *path, int omode);
 static bool tcfdbcloseimpl(TCFDB *fdb);
 static int64_t tcfdbprevid(TCFDB *fdb, int64_t id);
@@ -102,6 +107,18 @@ static bool tcfdboptimizeimpl(TCFDB *fdb, int32_t width, int64_t limsiz);
 static bool tcfdbvanishimpl(TCFDB *fdb);
 static bool tcfdbcopyimpl(TCFDB *fdb, const char *path);
 static bool tcfdbforeachimpl(TCFDB *fdb, TCITER iter, void *op);
+static bool tcfdblockmethod(TCFDB *fdb, bool wr);
+static bool tcfdbunlockmethod(TCFDB *fdb);
+static bool tcfdblockattr(TCFDB *fdb);
+static bool tcfdbunlockattr(TCFDB *fdb);
+static bool tcfdblockrecord(TCFDB *fdb, bool wr, uint64_t id);
+static bool tcfdbunlockrecord(TCFDB *fdb, uint64_t id);
+static bool tcfdblockallrecords(TCFDB *fdb, bool wr);
+static bool tcfdbunlockallrecords(TCFDB *fdb);
+static bool tcfdblocktran(TCFDB *fdb);
+static bool tcfdbunlocktran(TCFDB *fdb);
+static bool tcfdblockwal(TCFDB *fdb);
+static bool tcfdbunlockwal(TCFDB *fdb);
 
 
 /* debugging function prototypes */
@@ -135,12 +152,16 @@ void tcfdbdel(TCFDB *fdb){
   if(fdb->fd >= 0) tcfdbclose(fdb);
   if(fdb->mmtx){
     pthread_key_delete(*(pthread_key_t *)fdb->eckey);
+    pthread_mutex_destroy(fdb->wmtx);
+    pthread_mutex_destroy(fdb->tmtx);
     for(int i = FDBRMTXNUM - 1; i >= 0; i--){
       pthread_rwlock_destroy((pthread_rwlock_t *)fdb->rmtxs + i);
     }
     pthread_mutex_destroy(fdb->amtx);
     pthread_rwlock_destroy(fdb->mmtx);
     TCFREE(fdb->eckey);
+    TCFREE(fdb->wmtx);
+    TCFREE(fdb->tmtx);
     TCFREE(fdb->rmtxs);
     TCFREE(fdb->amtx);
     TCFREE(fdb->mmtx);
@@ -168,6 +189,8 @@ bool tcfdbsetmutex(TCFDB *fdb){
   TCMALLOC(fdb->mmtx, sizeof(pthread_rwlock_t));
   TCMALLOC(fdb->amtx, sizeof(pthread_mutex_t));
   TCMALLOC(fdb->rmtxs, sizeof(pthread_rwlock_t) * FDBRMTXNUM);
+  TCMALLOC(fdb->tmtx, sizeof(pthread_mutex_t));
+  TCMALLOC(fdb->wmtx, sizeof(pthread_mutex_t));
   TCMALLOC(fdb->eckey, sizeof(pthread_key_t));
   bool err = false;
   if(pthread_rwlock_init(fdb->mmtx, NULL) != 0) err = true;
@@ -175,13 +198,19 @@ bool tcfdbsetmutex(TCFDB *fdb){
   for(int i = 0; i < FDBRMTXNUM; i++){
     if(pthread_rwlock_init((pthread_rwlock_t *)fdb->rmtxs + i, NULL) != 0) err = true;
   }
+  if(pthread_mutex_init(fdb->tmtx, NULL) != 0) err = true;
+  if(pthread_mutex_init(fdb->wmtx, NULL) != 0) err = true;
   if(pthread_key_create(fdb->eckey, NULL) != 0) err = true;
   if(err){
     TCFREE(fdb->eckey);
+    TCFREE(fdb->wmtx);
+    TCFREE(fdb->tmtx);
     TCFREE(fdb->rmtxs);
     TCFREE(fdb->amtx);
     TCFREE(fdb->mmtx);
     fdb->eckey = NULL;
+    fdb->wmtx = NULL;
+    fdb->tmtx = NULL;
     fdb->rmtxs = NULL;
     fdb->amtx = NULL;
     fdb->mmtx = NULL;
@@ -805,7 +834,7 @@ double tcfdbadddouble(TCFDB *fdb, int64_t id, double num){
 bool tcfdbsync(TCFDB *fdb){
   assert(fdb);
   if(!FDBLOCKMETHOD(fdb, true)) return false;
-  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER)){
+  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER) || fdb->tran){
     tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
     FDBUNLOCKMETHOD(fdb);
     return false;
@@ -820,7 +849,7 @@ bool tcfdbsync(TCFDB *fdb){
 bool tcfdboptimize(TCFDB *fdb, int32_t width, int64_t limsiz){
   assert(fdb);
   if(!FDBLOCKMETHOD(fdb, true)) return false;
-  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER)){
+  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER) || fdb->tran){
     tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
     FDBUNLOCKMETHOD(fdb);
     return false;
@@ -836,7 +865,7 @@ bool tcfdboptimize(TCFDB *fdb, int32_t width, int64_t limsiz){
 bool tcfdbvanish(TCFDB *fdb){
   assert(fdb);
   if(!FDBLOCKMETHOD(fdb, true)) return false;
-  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER)){
+  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER) || fdb->tran){
     tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
     FDBUNLOCKMETHOD(fdb);
     return false;
@@ -866,6 +895,107 @@ bool tcfdbcopy(TCFDB *fdb, const char *path){
   FDBUNLOCKALLRECORDS(fdb);
   FDBUNLOCKMETHOD(fdb);
   return rv;
+}
+
+
+/* Begin the transaction of a fixed-length database object. */
+bool tcfdbtranbegin(TCFDB *fdb){
+  assert(fdb);
+  if(!FDBLOCKMETHOD(fdb, true)) return false;
+  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER) || fdb->fatal || fdb->tran){
+    tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  fdb->flags &= ~FDBFOPEN;
+  if(!tcfdbmemsync(fdb, false)){
+    fdb->flags |= FDBFOPEN;
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  fdb->flags |= FDBFOPEN;
+  if((fdb->omode & FDBOTSYNC) && fsync(fdb->fd) == -1){
+    tcfdbsetecode(fdb, TCESYNC, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  if(fdb->walfd < 0){
+    char *tpath = tcsprintf("%s%c%s", fdb->path, MYEXTCHR, FDBWALSUFFIX);
+    int walfd = open(tpath, O_RDWR | O_CREAT | O_TRUNC, FDBFILEMODE);
+    TCFREE(tpath);
+    if(walfd < 0){
+      int ecode = TCEOPEN;
+      switch(errno){
+      case EACCES: ecode = TCENOPERM; break;
+      case ENOENT: ecode = TCENOFILE; break;
+      }
+      tcfdbsetecode(fdb, ecode, __FILE__, __LINE__, __func__);
+      FDBUNLOCKMETHOD(fdb);
+      return false;
+    }
+    fdb->walfd = walfd;
+  }
+  if(!tcfdbwalinit(fdb)){
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  if(!FDBLOCKTRAN(fdb)){
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  fdb->tran = true;
+  FDBUNLOCKMETHOD(fdb);
+  return true;
+}
+
+
+/* Commit the transaction of a fixed-length database object. */
+bool tcfdbtrancommit(TCFDB *fdb){
+  assert(fdb);
+  if(!FDBLOCKMETHOD(fdb, true)) return false;
+  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER) || fdb->fatal || !fdb->tran){
+    tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  bool err = false;
+  if(!tcfdbmemsync(fdb, fdb->omode & FDBOTSYNC)) err = true;
+  if(!err && ftruncate(fdb->walfd, 0) == -1){
+    tcfdbsetecode(fdb, TCETRUNC, __FILE__, __LINE__, __func__);
+    err = true;
+  }
+  fdb->tran = false;
+  FDBUNLOCKTRAN(fdb);
+  FDBUNLOCKMETHOD(fdb);
+  return !err;
+}
+
+
+/* Abort the transaction of a fixed-length database object. */
+bool tcfdbtranabort(TCFDB *fdb){
+  assert(fdb);
+  if(!FDBLOCKMETHOD(fdb, true)) return false;
+  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER) || !fdb->tran){
+    tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  bool err = false;
+  if(!tcfdbmemsync(fdb, false)) err = true;
+  if(!tcfdbwalrestore(fdb, fdb->path)) err = true;
+  char hbuf[FDBHEADSIZ];
+  if(lseek(fdb->fd, 0, SEEK_SET) == -1){
+    tcfdbsetecode(fdb, TCESEEK, __FILE__, __LINE__, __func__);
+    err = false;
+  } else if(!tcread(fdb->fd, hbuf, FDBHEADSIZ)){
+    tcfdbsetecode(fdb, TCEREAD, __FILE__, __LINE__, __func__);
+    err = false;
+  } else {
+    tcfdbloadmeta(fdb, hbuf);
+  }
+  fdb->tran = false;
+  FDBUNLOCKTRAN(fdb);
+  FDBUNLOCKMETHOD(fdb);
+  return !err;
 }
 
 
@@ -1274,6 +1404,8 @@ static void tcfdbclear(TCFDB *fdb){
   fdb->mmtx = NULL;
   fdb->amtx = NULL;
   fdb->rmtxs = NULL;
+  fdb->tmtx = NULL;
+  fdb->wmtx = NULL;
   fdb->eckey = NULL;
   fdb->type = TCDBTFIXED;
   fdb->flags = 0;
@@ -1296,6 +1428,9 @@ static void tcfdbclear(TCFDB *fdb){
   fdb->fatal = false;
   fdb->inode = 0;
   fdb->mtime = 0;
+  fdb->tran = false;
+  fdb->walfd = -1;
+  fdb->walend = 0;
   fdb->dbgfd = -1;
   fdb->cnt_writerec = -1;
   fdb->cnt_readrec = -1;
@@ -1322,129 +1457,205 @@ static void tcfdbsetflag(TCFDB *fdb, int flag, bool sign){
 }
 
 
-/* Lock a method of the fixed-length database object.
-   `fdb' specifies the fixed-length database object.
-   `wr' specifies whether the lock is writer or not.
-   If successful, the return value is true, else, it is false. */
-static bool tcfdblockmethod(TCFDB *fdb, bool wr){
-  assert(fdb);
-  if(wr ? pthread_rwlock_wrlock(fdb->mmtx) != 0 : pthread_rwlock_rdlock(fdb->mmtx) != 0){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
-  }
-  TCTESTYIELD();
-  return true;
-}
-
-
-/* Unlock a method of the fixed-length database object.
+/* Initialize the write ahead logging file.
    `fdb' specifies the fixed-length database object.
    If successful, the return value is true, else, it is false. */
-static bool tcfdbunlockmethod(TCFDB *fdb){
+static bool tcfdbwalinit(TCFDB *fdb){
   assert(fdb);
-  if(pthread_rwlock_unlock(fdb->mmtx) != 0){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+  if(lseek(fdb->walfd, 0, SEEK_SET) == -1){
+    tcfdbsetecode(fdb, TCESEEK, __FILE__, __LINE__, __func__);
     return false;
   }
-  TCTESTYIELD();
+  if(ftruncate(fdb->walfd, 0) == -1){
+    tcfdbsetecode(fdb, TCETRUNC, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  uint64_t llnum = fdb->fsiz;
+  llnum = TCHTOILL(llnum);
+  if(!tcwrite(fdb->walfd, &llnum, sizeof(llnum))){
+    tcfdbsetecode(fdb, TCEWRITE, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  fdb->walend = fdb->fsiz;
+  if(!tcfdbwalwrite(fdb, 0, FDBHEADSIZ)) return false;
   return true;
 }
 
 
-/* Lock the attributes of the fixed-length database object.
+/* Write an event into the write ahead logging file.
    `fdb' specifies the fixed-length database object.
+   `off' specifies the offset of the region to be updated.
+   `size' specifies the size of the region.
    If successful, the return value is true, else, it is false. */
-static bool tcfdblockattr(TCFDB *fdb){
-  assert(fdb);
-  if(pthread_mutex_lock(fdb->amtx) != 0){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+static bool tcfdbwalwrite(TCFDB *fdb, uint64_t off, int64_t size){
+  assert(fdb && off >= 0 && size >= 0);
+  if(off + size > fdb->walend) size = fdb->walend - off;
+  if(size < 1) return true;
+  char stack[FDBIOBUFSIZ];
+  char *buf;
+  if(size + sizeof(off) + sizeof(size) <= FDBIOBUFSIZ){
+    buf = stack;
+  } else {
+    TCMALLOC(buf, size + sizeof(off) + sizeof(size));
+  }
+  char *wp = buf;
+  uint64_t llnum = TCHTOILL(off);
+  memcpy(wp, &llnum, sizeof(llnum));
+  wp += sizeof(llnum);
+  uint32_t lnum = TCHTOIL(size);
+  memcpy(wp, &lnum, sizeof(lnum));
+  wp += sizeof(lnum);
+  memcpy(wp, fdb->map + off, size);
+  wp += size;
+  if(!FDBLOCKWAL(fdb)) return false;
+  if(!tcwrite(fdb->walfd, buf, wp - buf)){
+    tcfdbsetecode(fdb, TCEWRITE, __FILE__, __LINE__, __func__);
+    if(buf != stack) TCFREE(buf);
+    FDBUNLOCKWAL(fdb);
     return false;
   }
-  TCTESTYIELD();
+  if(buf != stack) TCFREE(buf);
+  if((fdb->omode & FDBOTSYNC) && fsync(fdb->walfd) == -1){
+    tcfdbsetecode(fdb, TCESYNC, __FILE__, __LINE__, __func__);
+    FDBUNLOCKWAL(fdb);
+    return false;
+  }
+  FDBUNLOCKWAL(fdb);
   return true;
 }
 
 
-/* Unlock the attributes of the fixed-length database object.
+/* Restore the database from the write ahead logging file.
    `fdb' specifies the fixed-length database object.
+   `path' specifies the path of the database file.
    If successful, the return value is true, else, it is false. */
-static bool tcfdbunlockattr(TCFDB *fdb){
-  assert(fdb);
-  if(pthread_mutex_unlock(fdb->amtx) != 0){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
-  }
-  TCTESTYIELD();
-  return true;
-}
-
-
-/* Lock a record of the fixed-length database object.
-   `fdb' specifies the fixed-length database object.
-   `wr' specifies whether the lock is writer or not.
-   If successful, the return value is true, else, it is false. */
-static bool tcfdblockrecord(TCFDB *fdb, bool wr, uint64_t id){
-  assert(fdb && id > 0);
-  if(wr ? pthread_rwlock_wrlock((pthread_rwlock_t *)fdb->rmtxs + id % FDBRMTXNUM) != 0 :
-     pthread_rwlock_rdlock((pthread_rwlock_t *)fdb->rmtxs + id % FDBRMTXNUM) != 0){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
-  }
-  TCTESTYIELD();
-  return true;
-}
-
-
-/* Unlock a record of the fixed-length database object.
-   `fdb' specifies the fixed-length database object.
-   If successful, the return value is true, else, it is false. */
-static bool tcfdbunlockrecord(TCFDB *fdb, uint64_t id){
-  assert(fdb);
-  if(pthread_rwlock_unlock((pthread_rwlock_t *)fdb->rmtxs + id % FDBRMTXNUM) != 0){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
-  }
-  TCTESTYIELD();
-  return true;
-}
-
-
-/* Lock all records of the hash database object.
-   `fdb' specifies the hash database object.
-   `wr' specifies whether the lock is writer or not.
-   If successful, the return value is true, else, it is false. */
-static bool tcfdblockallrecords(TCFDB *fdb, bool wr){
-  assert(fdb);
-  for(int i = 0; i < FDBRMTXNUM; i++){
-    if(wr ? pthread_rwlock_wrlock((pthread_rwlock_t *)fdb->rmtxs + i) != 0 :
-       pthread_rwlock_rdlock((pthread_rwlock_t *)fdb->rmtxs + i) != 0){
-      while(--i >= 0){
-        pthread_rwlock_unlock((pthread_rwlock_t *)fdb->rmtxs + i);
-      }
-      tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
-      return false;
-    }
-  }
-  TCTESTYIELD();
-  return true;
-}
-
-
-/* Unlock all records of the hash database object.
-   `fdb' specifies the hash database object.
-   If successful, the return value is true, else, it is false. */
-static bool tcfdbunlockallrecords(TCFDB *fdb){
-  assert(fdb);
+static int tcfdbwalrestore(TCFDB *fdb, const char *path){
+  assert(fdb && path);
+  char *tpath = tcsprintf("%s%c%s", path, MYEXTCHR, FDBWALSUFFIX);
+  int walfd = open(tpath, O_RDONLY, FDBFILEMODE);
+  TCFREE(tpath);
+  if(walfd < 0) return false;
   bool err = false;
-  for(int i = FDBRMTXNUM - 1; i >= 0; i--){
-    if(pthread_rwlock_unlock((pthread_rwlock_t *)fdb->rmtxs + i)) err = true;
+  uint64_t walsiz = 0;
+  struct stat sbuf;
+  if(fstat(walfd, &sbuf) == 0){
+    walsiz = sbuf.st_size;
+  } else {
+    tcfdbsetecode(fdb, TCESTAT, __FILE__, __LINE__, __func__);
+    err = true;
   }
-  TCTESTYIELD();
-  if(err){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
+  if(walsiz >= sizeof(walsiz) + FDBHEADSIZ){
+    int dbfd = fdb->fd;
+    int tfd = -1;
+    if(!(fdb->omode & FDBOWRITER)){
+      tfd = open(path, O_WRONLY, FDBFILEMODE);
+      if(tfd >= 0){
+        dbfd = tfd;
+      } else {
+        int ecode = TCEOPEN;
+        switch(errno){
+        case EACCES: ecode = TCENOPERM; break;
+        case ENOENT: ecode = TCENOFILE; break;
+        }
+        tcfdbsetecode(fdb, ecode, __FILE__, __LINE__, __func__);
+        err = true;
+      }
+    }
+    uint64_t fsiz = 0;
+    if(tcread(walfd, &fsiz, sizeof(fsiz))){
+      fsiz = TCITOHLL(fsiz);
+    } else {
+      tcfdbsetecode(fdb, TCEREAD, __FILE__, __LINE__, __func__);
+      err = true;
+    }
+    TCLIST *list = tclistnew();
+    uint64_t waloff = sizeof(fsiz);
+    char stack[FDBIOBUFSIZ];
+    while(waloff < walsiz){
+      uint64_t off;
+      uint32_t size;
+      if(!tcread(walfd, stack, sizeof(off) + sizeof(size))){
+        tcfdbsetecode(fdb, TCEREAD, __FILE__, __LINE__, __func__);
+        err = true;
+        break;
+      }
+      memcpy(&off, stack, sizeof(off));
+      off = TCITOHLL(off);
+      memcpy(&size, stack + sizeof(off), sizeof(size));
+      size = TCITOHL(size);
+      char *buf;
+      if(sizeof(off) + size <= FDBIOBUFSIZ){
+        buf = stack;
+      } else {
+        TCMALLOC(buf, sizeof(off) + size);
+      }
+      *(uint64_t *)buf = off;
+      if(!tcread(walfd, buf + sizeof(off), size)){
+        tcfdbsetecode(fdb, TCEREAD, __FILE__, __LINE__, __func__);
+        err = true;
+        if(buf != stack) TCFREE(buf);
+        break;
+      }
+      TCLISTPUSH(list, buf, sizeof(off) + size);
+      if(buf != stack) TCFREE(buf);
+      waloff += sizeof(off) + sizeof(size) + size;
+    }
+    for(int i = TCLISTNUM(list) - 1; i >= 0; i--){
+      const char *rec;
+      int size;
+      TCLISTVAL(rec, list, i, size);
+      uint64_t off = *(uint64_t *)rec;
+      rec += sizeof(off);
+      size -= sizeof(off);
+      if(lseek(dbfd, off, SEEK_SET) == -1){
+        tcfdbsetecode(fdb, TCESEEK, __FILE__, __LINE__, __func__);
+        err = true;
+        break;
+      }
+      if(!tcwrite(dbfd, rec, size)){
+        tcfdbsetecode(fdb, TCEWRITE, __FILE__, __LINE__, __func__);
+        err = true;
+        break;
+      }
+    }
+    tclistdel(list);
+    if(ftruncate(dbfd, fsiz) == -1){
+      tcfdbsetecode(fdb, TCETRUNC, __FILE__, __LINE__, __func__);
+      err = true;
+    }
+    if((fdb->omode & FDBOTSYNC) && fsync(dbfd) == -1){
+      tcfdbsetecode(fdb, TCESYNC, __FILE__, __LINE__, __func__);
+      err = true;
+    }
+    if(tfd >= 0 && close(tfd) == -1){
+      tcfdbsetecode(fdb, TCECLOSE, __FILE__, __LINE__, __func__);
+      err = true;
+    }
+  } else {
+    err = true;
   }
-  return true;
+  if(close(walfd) == -1){
+    tcfdbsetecode(fdb, TCECLOSE, __FILE__, __LINE__, __func__);
+    err = true;
+  }
+  return !err;
+}
+
+
+/* Remove the write ahead logging file.
+   `fdb' specifies the fixed-length database object.
+   `path' specifies the path of the database file.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdbwalremove(TCFDB *fdb, const char *path){
+  assert(fdb && path);
+  char *tpath = tcsprintf("%s%c%s", path, MYEXTCHR, FDBWALSUFFIX);
+  bool err = false;
+  if(unlink(tpath) == -1 && errno != ENOENT){
+    tcfdbsetecode(fdb, TCEUNLINK, __FILE__, __LINE__, __func__);
+    err = true;
+  }
+  TCFREE(tpath);
+  return !err;
 }
 
 
@@ -1483,6 +1694,10 @@ static bool tcfdbopenimpl(TCFDB *fdb, const char *path, int omode){
       close(fd);
       return false;
     }
+    if(!tcfdbwalremove(fdb, path)){
+      close(fd);
+      return false;
+    }
   }
   struct stat sbuf;
   if(fstat(fd, &sbuf) == -1 || !S_ISREG(sbuf.st_mode)){
@@ -1517,6 +1732,23 @@ static bool tcfdbopenimpl(TCFDB *fdb, const char *path, int omode){
   }
   int type = fdb->type;
   tcfdbloadmeta(fdb, hbuf);
+  if((fdb->flags & FDBFOPEN) && tcfdbwalrestore(fdb, path)){
+    if(lseek(fd, 0, SEEK_SET) == -1){
+      tcfdbsetecode(fdb, TCESEEK, __FILE__, __LINE__, __func__);
+      close(fd);
+      return false;
+    }
+    if(!tcread(fd, hbuf, FDBHEADSIZ)){
+      tcfdbsetecode(fdb, TCEREAD, __FILE__, __LINE__, __func__);
+      close(fd);
+      return false;
+    }
+    tcfdbloadmeta(fdb, hbuf);
+    if(!tcfdbwalremove(fdb, path)){
+      close(fd);
+      return false;
+    }
+  }
   if(!(omode & FDBONOLCK)){
     if(memcmp(hbuf, FDBMAGICDATA, strlen(FDBMAGICDATA)) || fdb->type != type ||
        fdb->width < 1 || sbuf.st_size < fdb->fsiz || fdb->limsiz < FDBHEADSIZ ||
@@ -1553,6 +1785,9 @@ static bool tcfdbopenimpl(TCFDB *fdb, const char *path, int omode){
   fdb->fatal = false;
   fdb->inode = (uint64_t)sbuf.st_ino;
   fdb->mtime = sbuf.st_mtime;
+  fdb->tran = false;
+  fdb->walfd = -1;
+  fdb->walend = 0;
   if(fdb->omode & FDBOWRITER) tcfdbsetflag(fdb, FDBFOPEN, true);
   return true;
 }
@@ -1565,16 +1800,28 @@ static bool tcfdbcloseimpl(TCFDB *fdb){
   assert(fdb);
   bool err = false;
   if(fdb->omode & FDBOWRITER) tcfdbsetflag(fdb, FDBFOPEN, false);
-  TCFREE(fdb->path);
   if((fdb->omode & FDBOWRITER) && !tcfdbmemsync(fdb, false)) err = true;
   if(munmap(fdb->map, fdb->limsiz) == -1){
     tcfdbsetecode(fdb, TCEMMAP, __FILE__, __LINE__, __func__);
     err = true;
   }
+  if(fdb->tran){
+    if(!tcfdbwalrestore(fdb, fdb->path)) err = true;
+    fdb->tran = false;
+    FDBUNLOCKTRAN(fdb);
+  }
+  if(fdb->walfd >= 0){
+    if(close(fdb->walfd) == -1){
+      tcfdbsetecode(fdb, TCECLOSE, __FILE__, __LINE__, __func__);
+      err = true;
+    }
+    if(!fdb->fatal && !tcfdbwalremove(fdb, fdb->path)) err = true;
+  }
   if(close(fdb->fd) == -1){
     tcfdbsetecode(fdb, TCECLOSE, __FILE__, __LINE__, __func__);
     err = true;
   }
+  TCFREE(fdb->path);
   fdb->path = NULL;
   fdb->fd = -1;
   return !err;
@@ -1744,6 +1991,7 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
       return false;
     }
     if(dmode == FDBPDCAT){
+      if(fdb->tran && !tcfdbwalwrite(fdb, (char *)rec - fdb->map, fdb->width)) return false;
       vsiz = tclmin(vsiz, fdb->width - osiz);
       unsigned char *wp = rec;
       int usiz = osiz + vsiz;
@@ -1781,6 +2029,7 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
         *(int *)vbuf = lnum;
         return true;
       }
+      if(fdb->tran && !tcfdbwalwrite(fdb, (char *)rec - fdb->map, fdb->width)) return false;
       lnum += *(int *)vbuf;
       *(int *)vbuf = lnum;
       memcpy(rp, &lnum, sizeof(lnum));
@@ -1798,6 +2047,7 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
         *(double *)vbuf = dnum;
         return true;
       }
+      if(fdb->tran && !tcfdbwalwrite(fdb, (char *)rec - fdb->map, fdb->width)) return false;
       dnum += *(double *)vbuf;
       *(double *)vbuf = dnum;
       memcpy(rp, &dnum, sizeof(dnum));
@@ -1809,6 +2059,7 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
       int nvsiz;
       char *nvbuf = procptr->proc(rp, osiz, &nvsiz, procptr->op);
       if(nvbuf == (void *)-1){
+        if(fdb->tran && !tcfdbwalwrite(fdb, (char *)rec - fdb->map, fdb->width)) return false;
         memset(rec, 0, fdb->wsiz + 1);
         TCDODEBUG(fdb->cnt_writerec++);
         if(!FDBLOCKATTR(fdb)) return false;
@@ -1833,6 +2084,7 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
         tcfdbsetecode(fdb, TCEKEEP, __FILE__, __LINE__, __func__);
         return false;
       }
+      if(fdb->tran && !tcfdbwalwrite(fdb, (char *)rec - fdb->map, fdb->width)) return false;
       if(nvsiz > fdb->width) nvsiz = fdb->width;
       unsigned char *wp = rec;
       switch(fdb->wsiz){
@@ -1864,6 +2116,7 @@ static bool tcfdbputimpl(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, int
     tcfdbsetecode(fdb, TCENOREC, __FILE__, __LINE__, __func__);
     return false;
   }
+  if(fdb->tran && !tcfdbwalwrite(fdb, (char *)rec - fdb->map, fdb->width)) return false;
   unsigned char *wp = rec;
   switch(fdb->wsiz){
   case 1:
@@ -1933,6 +2186,7 @@ static bool tcfdboutimpl(TCFDB *fdb, int64_t id){
     tcfdbsetecode(fdb, TCENOREC, __FILE__, __LINE__, __func__);
     return false;
   }
+  if(fdb->tran && !tcfdbwalwrite(fdb, (char *)rec - fdb->map, fdb->width)) return false;
   memset(rec, 0, fdb->wsiz + 1);
   TCDODEBUG(fdb->cnt_writerec++);
   if(!FDBLOCKATTR(fdb)) return false;
@@ -2128,8 +2382,8 @@ static bool tcfdbvanishimpl(TCFDB *fdb){
 }
 
 
-/* Copy the database file of a hash database object.
-   `fdb' specifies the hash database object.
+/* Copy the database file of a fixed-length database object.
+   `fdb' specifies the fixed-length database object.
    `path' specifies the path of the destination file.
    If successful, the return value is true, else, it is false. */
 static bool tcfdbcopyimpl(TCFDB *fdb, const char *path){
@@ -2156,7 +2410,11 @@ static bool tcfdbcopyimpl(TCFDB *fdb, const char *path){
 }
 
 
-/* Process each record atomically of a fixed-length database object. */
+/* Process each record atomically of a fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   `iter' specifies the pointer to the iterator function called for each record.
+   `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.
+   If successful, the return value is true, else, it is false. */
 static bool tcfdbforeachimpl(TCFDB *fdb, TCITER iter, void *op){
   bool err = false;
   uint64_t id = fdb->min;
@@ -2174,6 +2432,188 @@ static bool tcfdbforeachimpl(TCFDB *fdb, TCITER iter, void *op){
     id = tcfdbnextid(fdb, id);
   }
   return !err;
+}
+
+
+/* Lock a method of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   `wr' specifies whether the lock is writer or not.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdblockmethod(TCFDB *fdb, bool wr){
+  assert(fdb);
+  if(wr ? pthread_rwlock_wrlock(fdb->mmtx) != 0 : pthread_rwlock_rdlock(fdb->mmtx) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Unlock a method of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdbunlockmethod(TCFDB *fdb){
+  assert(fdb);
+  if(pthread_rwlock_unlock(fdb->mmtx) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Lock the attributes of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdblockattr(TCFDB *fdb){
+  assert(fdb);
+  if(pthread_mutex_lock(fdb->amtx) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Unlock the attributes of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdbunlockattr(TCFDB *fdb){
+  assert(fdb);
+  if(pthread_mutex_unlock(fdb->amtx) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Lock a record of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   `wr' specifies whether the lock is writer or not.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdblockrecord(TCFDB *fdb, bool wr, uint64_t id){
+  assert(fdb && id > 0);
+  if(wr ? pthread_rwlock_wrlock((pthread_rwlock_t *)fdb->rmtxs + id % FDBRMTXNUM) != 0 :
+     pthread_rwlock_rdlock((pthread_rwlock_t *)fdb->rmtxs + id % FDBRMTXNUM) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Unlock a record of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdbunlockrecord(TCFDB *fdb, uint64_t id){
+  assert(fdb);
+  if(pthread_rwlock_unlock((pthread_rwlock_t *)fdb->rmtxs + id % FDBRMTXNUM) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Lock all records of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   `wr' specifies whether the lock is writer or not.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdblockallrecords(TCFDB *fdb, bool wr){
+  assert(fdb);
+  for(int i = 0; i < FDBRMTXNUM; i++){
+    if(wr ? pthread_rwlock_wrlock((pthread_rwlock_t *)fdb->rmtxs + i) != 0 :
+       pthread_rwlock_rdlock((pthread_rwlock_t *)fdb->rmtxs + i) != 0){
+      while(--i >= 0){
+        pthread_rwlock_unlock((pthread_rwlock_t *)fdb->rmtxs + i);
+      }
+      tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+      return false;
+    }
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Unlock all records of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdbunlockallrecords(TCFDB *fdb){
+  assert(fdb);
+  bool err = false;
+  for(int i = FDBRMTXNUM - 1; i >= 0; i--){
+    if(pthread_rwlock_unlock((pthread_rwlock_t *)fdb->rmtxs + i)) err = true;
+  }
+  TCTESTYIELD();
+  if(err){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  return true;
+}
+
+
+/* Lock the transaction of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdblocktran(TCFDB *fdb){
+  assert(fdb);
+  if(pthread_mutex_lock(fdb->tmtx) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Unlock the transaction of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdbunlocktran(TCFDB *fdb){
+  assert(fdb);
+  if(pthread_mutex_unlock(fdb->tmtx) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Lock the write ahead logging file of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdblockwal(TCFDB *fdb){
+  assert(fdb);
+  if(pthread_mutex_lock(fdb->wmtx) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
+}
+
+
+/* Unlock the write ahead logging file of the fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdbunlockwal(TCFDB *fdb){
+  assert(fdb);
+  if(pthread_mutex_unlock(fdb->wmtx) != 0){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  TCTESTYIELD();
+  return true;
 }
 
 
@@ -2195,6 +2635,8 @@ void tcfdbprintmeta(TCFDB *fdb){
   wp += sprintf(wp, " mmtx=%p", (void *)fdb->mmtx);
   wp += sprintf(wp, " amtx=%p", (void *)fdb->amtx);
   wp += sprintf(wp, " rmtxs=%p", (void *)fdb->rmtxs);
+  wp += sprintf(wp, " tmtx=%p", (void *)fdb->tmtx);
+  wp += sprintf(wp, " wmtx=%p", (void *)fdb->wmtx);
   wp += sprintf(wp, " eckey=%p", (void *)fdb->eckey);
   wp += sprintf(wp, " type=%02X", fdb->type);
   wp += sprintf(wp, " flags=%02X", fdb->flags);
@@ -2217,6 +2659,9 @@ void tcfdbprintmeta(TCFDB *fdb){
   wp += sprintf(wp, " fatal=%u", fdb->fatal);
   wp += sprintf(wp, " inode=%llu", (unsigned long long)fdb->inode);
   wp += sprintf(wp, " mtime=%llu", (unsigned long long)fdb->mtime);
+  wp += sprintf(wp, " tran=%d", fdb->tran);
+  wp += sprintf(wp, " walfd=%d", fdb->walfd);
+  wp += sprintf(wp, " walend=%llu", (unsigned long long)fdb->walend);
   wp += sprintf(wp, " dbgfd=%d", fdb->dbgfd);
   wp += sprintf(wp, " cnt_writerec=%lld", (long long)fdb->cnt_writerec);
   wp += sprintf(wp, " cnt_readrec=%lld", (long long)fdb->cnt_readrec);

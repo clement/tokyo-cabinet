@@ -7,11 +7,11 @@
 #================================================================
 
 # Package name
-AC_INIT(tokyocabinet, 1.4.12)
+AC_INIT(tokyocabinet, 1.4.13)
 
 # Package information
 MYLIBVER=8
-MYLIBREV=3
+MYLIBREV=4
 MYFORMATVER="1.0"
 
 # Targets
@@ -257,11 +257,11 @@ if test "$enable_bzip" != "no"
 then
   AC_CHECK_LIB(bz2, main)
 fi
-if test "$enable_exlzma" == "yes"
+if test "$enable_exlzma" = "yes"
 then
   AC_CHECK_LIB(lzma, main)
 fi
-if test "$enable_exlzo" == "yes"
+if test "$enable_exlzo" = "yes"
 then
   AC_CHECK_LIB(lzo2, main)
 fi
@@ -286,11 +286,11 @@ if test "$enable_bzip" != "no"
 then
   AC_CHECK_HEADER(bzlib.h, true, AC_MSG_ERROR([bzlib.h is required]))
 fi
-if test "$enable_exlzma" == "yes"
+if test "$enable_exlzma" = "yes"
 then
   AC_CHECK_HEADER(lzmalib.h, true, AC_MSG_ERROR([lzmalib.h is required]))
 fi
-if test "$enable_exlzo" == "yes"
+if test "$enable_exlzo" = "yes"
 then
   AC_CHECK_HEADER(lzo/lzo1x.h, true, AC_MSG_ERROR([lzo/lzo1x.h is required]))
 fi

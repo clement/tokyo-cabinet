@@ -68,7 +68,7 @@ module TokyoCabinet {
     const long TLARGE = 1 << 0;
     const long TDEFLATE = 1 << 1;
     const long TBZIP = 1 << 2;
-    const long TTCBS = 1 << 7;
+    const long TTCBS = 1 << 3;
     const long OREADER = 1 << 0;
     const long OWRITER = 1 << 1;
     const long OCREAT = 1 << 2;
@@ -111,7 +111,7 @@ module TokyoCabinet {
     const long TLARGE = 1 << 0;
     const long TDEFLATE = 1 << 1;
     const long TBZIP = 1 << 2;
-    const long TTCBS = 1 << 7;
+    const long TTCBS = 1 << 3;
     const long OREADER = 1 << 0;
     const long OWRITER = 1 << 1;
     const long OCREAT = 1 << 2;
@@ -179,6 +179,7 @@ module TokyoCabinet {
     const long OTRUNC = 1 << 3;
     const long ONOLCK = 1 << 4;
     const long OLCKNB = 1 << 5;
+    const long OTSYNC = 1 << 6;
     boolean tune(in long width, in long long limsiz);
     boolean open(in string path, in long omode);
     boolean close();
@@ -197,6 +198,9 @@ module TokyoCabinet {
     boolean optimize(in long width, in long long limsiz);
     boolean vanish();
     boolean copy(in string path);
+    boolean tranbegin();
+    boolean trancommit();
+    boolean tranabort();
     string path();
     long long rnum();
     long long fsiz();
@@ -208,7 +212,7 @@ module TokyoCabinet {
     const long TLARGE = 1 << 0;
     const long TDEFLATE = 1 << 1;
     const long TBZIP = 1 << 2;
-    const long TTCBS = 1 << 7;
+    const long TTCBS = 1 << 3;
     const long OREADER = 1 << 0;
     const long OWRITER = 1 << 1;
     const long OCREAT = 1 << 2;
@@ -284,6 +288,34 @@ module TokyoCabinet {
     List search();
     boolean searchout();
     string hint();
+  };
+  //----------------------------------------------------------------
+  // the abstract database API
+  //----------------------------------------------------------------
+  interface ADB {
+    boolean open(in string name);
+    boolean close();
+    boolean put(in string key, in string value);
+    boolean putkeep(in string key, in string value);
+    boolean putcat(in string key, in string value);
+    boolean out(in string key);
+    string get(in string key);
+    long vsiz(in string key);
+    boolean iterinit();
+    string iternext();
+    List fwmkeys(in string prefix, in long max);
+    long addint(in string key, in long num);
+    double adddouble(in string key, in double num);
+    boolean sync();
+    boolean vanish();
+    boolean copy(in string path);
+    boolean tranbegin();
+    boolean trancommit();
+    boolean tranabort();
+    string path();
+    long long rnum();
+    long long size();
+    List misc(in string name, in List args);
   };
 };
 

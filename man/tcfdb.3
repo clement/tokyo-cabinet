@@ -130,7 +130,7 @@ The function `tcfdbopen' is used in order to open a database file and connect a 
 `\fIpath\fR' specifies the path of the database file.
 .RE
 .RS
-`\fIomode\fR' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.  If the mode is `FDBOWRITER', the following may be added by bitwise-or: `FDBOCREAT', which means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new database regardless if one exists.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by bitwise-or: `FDBONOLCK', which means it opens the database file without file locking, or `FDBOLCKNB', which means locking is performed without blocking.
+`\fIomode\fR' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.  If the mode is `FDBOWRITER', the following may be added by bitwise\-or: `FDBOCREAT', which means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new database regardless if one exists, `FDBOTSYNC', which means every transaction synchronizes updated contents with the device.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by bitwise\-or: `FDBONOLCK', which means it opens the database file without file locking, or `FDBOLCKNB', which means locking is performed without blocking.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -806,7 +806,7 @@ The function `tcfdbadddouble' is used in order to add a real number to a record 
 `\fInum\fR' specifies the additional value.
 .RE
 .RS
-If successful, the return value is the summation value, else, it is Not-a-Number.
+If successful, the return value is the summation value, else, it is Not\-a\-Number.
 .RE
 .RS
 If the corresponding record exists, the value is treated as a real number and is added to.  If no record corresponds, a new record of the additional value is stored.
@@ -877,6 +877,54 @@ If successful, the return value is true, else, it is false.  False is returned i
 .RE
 .RS
 The database file is assured to be kept synchronized and not modified while the copying or executing operation is in progress.  So, this function is useful to create a backup file of the database file.
+.RE
+.RE
+.PP
+The function `tcfdbtranbegin' is used in order to begin the transaction of a fixed\-length database object.
+.PP
+.RS
+.br
+\fBbool tcfdbtranbegin(TCFDB *\fIfdb\fB);\fR
+.RS
+`\fIfdb\fR' specifies the fixed\-length database object connected as a writer.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+The database is locked by the thread while the transaction so that only one transaction can be activated with a database object at the same time.  Thus, the serializable isolation level is assumed if every database operation is performed in the transaction.  All updated regions are kept track of by write ahead logging while the transaction.  If the database is closed during transaction, the transaction is aborted implicitly.
+.RE
+.RE
+.PP
+The function `tcfdbtrancommit' is used in order to commit the transaction of a fixed\-length database object.
+.PP
+.RS
+.br
+\fBbool tcfdbtrancommit(TCFDB *\fIfdb\fB);\fR
+.RS
+`\fIfdb\fR' specifies the fixed\-length database object connected as a writer.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+Update in the transaction is fixed when it is committed successfully.
+.RE
+.RE
+.PP
+The function `tcfdbtranabort' is used in order to abort the transaction of a fixed\-length database object.
+.PP
+.RS
+.br
+\fBbool tcfdbtranabort(TCFDB *\fIfdb\fB);\fR
+.RS
+`\fIfdb\fR' specifies the fixed\-length database object connected as a writer.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.
 .RE
 .RE
 .PP

@@ -15,6 +15,7 @@
 
 
 #include <tcutil.h>
+#include <tcbdb.h>
 #include <tcadb.h>
 #include "myconf.h"
 
@@ -30,6 +31,8 @@ static void printerr(TCADB *adb);
 static int sepstrtochr(const char *str);
 static char *strtozsv(const char *str, int sep, int *sp);
 static int printdata(const char *ptr, int size, bool px, int sep);
+static bool mapbdbproc(void *map, const char *kbuf, int ksiz, const char *vbuf, int vsiz,
+                       void *op);
 static int runcreate(int argc, char **argv);
 static int runinform(int argc, char **argv);
 static int runput(int argc, char **argv);
@@ -37,6 +40,7 @@ static int runout(int argc, char **argv);
 static int runget(int argc, char **argv);
 static int runlist(int argc, char **argv);
 static int runmisc(int argc, char **argv);
+static int runmap(int argc, char **argv);
 static int runversion(int argc, char **argv);
 static int proccreate(const char *name);
 static int procinform(const char *name);
@@ -46,6 +50,7 @@ static int procout(const char *name, const char *kbuf, int ksiz);
 static int procget(const char *name, const char *kbuf, int ksiz, int sep, bool px, bool pz);
 static int proclist(const char *name, int sep, int max, bool pv, bool px, const char *fmstr);
 static int procmisc(const char *name, const char *func, const TCLIST *args, int sep, bool px);
+static int procmap(const char *name, const char *dest, const char *fmstr);
 static int procversion(void);
 
 
@@ -68,6 +73,8 @@ int main(int argc, char **argv){
     rv = runlist(argc, argv);
   } else if(!strcmp(argv[1], "misc")){
     rv = runmisc(argc, argv);
+  } else if(!strcmp(argv[1], "map")){
+    rv = runmap(argc, argv);
   } else if(!strcmp(argv[1], "version") || !strcmp(argv[1], "--version")){
     rv = runversion(argc, argv);
   } else {
@@ -89,6 +96,7 @@ static void usage(void){
   fprintf(stderr, "  %s get [-sx] [-sep chr] [-px] [-pz] name key\n", g_progname);
   fprintf(stderr, "  %s list [-sep chr] [-m num] [-pv] [-px] [-fm str] name\n", g_progname);
   fprintf(stderr, "  %s misc [-sx] [-sep chr] [-px] name func [arg...]\n", g_progname);
+  fprintf(stderr, "  %s map [-fm str] name dest\n", g_progname);
   fprintf(stderr, "  %s version\n", g_progname);
   fprintf(stderr, "\n");
   exit(1);
@@ -143,6 +151,15 @@ static int printdata(const char *ptr, int size, bool px, int sep){
     ptr++;
   }
   return len;
+}
+
+
+/* mapping function */
+static bool mapbdbproc(void *map, const char *kbuf, int ksiz, const char *vbuf, int vsiz,
+                       void *op){
+  bool err = false;
+  if(!tcadbmapbdbemit(map, kbuf, ksiz, vbuf, vsiz)) err = true;
+  return !err;
 }
 
 
@@ -418,6 +435,35 @@ static int runmisc(int argc, char **argv){
 }
 
 
+/* parse arguments of map command */
+static int runmap(int argc, char **argv){
+  char *name = NULL;
+  char *dest = NULL;
+  char *fmstr = NULL;
+  for(int i = 2; i < argc; i++){
+    if(!name && argv[i][0] == '-'){
+      if(!strcmp(argv[i], "-fm")){
+        if(++i >= argc) usage();
+        fmstr = argv[i];
+      } else {
+        usage();
+      }
+    } else if(!name){
+      name = argv[i];
+    } else if(!dest){
+      dest = argv[i];
+    } else {
+      usage();
+    }
+  }
+  if(!name || !dest) usage();
+  name = tcsprintf("%s#mode=r", name);
+  int rv = procmap(name, dest, fmstr);
+  tcfree(name);
+  return rv;
+}
+
+
 /* parse arguments of version command */
 static int runversion(int argc, char **argv){
   int rv = procversion();
@@ -658,6 +704,49 @@ static int procmisc(const char *name, const char *func, const TCLIST *args, int 
   }
   if(!tcadbclose(adb)){
     if(!err) printerr(adb);
+    err = true;
+  }
+  tcadbdel(adb);
+  return err ? 1 : 0;
+}
+
+
+/* perform map command */
+static int procmap(const char *name, const char *dest, const char *fmstr){
+  TCADB *adb = tcadbnew();
+  if(!tcadbopen(adb, name)){
+    printerr(adb);
+    tcadbdel(adb);
+    return 1;
+  }
+  bool err = false;
+  TCBDB *bdb = tcbdbnew();
+  if(!tcbdbopen(bdb, dest, BDBOWRITER | BDBOCREAT | BDBOTRUNC)){
+    printerr(adb);
+    tcbdbdel(bdb);
+    tcadbdel(adb);
+    return 1;
+  }
+  if(fmstr){
+    TCLIST *keys = tcadbfwmkeys2(adb, fmstr, -1);
+    if(!tcadbmapbdb(adb, keys, bdb, mapbdbproc, NULL, -1)){
+      printerr(adb);
+      err = true;
+    }
+    tclistdel(keys);
+  } else {
+    if(!tcadbmapbdb(adb, NULL, bdb, mapbdbproc, NULL, -1)){
+      printerr(adb);
+      err = true;
+    }
+  }
+  if(!tcbdbclose(bdb)){
+    printerr(adb);
+    err = true;
+  }
+  tcbdbdel(bdb);
+  if(!tcadbclose(adb)){
+    printerr(adb);
     err = true;
   }
   tcadbdel(adb);

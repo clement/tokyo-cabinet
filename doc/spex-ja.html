@@ -124,7 +124,7 @@
 
 <h3 id="features_practical">実用的な機能性</h3>
 
-<p>ハッシュデータベースとB+木データベースはトランザクション機構を提供します。トランザクションを開始してから終了するまでの一連の操作を一括してデータベースにコミットしたり、一連の更新操作を破棄してデータベースの状態をトランザクションの開始前の状態にロールバックしたりすることができます。トランザクションの分離レベルは2種類あります。データベースに対する全ての操作をトランザクション内で行うと直列化可能（serializable）トランザクションとなり、トランザクション外の操作を同時に行うと非コミット読み取り（read uncommitted）トランザクションとなります。耐久性はログ先行書き込みとシャドウページングによって担保されます。</p>
+<p>ファイルシステム上のデータベースはトランザクション機構を提供します。トランザクションを開始してから終了するまでの一連の操作を一括してデータベースにコミットしたり、一連の更新操作を破棄してデータベースの状態をトランザクションの開始前の状態にロールバックしたりすることができます。トランザクションの分離レベルは2種類あります。データベースに対する全ての操作をトランザクション内で行うと直列化可能（serializable）トランザクションとなり、トランザクション外の操作を同時に行うと非コミット読み取り（read uncommitted）トランザクションとなります。耐久性はログ先行書き込みとシャドウページングによって担保されます。</p>
 
 <p>Tokyo Cabinetにはデータベースに接続するモードとして、「リーダ」と「ライタ」の二種類があります。リーダは読み込み専用で、ライタは読み書き両用です。データベースにはファイルロックによってプロセス間での排他制御が行われます。ライタが接続している間は、他のプロセスはリーダとしてもライタとしても接続できません。リーダが接続している間は、他のプロセスのリーダは接続できるが、ライタは接続できません。この機構によって、マルチタスク環境での同時接続に伴うデータの整合性が保証されます。</p>
 
@@ -4617,7 +4617,7 @@ int main(int argc, char **argv){
 <dt><code>bool tcfdbopen(TCFDB *<var>fdb</var>, const char *<var>path</var>, int <var>omode</var>);</code></dt>
 <dd>`<var>fdb</var>' specifies the fixed-length database object which is not opened.</dd>
 <dd>`<var>path</var>' specifies the path of the database file.</dd>
-<dd>`<var>omode</var>' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.  If the mode is `FDBOWRITER', the following may be added by bitwise-or: `FDBOCREAT', which means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new database regardless if one exists.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by bitwise-or: `FDBONOLCK', which means it opens the database file without file locking, or `FDBOLCKNB', which means locking is performed without blocking.</dd>
+<dd>`<var>omode</var>' specifies the connection mode: `FDBOWRITER' as a writer, `FDBOREADER' as a reader.  If the mode is `FDBOWRITER', the following may be added by bitwise-or: `FDBOCREAT', which means it creates a new database if not exist, `FDBOTRUNC', which means it creates a new database regardless if one exists, `FDBOTSYNC', which means every transaction synchronizes updated contents with the device.  Both of `FDBOREADER' and `FDBOWRITER' can be added to by bitwise-or: `FDBONOLCK', which means it opens the database file without file locking, or `FDBOLCKNB', which means locking is performed without blocking.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
@@ -4995,6 +4995,33 @@ int main(int argc, char **argv){
 <dd>`<var>path</var>' specifies the path of the destination file.  If it begins with `@', the trailing substring is executed as a command line.</dd>
 <dd>If successful, the return value is true, else, it is false.  False is returned if the executed command returns non-zero code.</dd>
 <dd>The database file is assured to be kept synchronized and not modified while the copying or executing operation is in progress.  So, this function is useful to create a backup file of the database file.</dd>
+</dl>
+
+<p>The function `tcfdbtranbegin' is used in order to begin the transaction of a fixed-length database object.</p>
+
+<dl class="api">
+<dt><code>bool tcfdbtranbegin(TCFDB *<var>fdb</var>);</code></dt>
+<dd>`<var>fdb</var>' specifies the fixed-length database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The database is locked by the thread while the transaction so that only one transaction can be activated with a database object at the same time.  Thus, the serializable isolation level is assumed if every database operation is performed in the transaction.  All updated regions are kept track of by write ahead logging while the transaction.  If the database is closed during transaction, the transaction is aborted implicitly.</dd>
+</dl>
+
+<p>The function `tcfdbtrancommit' is used in order to commit the transaction of a fixed-length database object.</p>
+
+<dl class="api">
+<dt><code>bool tcfdbtrancommit(TCFDB *<var>fdb</var>);</code></dt>
+<dd>`<var>fdb</var>' specifies the fixed-length database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is fixed when it is committed successfully.</dd>
+</dl>
+
+<p>The function `tcfdbtranabort' is used in order to abort the transaction of a fixed-length database object.</p>
+
+<dl class="api">
+<dt><code>bool tcfdbtranabort(TCFDB *<var>fdb</var>);</code></dt>
+<dd>`<var>fdb</var>' specifies the fixed-length database object connected as a writer.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.</dd>
 </dl>
 
 <p>The function `tcfdbpath' is used in order to get the file path of a fixed-length database object.</p>
@@ -6243,7 +6270,7 @@ int main(int argc, char **argv){
 
 <dl class="api">
 <dt><code>int tcadbaddint(TCADB *<var>adb</var>, const void *<var>kbuf</var>, int <var>ksiz</var>, int <var>num</var>);</code></dt>
-<dd>`<var>adb</var>' specifies the abstract database object connected as a writer.</dd>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
 <dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
 <dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
 <dd>`<var>num</var>' specifies the additional value.</dd>
@@ -6255,7 +6282,7 @@ int main(int argc, char **argv){
 
 <dl class="api">
 <dt><code>double tcadbadddouble(TCADB *<var>adb</var>, const void *<var>kbuf</var>, int <var>ksiz</var>, double <var>num</var>);</code></dt>
-<dd>`<var>adb</var>' specifies the abstract database object connected as a writer.</dd>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
 <dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
 <dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
 <dd>`<var>num</var>' specifies the additional value.</dd>
@@ -6287,6 +6314,33 @@ int main(int argc, char **argv){
 <dd>`<var>path</var>' specifies the path of the destination file.  If it begins with `@', the trailing substring is executed as a command line.</dd>
 <dd>If successful, the return value is true, else, it is false.  False is returned if the executed command returns non-zero code.</dd>
 <dd>The database file is assured to be kept synchronized and not modified while the copying or executing operation is in progress.  So, this function is useful to create a backup file of the database file.</dd>
+</dl>
+
+<p>The function `tcadbtranbegin' is used in order to begin the transaction of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>bool tcadbtranbegin(TCADB *<var>adb</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>The database is locked by the thread while the transaction so that only one transaction can be activated with a database object at the same time.  Thus, the serializable isolation level is assumed if every database operation is performed in the transaction.  All updated regions are kept track of by write ahead logging while the transaction.  If the database is closed during transaction, the transaction is aborted implicitly.</dd>
+</dl>
+
+<p>The function `tcadbtrancommit' is used in order to commit the transaction of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>bool tcadbtrancommit(TCADB *<var>adb</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is fixed when it is committed successfully.</dd>
+</dl>
+
+<p>The function `tcadbtranabort' is used in order to abort the transaction of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>bool tcadbtranabort(TCADB *<var>adb</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.</dd>
 </dl>
 
 <p>The function `tcadbrnum' is used in order to get the number of records of an abstract database object.</p>
@@ -6402,7 +6456,7 @@ int main(int argc, char **argv){
 
 <p>このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
 
-<p>コマンド `<code>tcamgr</code>' は、抽象データベースAPIやそのアプリケーションのテストやデバッグに役立つツールです。以下の書式で用います。`<var>name</var>' はデータベースの名前を指定し、`<var>key</var>' はレコードのキーを指定し、`<var>value</var>' はレコードの値を指定し、`<var>func</var>' は関数の名前を指定し、`<var>arg</var>' は関数の引数を指定します。</p>
+<p>コマンド `<code>tcamgr</code>' は、抽象データベースAPIやそのアプリケーションのテストやデバッグに役立つツールです。以下の書式で用います。`<var>name</var>' はデータベースの名前を指定し、`<var>key</var>' はレコードのキーを指定し、`<var>value</var>' はレコードの値を指定し、`<var>func</var>' は関数の名前を指定し、`<var>arg</var>' は関数の引数を指定し、`<var>dest</var>' は格納先のファイルを指定します。</p>
 
 <dl class="api">
 <dt><code>tcamgr create <var>name</var></code></dt>
@@ -6419,6 +6473,8 @@ int main(int argc, char **argv){
 <dd>全てのレコードのキーを改行で区切って標準出力する。</dd>
 <dt><code>tcamgr misc [-sx] [-sep <var>chr</var>] [-px] <var>name</var> <var>func</var> [<var>arg</var>...]</code></dt>
 <dd>雑多な操作の多目的関数を呼び出す。</dd>
+<dt><code>tcamgr map [-fm <var>str</var>] <var>name</var> <var>dest</var></code></dt>
+<dd>レコードを別のB+木データベース内に写像する。</dd>
 <dt><code>tcamgr version</code></dt>
 <dd>Tokyo Cabinetのバージョン情報を標準出力する。</dd>
 </dl>
@@ -6543,7 +6599,7 @@ tchdbopen(hdb, "casket.tch", HDBOWRITER);
 
 <h3 id="tips_transaction">トランザクション</h3>
 
-<p>ハッシュデータベースとB+木データベースにはトランザクション機構があります。トランザクションを開始してから行った一連の操作は、コミットすることで確定させたり、アボートすることでなかったことにしたりすることができます。トランザクション中にアプリケーションがクラッシュ場合にも、トランザクション中の操作がなかったことになるだけで、データベースの整合性は維持されます。トランザクションは以下のようなコードで用います。</p>
+<p>ハッシュデータベースとB+木データベースにはトランザクション機構があります。トランザクションを開始してから行った一連の操作は、コミットすることで確定させたり、アボートすることでなかったことにしたりすることができます。トランザクション中にアプリケーションがクラッシュした場合にも、トランザクション中の操作がなかったことになるだけで、データベースの整合性は維持されます。トランザクションは以下のようなコードで用います。</p>
 
 <pre>tchdbtranbegin(hdb);
 do_something();
@@ -6554,7 +6610,7 @@ if(is_all_ok){
 }
 </pre>
 
-<p>トランザクションを実行できるのは同時1スレッドのみで、他のスレッドはその間ブロックされます。したがって、データベースの参照をトランザクション内でのみ行うならば、トランザクションの分離レベルは直列化可能（serializable）になります。しかし、あるスレッドがトランザクションの最中でも他のスレッドはトランザクションを実行せずにデータベースを参照できます。その場合の分離レベルは非コミット読み取り（read uncommitted）になります。状況に応じて使い分けてください。</p>
+<p>トランザクションを実行できるのは同時1スレッドのみで、他のスレッドはその間にトランザクションを開始しようとするとブロックされます。したがって、データベースの参照をトランザクション内でのみ行うならば、トランザクションの分離レベルは直列化可能（serializable）になります。しかし、あるスレッドがトランザクションの最中でも他のスレッドはトランザクションを実行せずにデータベースを参照できます。その場合の分離レベルは非コミット読み取り（read uncommitted）になります。状況に応じて使い分けてください。</p>
 
 <p>トランザクション機構は、ハッシュデータベースではファイル上のログ先行書き込み（write ahead logging）によって実現され、B+木データベースではメモリ上のシャドウページング（shadow paging）によって実現されます。これらの手法とロックによって、データベース単位のACID属性（atomicity、consistency、isolation、durability）が確保されます。</p>
 
@@ -7249,7 +7305,7 @@ cp -f "$srcpath" "$destpath"
 <dt>Q. : アプリケーションの良いサンプルコードはありますか？</dt>
 <dd>A. : 各APIのコマンドのソースコードを参考にしてください。`<code>tchmgr.c</code>' と `<code>tcbmgr.c</code>' と `<code>tcfmgr.c</code>' が最も簡潔でしょう。</dd>
 <dt>Q. : tchdbputkeep2とか、APIのシグネチャがわかりにくいんですけど、アンダースコア区切りとかCamelCaseとか使わないんですか？</dt>
-<dd>A. : 使いません。UNIX（POSIX）にも、creatとかsbrkとかdup2とかwait3とかwait4とかsigprocmaskとかstrncasecmpとかgethostbyname2とか、あなた好みでないものが多くあります。逆に私はUNIXのようにハードボイルドでユーザに媚びない名前が好きなのです。</p>
+<dd>A. : 使いません。UNIX（POSIX）にも、creatとかsbrkとかdup2とかwait3とかwait4とかsigprocmaskとかstrncasecmpとかgethostbyname2とか、あなた好みでないものが多くあります。逆に私はUNIXのようにハードボイルドでユーザに媚びない名前が好きなのです。</dd>
 <dt>Q. : データベースが壊れたのですが、どうしてでしょうか？</dt>
 <dd>A. : 大抵の場合、あなたのアプリケーションがきちんとデータベースを閉じていないのが原因です。デーモンプロセスであろうが、CGIスクリプトであろうが、アプリケーションが終了する際には必ずデータベースを閉じなければなりません。なお、CGIのプロセスはSIGPIPEやSIGTERMによって殺されることがあることにも留意しましょう。</dd>
 <dt>Q. : データベースを壊れにくくするにはどうすればよいですか？</dt>
