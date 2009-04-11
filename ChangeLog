@@ -1,3 +1,13 @@
+2009-04-07  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcbdb.c (tcbdbputimpl, tcbdbcurputimpl): page size limitation was added.
+
+	* tcbdb.c (tcbdbleafdatasize): removed.
+
+	* tctdb.c (tctdbsetindeximpl): inner indexes were tuned.
+
+	- Release: 1.4.14
+
 2009-04-02  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* configure.in: a bug related to support for traditional shells was fixed.

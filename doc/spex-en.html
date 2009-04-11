@@ -5304,7 +5304,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetcache(TCTDB *<var>tdb</var>, int32_t <var>rcnum</var>, int32_t <var>lcnum</var>, int32_t <var>ncnum</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
 <dd>`<var>rcnum</var>' specifies the maximum number of records to be cached.  If it is not more than 0, the record cache is disabled.  It is disabled by default.</dd>
-<dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 2048.</dd>
+<dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 4096.</dd>
 <dd>`<var>ncnum</var>' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 512.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the caching parameters should be set before the database is opened.  Leaf nodes and non-leaf nodes are used in column indexes.</dd>

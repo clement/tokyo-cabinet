@@ -27,10 +27,13 @@
 #define TDBDEFBNUM     131071            // default bucket number
 #define TDBDEFAPOW     4                 // default alignment power
 #define TDBDEFFPOW     10                // default free block pool power
-#define TDBDEFLCNUM    2048              // default number of leaf cache
+#define TDBDEFLCNUM    4096              // default number of leaf cache
 #define TDBDEFNCNUM    512               // default number of node cache
 #define TDBDEFXMSIZ    ((1LL<<20)*64)    // default size of the extra mapped memory
 #define TDBIDXSUFFIX   "idx"             // suffix of column index file
+#define TDBIDXLMEMB    64                // number of members in each leaf of the index
+#define TDBIDXNMEMB    256               // number of members in each node of the index
+#define TDBIDXLSMAX    8192              // maximum size of each leaf of the index
 #define TDBNUMCNTCOL   "_num"            // column name of number counting
 #define TDBCNTBUFSIZ   1024              // size of a buffer for number counting
 #define TDBHINTUSIZ    256               // unit size of the hint string
@@ -1329,6 +1332,7 @@ static bool tctdbopenimpl(TCTDB *tdb, const char *path, int omode){
       if(tdb->mmtx) tcbdbsetmutex(bdb);
       if(enc && dec) tcbdbsetcodecfunc(bdb, enc, encop, dec, decop);
       tcbdbsetcache(bdb, tdb->lcnum, tdb->ncnum);
+      tcbdbsetlsmax(bdb, TDBIDXLSMAX);
       if(tcbdbopen(bdb, ipath, bomode)){
         idxs[inum].name = tcstrdup(name);
         idxs[inum].type = TDBITLEXICAL;
@@ -1858,6 +1862,7 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
   TCCODEC enc, dec;
   void *encop, *decop;
   tchdbcodecfunc(tdb->hdb, &enc, &encop, &dec, &decop);
+  int64_t bbnum = (tchdbbnum(tdb->hdb) / TDBIDXLMEMB) * 4 + TDBIDXLMEMB;
   uint8_t opts = tdb->opts;
   uint8_t bopts = 0;
   if(opts & TDBTLARGE) bopts |= BDBTLARGE;
@@ -1872,8 +1877,9 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
     tcxstrprintf(pbuf, "%clex", MYEXTCHR);
     if(tdb->mmtx) tcbdbsetmutex(idx->db);
     if(enc && dec) tcbdbsetcodecfunc(idx->db, enc, encop, dec, decop);
-    tcbdbtune(idx->db, -1, -1, -1, -1, -1, bopts);
+    tcbdbtune(idx->db, TDBIDXLMEMB, TDBIDXNMEMB, bbnum, -1, -1, bopts);
     tcbdbsetcache(idx->db, tdb->lcnum, tdb->ncnum);
+    tcbdbsetlsmax(idx->db, TDBIDXLSMAX);
     if(!tcbdbopen(idx->db, TCXSTRPTR(pbuf), bomode)){
       tctdbsetecode(tdb, tcbdbecode(idx->db), __FILE__, __LINE__, __func__);
       err = true;
@@ -1887,8 +1893,9 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
     if(tdb->mmtx) tcbdbsetmutex(idx->db);
     tcbdbsetcmpfunc(idx->db, tccmpdecimal, NULL);
     if(enc && dec) tcbdbsetcodecfunc(idx->db, enc, encop, dec, decop);
-    tcbdbtune(idx->db, -1, -1, -1, -1, -1, bopts);
+    tcbdbtune(idx->db, TDBIDXLMEMB, TDBIDXNMEMB, bbnum, -1, -1, bopts);
     tcbdbsetcache(idx->db, tdb->lcnum, tdb->ncnum);
+    tcbdbsetlsmax(idx->db, TDBIDXLSMAX);
     if(!tcbdbopen(idx->db, TCXSTRPTR(pbuf), bomode)){
       tctdbsetecode(tdb, tcbdbecode(idx->db), __FILE__, __LINE__, __func__);
       err = true;

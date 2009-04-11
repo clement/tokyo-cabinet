@@ -63,9 +63,9 @@ typedef struct {                         /* type of structure for a B+ tree data
   TCMAP *nodec;                          /* cache for nodes */
   TCCMP cmp;                             /* pointer to the comparison function */
   void *cmpop;                           /* opaque object for the comparison function */
-  uint32_t lcnum;                        /* max number of cached leaves */
-  uint32_t ncnum;                        /* max number of cached nodes */
-  uint32_t lsmax;                        /* max size of each leaf */
+  uint32_t lcnum;                        /* maximum number of cached leaves */
+  uint32_t ncnum;                        /* maximum number of cached nodes */
+  uint32_t lsmax;                        /* maximum size of each leaf */
   uint32_t lschk;                        /* counter for leaf size checking */
   uint64_t capnum;                       /* capacity number of records */
   uint64_t *hist;                        /* history array of visited nodes */
@@ -956,8 +956,8 @@ uint64_t tcbdbbnumused(TCBDB *bdb);
 
 /* Set the maximum size of each leaf node.
    `bdb' specifies the B+ tree database object which is not opened.
-   `lsmax' specifies the maximum size of each leaf node.  If it is not more than 0, the maximum
-   size is unlimited.
+   `lsmax' specifies the maximum size of each leaf node.  If it is not more than 0, the default
+   value is specified.  The default value is 16386.
    If successful, the return value is true, else, it is false.
    Note that the tuning parameters of the database should be set before the database is opened. */
 bool tcbdbsetlsmax(TCBDB *bdb, uint32_t lsmax);

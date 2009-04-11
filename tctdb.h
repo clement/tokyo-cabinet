@@ -224,7 +224,7 @@ bool tctdbtune(TCTDB *tdb, int64_t bnum, int8_t apow, int8_t fpow, uint8_t opts)
    `rcnum' specifies the maximum number of records to be cached.  If it is not more than 0, the
    record cache is disabled.  It is disabled by default.
    `lcnum' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0,
-   the default value is specified.  The default value is 2048.
+   the default value is specified.  The default value is 4096.
    `ncnum' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0,
    the default value is specified.  The default value is 512.
    If successful, the return value is true, else, it is false.

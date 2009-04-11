@@ -81,7 +81,7 @@ typedef struct {                         /* type of structure for a hash databas
   TCXSTR *drpdef;                        /* deferred records of the delayed record pool */
   uint64_t drpoff;                       /* offset of the delayed record pool */
   TCMDB *recc;                           /* cache for records */
-  uint32_t rcnum;                        /* max number of cached records */
+  uint32_t rcnum;                        /* maximum number of cached records */
   TCCODEC enc;                           /* pointer to the encoding function */
   void *encop;                           /* opaque object for the encoding functions */
   TCCODEC dec;                           /* pointer to the decoding function */
