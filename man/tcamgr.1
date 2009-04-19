@@ -5,7 +5,7 @@ tcamgr \- the command line utility of the abstract database API
 
 .SH DESCRIPTION
 .PP
-The command `\fBtcamgr\fR' is a utility for test and debugging of the abstract database API and its applications.  `\fIname\fR' specifies the name of a database.  `\fIkey\fR' specifies the key of a record.  `\fIvalue\fR' specifies the value of a record.  `\fIfunc\fR' specifies the name of a function.  `\fIarg\fR' specifies the arguments of the function.  `\fIdest\fR' specifies the path of the destination file.
+The command `\fBtcamgr\fR' is a utility for test and debugging of the abstract database API and its applications.  `\fIname\fR' specifies the name of a database.  `\fIkey\fR' specifies the key of a record.  `\fIvalue\fR' specifies the value of a record.  `\fIparams\fR' specifies the tuning parameters.  `\fIfunc\fR' specifies the name of a function.  `\fIarg\fR' specifies the arguments of the function.  `\fIdest\fR' specifies the path of the destination file.
 .PP
 .RS
 .br
@@ -37,6 +37,11 @@ Print the value of a record.
 \fBtcamgr list \fR[\fB\-sep \fIchr\fB\fR]\fB \fR[\fB\-m \fInum\fB\fR]\fB \fR[\fB\-pv\fR]\fB \fR[\fB\-px\fR]\fB \fR[\fB\-fm \fIstr\fB\fR]\fB \fIname\fB\fR
 .RS
 Print keys of all records, separated by line feeds.
+.RE
+.br
+\fBtcamgr optimize \fIname\fB \fIparams\fB\fR
+.RS
+Optimize a database file.
 .RE
 .br
 \fBtcamgr misc \fR[\fB\-sx\fR]\fB \fR[\fB\-sep \fIchr\fB\fR]\fB \fR[\fB\-px\fR]\fB \fIname\fB \fIfunc\fB \fR[\fB\fIarg\fB...\fR]\fB\fR

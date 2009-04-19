@@ -324,6 +324,16 @@ double tcadbadddouble(TCADB *adb, const void *kbuf, int ksiz, double num);
 bool tcadbsync(TCADB *adb);
 
 
+/* Optimize the storage of an abstract database object.
+   `adb' specifies the abstract database object.
+   `params' specifies the string of the tuning parameters, which works as with the tuning
+   of parameters the function `tcadbopen'.  If it is `NULL', it is not used.
+   If successful, the return value is true, else, it is false.
+   This function is useful to reduce the size of the database storage with data fragmentation by
+   successive updating. */
+bool tcadboptimize(TCADB *adb, const char *params);
+
+
 /* Remove all records of an abstract database object.
    `adb' specifies the abstract database object.
    If successful, the return value is true, else, it is false. */
@@ -366,6 +376,14 @@ bool tcadbtrancommit(TCADB *adb);
    Update in the transaction is discarded when it is aborted.  The state of the database is
    rollbacked to before transaction. */
 bool tcadbtranabort(TCADB *adb);
+
+
+/* Get the file path of an abstract database object.
+   `adb' specifies the abstract database object.
+   The return value is the path of the database file or `NULL' if the object does not connect to
+   any database.  "*" stands for on-memory hash database.  "+" stands for on-memory tree
+   database. */
+const char *tcadbpath(TCADB *adb);
 
 
 /* Get the number of records of an abstract database object.

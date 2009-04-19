@@ -24,7 +24,7 @@ To use the abstract database API, include `\fBtcutil.h\fR', `\fBtcadb.h\fR', and
 .PP
 Objects whose type is pointer to `\fBTCADB\fR' are used to handle abstract databases.  An abstract database object is created with the function `\fBtcadbnew\fR' and is deleted with the function `\fBtcadbdel\fR'.  To avoid memory leak, it is important to delete every object when it is no longer in use.
 .PP
-Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `\fBtcadbopen\fR' is used to open a concrete database and the function `\fBtcadbclose\fR' is used to close the database.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.
+Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `\fBtcadbopen\fR' is used to open a concrete database and the function `\fBtcadbclose\fR' is used to close the database.  To avoid data missing or corruption, it is important to close every database instance when it is no longer in use.
 
 .SH API
 .PP
@@ -508,6 +508,25 @@ If successful, the return value is true, else, it is false.
 .RE
 .RE
 .PP
+The function `tcadboptimize' is used in order to optimize the storage of an abstract database object.
+.PP
+.RS
+.br
+\fBbool tcadboptimize(TCADB *\fIadb\fB, const char *\fIparams\fB);\fR
+.RS
+`\fIadb\fR' specifies the abstract database object.
+.RE
+.RS
+`\fIparams\fR' specifies the string of the tuning parameters, which works as with the tuning of parameters the function `tcadbopen'.  If it is `NULL', it is not used.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+This function is useful to reduce the size of the database storage with data fragmentation by successive updating.
+.RE
+.RE
+.PP
 The function `tcadbvanish' is used in order to remove all records of an abstract database object.
 .PP
 .RS
@@ -585,6 +604,19 @@ If successful, the return value is true, else, it is false.
 .RE
 .RS
 Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.
+.RE
+.RE
+.PP
+The function `tcadbpath' is used in order to get the file path of an abstract database object.
+.PP
+.RS
+.br
+\fBconst char *tcadbpath(TCADB *\fIadb\fB);\fR
+.RS
+`\fIadb\fR' specifies the abstract database object.
+.RE
+.RS
+The return value is the path of the database file or `NULL' if the object does not connect to any database.  "*" stands for on\-memory hash database.  "+" stands for on\-memory tree database.
 .RE
 .RE
 .PP

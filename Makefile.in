@@ -89,7 +89,7 @@ all : $(LIBRARYFILES) $(COMMANDFILES) $(CGIFILES)
 clean :
 	rm -rf $(LIBRARYFILES) $(LIBOBJFILES) $(COMMANDFILES) $(CGIFILES) \
 	  *.o a.out tokyocabinet_all.c check.in check.out gmon.out leak.log words.tsv \
-	  casket casket-* casket.* *.wal *~ hoge moge
+	  casket casket-* casket.* *.tch *.tcb *.tcf *.tct *.idx.* *.wal *~ hoge moge tako ika
 
 
 version :
@@ -518,6 +518,7 @@ check-adb :
 	$(RUNENV) $(RUNCMD) ./tcamgr get casket.tch four > check.out
 	$(RUNENV) $(RUNCMD) ./tcamgr get casket.tch five > check.out
 	$(RUNENV) $(RUNCMD) ./tcamgr list -pv -fm f casket.tch > check.out
+	$(RUNENV) $(RUNCMD) ./tcamgr optimize casket.tch
 	$(RUNENV) $(RUNCMD) ./tcamgr put -dc casket.tch three third
 	$(RUNENV) $(RUNCMD) ./tcamgr get casket.tch three > check.out
 	$(RUNENV) $(RUNCMD) ./tcamgr get casket.tch four > check.out

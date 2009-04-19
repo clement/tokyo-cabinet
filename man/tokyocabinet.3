@@ -13,7 +13,7 @@ As for database of B+ tree, records whose keys are duplicated can be stored.  Ac
 .PP
 As for database of fixed\-length array, records are stored with unique natural numbers.  It is impossible to store two or more records with a key overlaps.  Moreover, the length of each record is limited by the specified length.  Provided operations are the same as ones of hash database.
 .PP
-Table database is also provided as a variant of hash database.  Each record is identified by the primary key and has a set of named columns.  Although there is no concept of data schema, it is possible to search for records with complex conditions efficiently by using indexes of arbitrary columns.
+Table database is also provided as a variant of hash database.  Each record is identified by the primary key and has a set of named columns.  Although there is no concept of data schema, it is possible to search for records with complex conditions efficiently by using indices of arbitrary columns.
 .PP
 Tokyo Cabinet is written in the C language, and provided as API of C, Perl, Ruby, Java, and Lua.  Tokyo Cabinet is available on platforms which have API conforming to C99 and POSIX.  Tokyo Cabinet is a free software licensed under the GNU Lesser General Public License.
 
@@ -78,7 +78,7 @@ Table database does not express simple key/value structure but expresses a struc
 .PP
 Table database supports query functions with not only the primary key but also with conditions about arbitrary columns.  Each column condition is composed of the name of a column and a condition expression.  Operators of full matching, forward matching, regular expression matching, and so on are provided for the string type.  Operators of full matching, range matching and so on are provided for the number type.  A query can contain multiple conditions.  The order of the result set can be specified as the ascending or descending order of strings or numbers.
 .PP
-You can create indexes for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indexes have types for strings or numbers.  The query optimizer uses indexes in suitable way according to each query.  Indexes are implemented as different files of B+ tree database.
+You can create indices for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indices have types for strings or numbers.  The query optimizer uses indices in suitable way according to each query.  Indices are implemented as different files of B+ tree database.
 
 .SH PRACTICAL FUNCTIONALITY
 .PP

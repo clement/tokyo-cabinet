@@ -679,7 +679,7 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
       char *rbuf = tcfdbget2(fdb, kbuf, ksiz, &rsiz);
       if(vbuf){
         iputchar('.');
-        if(vsiz > RECBUFSIZ) vsiz = RECBUFSIZ;
+        if(vsiz > tcfdbwidth(fdb)) vsiz = tcfdbwidth(fdb);
         if(!rbuf){
           eprint(fdb, "tcfdbget");
           err = true;
@@ -1023,6 +1023,33 @@ static void *threadwicked(void *targ){
       break;
     default:
       if(id == 0) iputchar('@');
+      if(tcfdbtranbegin(fdb)){
+        if(myrand(2) == 0){
+          if(!tcfdbput2(fdb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(fdb, "tcfdbput");
+            err = true;
+          }
+        } else {
+          if(!tcfdbout2(fdb, kbuf, ksiz) && tcfdbecode(fdb) != TCENOREC){
+            eprint(fdb, "tcfdbout");
+            err = true;
+          }
+        }
+        if(nc && myrand(2) == 0){
+          if(!tcfdbtrancommit(fdb)){
+            eprint(fdb, "tcfdbtrancommit");
+            err = true;
+          }
+        } else {
+          if(!tcfdbtranabort(fdb)){
+            eprint(fdb, "tcfdbtranabort");
+            err = true;
+          }
+        }
+      } else {
+        eprint(fdb, "tcfdbtranbegin");
+        err = true;
+      }
       if(myrand(1000) == 0){
         if(!tcfdbforeach(fdb, iterfunc, NULL)){
           eprint(fdb, "tcfdbforeach");
@@ -1036,7 +1063,7 @@ static void *threadwicked(void *targ){
     if(id == 0){
       if(i % 50 == 0) iprintf(" (%08d)\n", i);
       if(id == 0 && i == rnum / 4){
-        if(!tcfdboptimize(fdb, RECBUFSIZ, -1)){
+        if(!tcfdboptimize(fdb, RECBUFSIZ, -1) && tcfdbecode(fdb) != TCEINVALID){
           eprint(fdb, "tcfdboptimize");
           err = true;
         }

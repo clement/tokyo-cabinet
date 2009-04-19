@@ -720,7 +720,7 @@ uint64_t tcfdbmax(TCFDB *fdb);
    `fdb' specifies the fixed-length database object.
    The return value is the width of the value of each record or 0 if the object does not connect
    to any database file. */
-uint64_t tcfdbwidth(TCFDB *fdb);
+uint32_t tcfdbwidth(TCFDB *fdb);
 
 
 /* Get the limit file size of a fixed-length database object.

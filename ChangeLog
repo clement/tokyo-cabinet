@@ -1,3 +1,25 @@
+2009-04-08  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcsleep): new function.
+
+	* tchdb.c (tchdbtranbegin): locking algorithm was modified.
+
+	* tchdb.c (tchdblocktran, tchdbunlocktran): abolished.
+
+	* tcbdb.c (tcbdbtranbegin): locking algorithm was modified.
+
+	* tcbdb.c (tcbdbcurjumpimpl): a bug related to cursor initialization was fixed.
+
+	* tcfdb.c (tcbdbtranbegin): locking algorithm was modified.
+
+	* tcfdb.c (tcfdblocktran, tcfdbunlocktran): abolished.
+
+	* tctdb.c (tctdbqryallcondmatch): a bug related to handling null value was fixed.
+
+	* tcadb.c (tcadboptimize, tcadbpath): new functions.
+
+	- Release: 1.4.15
+
 2009-04-07  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcbdb.c (tcbdbputimpl, tcbdbcurputimpl): page size limitation was added.

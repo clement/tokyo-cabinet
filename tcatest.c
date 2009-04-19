@@ -116,7 +116,8 @@ static void iputchar(int c){
 
 /* print error message of abstract database */
 static void eprint(TCADB *adb, const char *func){
-  fprintf(stderr, "%s: %s: error\n", g_progname, func);
+  const char *path = tcadbpath(adb);
+  fprintf(stderr, "%s: %s: %s: error\n", g_progname, path ? path : "-", func);
 }
 
 
@@ -678,6 +679,10 @@ static int procmisc(const char *name, int rnum){
   tclistdel(args);
   if(myrand(10) == 0 && !tcadbsync(adb)){
     eprint(adb, "tcadbsync");
+    err = true;
+  }
+  if(myrand(10) == 0 && !tcadboptimize(adb, NULL)){
+    eprint(adb, "tcadboptimize");
     err = true;
   }
   if(!tcadbvanish(adb)){

@@ -872,6 +872,7 @@ bool tcadbsync(TCADB *adb){
         tcmdbcutfront(adb->mdb, 1);
       }
     }
+    adb->capcnt = 0;
     break;
   case ADBONDB:
     if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum)
@@ -881,6 +882,7 @@ bool tcadbsync(TCADB *adb){
         tcndbcutfringe(adb->ndb, 0x100);
       }
     }
+    adb->capcnt = 0;
     break;
   case ADBOHDB:
     if(!tchdbsync(adb->hdb)) err = true;
@@ -893,6 +895,117 @@ bool tcadbsync(TCADB *adb){
     break;
   case ADBOTDB:
     if(!tctdbsync(adb->tdb)) err = true;
+    break;
+  default:
+    err = true;
+    break;
+  }
+  return !err;
+}
+
+
+/* Optimize the storage of an abstract database object. */
+bool tcadboptimize(TCADB *adb, const char *params){
+  assert(adb);
+  TCLIST *elems = params ? tcstrsplit(params, "#") : tclistnew();
+  int64_t bnum = -1;
+  int64_t capnum = -1;
+  int64_t capsiz = -1;
+  int8_t apow = -1;
+  int8_t fpow = -1;
+  bool tdefault = true;
+  bool tlmode = false;
+  bool tdmode = false;
+  bool tbmode = false;
+  bool ttmode = false;
+  int32_t lmemb = -1;
+  int32_t nmemb = -1;
+  int32_t width = -1;
+  int64_t limsiz = -1;
+  int ln = TCLISTNUM(elems);
+  for(int i = 0; i < ln; i++){
+    const char *elem = TCLISTVALPTR(elems, i);
+    char *pv = strchr(elem, '=');
+    if(!pv) continue;
+    *(pv++) = '\0';
+    if(!tcstricmp(elem, "bnum")){
+      bnum = tcatoix(pv);
+    } else if(!tcstricmp(elem, "capnum")){
+      capnum = tcatoix(pv);
+    } else if(!tcstricmp(elem, "capsiz")){
+      capsiz = tcatoix(pv);
+    } else if(!tcstricmp(elem, "apow")){
+      apow = tcatoix(pv);
+    } else if(!tcstricmp(elem, "fpow")){
+      fpow = tcatoix(pv);
+    } else if(!tcstricmp(elem, "opts")){
+      tdefault = false;
+      if(strchr(pv, 'l') || strchr(pv, 'L')) tlmode = true;
+      if(strchr(pv, 'd') || strchr(pv, 'D')) tdmode = true;
+      if(strchr(pv, 'b') || strchr(pv, 'B')) tbmode = true;
+      if(strchr(pv, 't') || strchr(pv, 'T')) ttmode = true;
+    } else if(!tcstricmp(elem, "lmemb")){
+      lmemb = tcatoix(pv);
+    } else if(!tcstricmp(elem, "nmemb")){
+      nmemb = tcatoix(pv);
+    } else if(!tcstricmp(elem, "width")){
+      width = tcatoix(pv);
+    } else if(!tcstricmp(elem, "limsiz")){
+      limsiz = tcatoix(pv);
+    }
+  }
+  tclistdel(elems);
+  bool err = false;
+  int opts;
+  switch(adb->omode){
+  case ADBOMDB:
+    adb->capnum = capnum;
+    adb->capsiz = capsiz;
+    tcadbsync(adb);
+    break;
+  case ADBONDB:
+    adb->capnum = capnum;
+    adb->capsiz = capsiz;
+    tcadbsync(adb);
+    break;
+  case ADBOHDB:
+    opts = 0;
+    if(tdefault){
+      opts = UINT8_MAX;
+    } else {
+      if(tlmode) opts |= HDBTLARGE;
+      if(tdmode) opts |= HDBTDEFLATE;
+      if(tbmode) opts |= HDBTBZIP;
+      if(ttmode) opts |= HDBTTCBS;
+    }
+    if(!tchdboptimize(adb->hdb, bnum, apow, fpow, opts)) err = true;
+    break;
+  case ADBOBDB:
+    opts = 0;
+    if(tdefault){
+      opts = UINT8_MAX;
+    } else {
+      if(tlmode) opts |= BDBTLARGE;
+      if(tdmode) opts |= BDBTDEFLATE;
+      if(tbmode) opts |= BDBTBZIP;
+      if(ttmode) opts |= BDBTTCBS;
+    }
+    if(!tcbdboptimize(adb->bdb, lmemb, nmemb, bnum, apow, fpow, opts)) err = true;
+    break;
+  case ADBOFDB:
+    if(!tcfdboptimize(adb->fdb, width, limsiz)) err = true;
+    break;
+  case ADBOTDB:
+    opts = 0;
+    if(tdefault){
+      opts = UINT8_MAX;
+    } else {
+      if(tlmode) opts |= TDBTLARGE;
+      if(tdmode) opts |= TDBTDEFLATE;
+      if(tbmode) opts |= TDBTBZIP;
+      if(ttmode) opts |= TDBTTCBS;
+    }
+    if(!tctdboptimize(adb->tdb, bnum, apow, fpow, opts)) err = true;
     break;
   default:
     err = true;
@@ -1080,6 +1193,37 @@ bool tcadbtranabort(TCADB *adb){
     break;
   }
   return !err;
+}
+
+
+/* Get the file path of an abstract database object. */
+const char *tcadbpath(TCADB *adb){
+  assert(adb);
+  const char *rv;
+  switch(adb->omode){
+  case ADBOMDB:
+    rv = "*";
+    break;
+  case ADBONDB:
+    rv = "+";
+    break;
+  case ADBOHDB:
+    rv = tchdbpath(adb->hdb);
+    break;
+  case ADBOBDB:
+    rv = tcbdbpath(adb->bdb);
+    break;
+  case ADBOFDB:
+    rv = tcfdbpath(adb->fdb);
+    break;
+  case ADBOTDB:
+    rv = tctdbpath(adb->tdb);
+    break;
+  default:
+    rv = NULL;
+    break;
+  }
+  return rv;
 }
 
 

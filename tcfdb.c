@@ -72,10 +72,6 @@ typedef struct {                         // type of structure for a duplication 
   ((TC_fdb)->mmtx ? tcfdblockallrecords((TC_fdb), (TC_wr)) : true)
 #define FDBUNLOCKALLRECORDS(TC_fdb) \
   ((TC_fdb)->mmtx ? tcfdbunlockallrecords(TC_fdb) : true)
-#define FDBLOCKTRAN(TC_fdb) \
-  ((TC_fdb)->mmtx ? tcfdblocktran(TC_fdb) : true)
-#define FDBUNLOCKTRAN(TC_fdb) \
-  ((TC_fdb)->mmtx ? tcfdbunlocktran(TC_fdb) : true)
 #define FDBLOCKWAL(TC_fdb) \
   ((TC_fdb)->mmtx ? tcfdblockwal(TC_fdb) : true)
 #define FDBUNLOCKWAL(TC_fdb) \
@@ -115,8 +111,6 @@ static bool tcfdblockrecord(TCFDB *fdb, bool wr, uint64_t id);
 static bool tcfdbunlockrecord(TCFDB *fdb, uint64_t id);
 static bool tcfdblockallrecords(TCFDB *fdb, bool wr);
 static bool tcfdbunlockallrecords(TCFDB *fdb);
-static bool tcfdblocktran(TCFDB *fdb);
-static bool tcfdbunlocktran(TCFDB *fdb);
 static bool tcfdblockwal(TCFDB *fdb);
 static bool tcfdbunlockwal(TCFDB *fdb);
 
@@ -881,7 +875,7 @@ bool tcfdbvanish(TCFDB *fdb){
 bool tcfdbcopy(TCFDB *fdb, const char *path){
   assert(fdb && path);
   if(!FDBLOCKMETHOD(fdb, false)) return false;
-  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER)){
+  if(fdb->fd < 0){
     tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
     FDBUNLOCKMETHOD(fdb);
     return false;
@@ -901,11 +895,17 @@ bool tcfdbcopy(TCFDB *fdb, const char *path){
 /* Begin the transaction of a fixed-length database object. */
 bool tcfdbtranbegin(TCFDB *fdb){
   assert(fdb);
-  if(!FDBLOCKMETHOD(fdb, true)) return false;
-  if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER) || fdb->fatal || fdb->tran){
-    tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+  for(double wsec = 1.0 / sysconf(_SC_CLK_TCK); true; wsec *= 2){
+    if(!FDBLOCKMETHOD(fdb, true)) return false;
+    if(fdb->fd < 0 || !(fdb->omode & FDBOWRITER) || fdb->fatal){
+      tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+      FDBUNLOCKMETHOD(fdb);
+      return false;
+    }
+    if(!fdb->tran) break;
     FDBUNLOCKMETHOD(fdb);
-    return false;
+    if(wsec > 1.0) wsec = 1.0;
+    tcsleep(wsec);
   }
   fdb->flags &= ~FDBFOPEN;
   if(!tcfdbmemsync(fdb, false)){
@@ -938,10 +938,6 @@ bool tcfdbtranbegin(TCFDB *fdb){
     FDBUNLOCKMETHOD(fdb);
     return false;
   }
-  if(!FDBLOCKTRAN(fdb)){
-    FDBUNLOCKMETHOD(fdb);
-    return false;
-  }
   fdb->tran = true;
   FDBUNLOCKMETHOD(fdb);
   return true;
@@ -964,7 +960,6 @@ bool tcfdbtrancommit(TCFDB *fdb){
     err = true;
   }
   fdb->tran = false;
-  FDBUNLOCKTRAN(fdb);
   FDBUNLOCKMETHOD(fdb);
   return !err;
 }
@@ -993,7 +988,6 @@ bool tcfdbtranabort(TCFDB *fdb){
     tcfdbloadmeta(fdb, hbuf);
   }
   fdb->tran = false;
-  FDBUNLOCKTRAN(fdb);
   FDBUNLOCKMETHOD(fdb);
   return !err;
 }
@@ -1140,7 +1134,7 @@ uint64_t tcfdbmax(TCFDB *fdb){
 
 
 /* Get the width of the value of each record of a fixed-length database object. */
-uint64_t tcfdbwidth(TCFDB *fdb){
+uint32_t tcfdbwidth(TCFDB *fdb){
   assert(fdb);
   if(fdb->fd < 0){
     tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
@@ -1808,7 +1802,6 @@ static bool tcfdbcloseimpl(TCFDB *fdb){
   if(fdb->tran){
     if(!tcfdbwalrestore(fdb, fdb->path)) err = true;
     fdb->tran = false;
-    FDBUNLOCKTRAN(fdb);
   }
   if(fdb->walfd >= 0){
     if(close(fdb->walfd) == -1){
@@ -2557,34 +2550,6 @@ static bool tcfdbunlockallrecords(TCFDB *fdb){
     tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
     return false;
   }
-  return true;
-}
-
-
-/* Lock the transaction of the fixed-length database object.
-   `fdb' specifies the fixed-length database object.
-   If successful, the return value is true, else, it is false. */
-static bool tcfdblocktran(TCFDB *fdb){
-  assert(fdb);
-  if(pthread_mutex_lock(fdb->tmtx) != 0){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
-  }
-  TCTESTYIELD();
-  return true;
-}
-
-
-/* Unlock the transaction of the fixed-length database object.
-   `fdb' specifies the fixed-length database object.
-   If successful, the return value is true, else, it is false. */
-static bool tcfdbunlocktran(TCFDB *fdb){
-  assert(fdb);
-  if(pthread_mutex_unlock(fdb->tmtx) != 0){
-    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
-  }
-  TCTESTYIELD();
   return true;
 }
 

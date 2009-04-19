@@ -1603,7 +1603,7 @@ static int procwicked(const char *path, int rnum, bool mt, int omode){
     iputchar('+');
     int vsiz;
     const char *vbuf = tcmapiterval(kbuf, &vsiz);
-    if(vsiz > RECBUFSIZ) vsiz = RECBUFSIZ;
+    if(vsiz > tcfdbwidth(fdb)) vsiz = tcfdbwidth(fdb);
     int rsiz;
     char *rbuf = tcfdbget2(fdb, kbuf, ksiz, &rsiz);
     if(!rbuf){

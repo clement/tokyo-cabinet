@@ -5310,7 +5310,7 @@ int main(int argc, char **argv){
 <dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 2048.</dd>
 <dd>`<var>ncnum</var>' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 512.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>Note that the caching parameters should be set before the database is opened.  Leaf nodes and non-leaf nodes are used in column indexes.</dd>
+<dd>Note that the caching parameters should be set before the database is opened.  Leaf nodes and non-leaf nodes are used in column indices.</dd>
 </dl>
 
 <p>The function `tctdbsetxmsiz' is used in order to set the size of the extra mapped memory of a table database object.</p>
@@ -5695,7 +5695,7 @@ int main(int argc, char **argv){
 <dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
 <dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>Note that the setting indexes should be set after the database is opened.</dd>
+<dd>Note that the setting indices should be set after the database is opened.</dd>
 </dl>
 
 
@@ -6298,6 +6298,16 @@ int main(int argc, char **argv){
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
+<p>The function `tcadboptimize' is used in order to optimize the storage of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>bool tcadboptimize(TCADB *<var>adb</var>, const char *<var>params</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>`<var>params</var>' specifies the string of the tuning parameters, which works as with the tuning of parameters the function `tcadbopen'.  If it is `NULL', it is not used.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>This function is useful to reduce the size of the database storage with data fragmentation by successive updating.</dd>
+</dl>
+
 <p>The function `tcadbvanish' is used in order to remove all records of an abstract database object.</p>
 
 <dl class="api">
@@ -6341,6 +6351,14 @@ int main(int argc, char **argv){
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.</dd>
+</dl>
+
+<p>The function `tcadbpath' is used in order to get the file path of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>const char *tcadbpath(TCADB *<var>adb</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>The return value is the path of the database file or `NULL' if the object does not connect to any database.  "*" stands for on-memory hash database.  "+" stands for on-memory tree database.</dd>
 </dl>
 
 <p>The function `tcadbrnum' is used in order to get the number of records of an abstract database object.</p>
@@ -6456,7 +6474,7 @@ int main(int argc, char **argv){
 
 <p>このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
 
-<p>コマンド `<code>tcamgr</code>' は、抽象データベースAPIやそのアプリケーションのテストやデバッグに役立つツールです。以下の書式で用います。`<var>name</var>' はデータベースの名前を指定し、`<var>key</var>' はレコードのキーを指定し、`<var>value</var>' はレコードの値を指定し、`<var>func</var>' は関数の名前を指定し、`<var>arg</var>' は関数の引数を指定し、`<var>dest</var>' は格納先のファイルを指定します。</p>
+<p>コマンド `<code>tcamgr</code>' は、抽象データベースAPIやそのアプリケーションのテストやデバッグに役立つツールです。以下の書式で用います。`<var>name</var>' はデータベースの名前を指定し、`<var>key</var>' はレコードのキーを指定し、`<var>value</var>' はレコードの値を指定し、`<var>params</var>' はチューニングパラメータを指定し、`<var>func</var>' は関数の名前を指定し、`<var>arg</var>' は関数の引数を指定し、`<var>dest</var>' は格納先のファイルを指定します。</p>
 
 <dl class="api">
 <dt><code>tcamgr create <var>name</var></code></dt>
@@ -6471,6 +6489,8 @@ int main(int argc, char **argv){
 <dd>レコードの値を取得して標準出力する。</dd>
 <dt><code>tcamgr list [-sep <var>chr</var>] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>name</var></code></dt>
 <dd>全てのレコードのキーを改行で区切って標準出力する。</dd>
+<dt><code>tcamgr optimize <var>name</var> <var>params</var></code></dt>
+<dd>データベースを最適化する。</dd>
 <dt><code>tcamgr misc [-sx] [-sep <var>chr</var>] [-px] <var>name</var> <var>func</var> [<var>arg</var>...]</code></dt>
 <dd>雑多な操作の多目的関数を呼び出す。</dd>
 <dt><code>tcamgr map [-fm <var>str</var>] <var>name</var> <var>dest</var></code></dt>
@@ -6771,7 +6791,7 @@ cp -f "$srcpath" "$destpath"
 <td>データベースタイプ</td>
 <td class="number">32</td>
 <td class="number">1</td>
-<td>ハッシュ表（0x01）かB+木（0x02）</td>
+<td>ハッシュ表（0x01）かB+木（0x02）か固定長（0x03）かテーブル（0x04）</td>
 </tr>
 <tr>
 <td>追加フラグ</td>
@@ -6900,7 +6920,7 @@ cp -f "$srcpath" "$destpath"
 <td>パディング</td>
 <td class="number">可変</td>
 <td class="number">可変</td>
-<td>パディング</td>
+<td>意味を持たないデータ</td>
 </tr>
 </table>
 
@@ -6971,10 +6991,10 @@ cp -f "$srcpath" "$destpath"
 </tr>
 
 <tr>
-<td>比較関数フラグ</td>
+<td>比較関数</td>
 <td class="number">0</td>
 <td class="number">1</td>
-<td>比較関数がtccmplexical（デフォルト）なら0x0、tccmpdecimalなら0x1、tccmpint32なら0x2、tccmpint64なら0x3、それ以外なら0xff</td>
+<td>比較関数がtccmplexical（デフォルト）なら0x00、tccmpdecimalなら0x01、tccmpint32なら0x02、tccmpint64なら0x03、それ以外なら0xff</td>
 </tr>
 <tr>
 <td>予約領域</td>
@@ -7108,7 +7128,7 @@ cp -f "$srcpath" "$destpath"
 </tr>
 </table>
 
-<p>インデックスはページを探索するためのポインタの論理的な単位です。インデックスは以下の形式で直列化されます。</p>
+<p>インデックスは子ページを探索するためのポインタの論理的な単位です。インデックスは以下の形式で直列化されます。</p>
 
 <table summary="index format">
 <tr>
@@ -7183,7 +7203,7 @@ cp -f "$srcpath" "$destpath"
 <td>データベースタイプ</td>
 <td class="number">32</td>
 <td class="number">1</td>
-<td>0x03</td>
+<td>0x03固定</td>
 </tr>
 <tr>
 <td>追加フラグ</td>
@@ -7260,15 +7280,17 @@ cp -f "$srcpath" "$destpath"
 <td>パディング</td>
 <td class="number">可変</td>
 <td class="number">可変</td>
-<td>パディング。値サイズが0の時は、先頭バイトの真偽値でレコードの有無を示す</td>
+<td>値サイズが0の時は、先頭バイトの真偽値でレコードの有無を示す</td>
 </tr>
 </table>
 
+<p>トランザクションログの命名規則やフォーマットはハッシュデータベースのものと同じです。</p>
+
 <h3 id="fileformat_note">注記</h3>
 
-<p>データベースファイルはスパースではないので、通常のファイルと同様に複製等の操作を行うことができます。ハッシュデータベースのファイルもB+木データベースのファイルも実行環境のバイトオーダに依存しない形式なので、バイトオーダの異なる環境にデータベースファイルを移設してもそのままで利用できます。</p>
+<p>データベースファイルはスパースではないので、通常のファイルと同様に複製等の操作を行うことができます。またフォーマットも実行環境のバイトオーダに依存しないので、バイトオーダの異なる環境にデータベースファイルを移設してもそのままで利用できます。</p>
 
-<p>なるべくなら、ハッシュデータベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-hash</code>' にしてください。ファイル名の接尾辞は `<code>.tch</code>' にしてください。B+木データベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-btree</code>' にしてください。ファイル名の接尾辞は `<code>.tcb</code>' にしてください。固定長データベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-fixlen</code>' にしてください。ファイル名の接尾辞は `<code>.tcf</code>' にしてください。テーブルデータベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-table</code>' にしてください。ファイル名の接尾辞は `<code>.tct</code>' にしてください。</p>
+<p>なるべくなら、ハッシュデータベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-hash</code>' にしてください。ファイル名の接尾辞は `<code>.tch</code>' にしてください。B+木データベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-btree</code>' にしてください。ファイル名の接尾辞は `<code>.tcb</code>' にしてください。固定長データベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-fixed</code>' にしてください。ファイル名の接尾辞は `<code>.tcf</code>' にしてください。テーブルデータベースのファイルをネットワークで配布する際には、MIMEタイプを `<code>application/x-tokyocabinet-table</code>' にしてください。ファイル名の接尾辞は `<code>.tct</code>' にしてください。</p>
 
 <p>データベースファイルのマジックデータを `<code>file</code>' コマンドに識別させたい場合は、`<code>magic</code>' ファイルに以下の行を追記してください。</p>
 
@@ -7276,9 +7298,13 @@ cp -f "$srcpath" "$destpath"
 0       string    ToKyO\ CaBiNeT\n   Tokyo Cabinet
 &gt;14     string    x                  \b (%s)
 &gt;32     byte      0                  \b, Hash
+!:mime  application/x-tokyocabinet-hash
 &gt;32     byte      1                  \b, B+ tree
+!:mime  application/x-tokyocabinet-btree
 &gt;32     byte      2                  \b, Fixed-length
+!:mime  application/x-tokyocabinet-fixed
 &gt;32     byte      3                  \b, Table
+!:mime  application/x-tokyocabinet-table
 &gt;33     byte      &amp;1                 \b, [open]
 &gt;33     byte      &amp;2                 \b, [fatal]
 &gt;34     byte      x                  \b, apow=%d
@@ -7288,9 +7314,9 @@ cp -f "$srcpath" "$destpath"
 &gt;36     byte      &amp;4                 \b, [bzip]
 &gt;36     byte      &amp;8                 \b, [tcbs]
 &gt;36     byte      &amp;16                \b, [excodec]
-&gt;40     lelong    x                  \b, bnum=%d
-&gt;48     lelong    x                  \b, rnum=%d
-&gt;56     lelong    x                  \b, fsiz=%d
+&gt;40     lequad    x                  \b, bnum=%lld
+&gt;48     lequad    x                  \b, rnum=%lld
+&gt;56     lequad    x                  \b, fsiz=%lld
 </pre>
 
 <hr />

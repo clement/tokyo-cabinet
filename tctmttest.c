@@ -1289,6 +1289,33 @@ static void *threadwicked(void *targ){
       break;
     default:
       if(id == 0) iputchar('@');
+      if(tctdbtranbegin(tdb)){
+        if(myrand(2) == 0){
+          if(!tctdbput(tdb, pkbuf, pksiz, cols)){
+            eprint(tdb, "tctdbput");
+            err = true;
+          }
+        } else {
+          if(!tctdbout(tdb, pkbuf, pksiz) && tctdbecode(tdb) != TCENOREC){
+            eprint(tdb, "tctdbout");
+            err = true;
+          }
+        }
+        if(myrand(2) == 0){
+          if(!tctdbtrancommit(tdb)){
+            eprint(tdb, "tctdbtrancommit");
+            err = true;
+          }
+        } else {
+          if(!tctdbtranabort(tdb)){
+            eprint(tdb, "tctdbtranabort");
+            err = true;
+          }
+        }
+      } else {
+        eprint(tdb, "tctdbtranbegin");
+        err = true;
+      }
       if(myrand(10000) == 0) srand((unsigned int)(tctime() * 1000) % UINT_MAX);
       break;
     }
@@ -1296,7 +1323,7 @@ static void *threadwicked(void *targ){
     if(id == 0){
       if(i % 50 == 0) iprintf(" (%08d)\n", i);
       if(id == 0 && i == rnum / 4){
-        if(!tctdboptimize(tdb, rnum / 50, -1, -1, -1)){
+        if(!tctdboptimize(tdb, rnum / 50, -1, -1, -1) && tctdbecode(tdb) != TCEINVALID){
           eprint(tdb, "tctdboptimize");
           err = true;
         }

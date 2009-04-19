@@ -62,7 +62,7 @@ typedef struct {                         // type of structure for a page index
 typedef struct {                         // type of structure for a node page
   uint64_t id;                           // ID number of the node
   uint64_t heir;                         // ID of the child before the first index
-  TCPTRLIST *idxs;                       // list of indexes
+  TCPTRLIST *idxs;                       // list of indices
   bool dirty;                            // whether to be written back
   bool dead;                             // whether to be removed
 } BDBNODE;
@@ -806,11 +806,17 @@ bool tcbdbcopy(TCBDB *bdb, const char *path){
 /* Begin the transaction of a B+ tree database object. */
 bool tcbdbtranbegin(TCBDB *bdb){
   assert(bdb);
-  if(!BDBLOCKMETHOD(bdb, true)) return false;
-  if(!bdb->open || !bdb->wmode || bdb->tran){
-    tcbdbsetecode(bdb, TCEINVALID, __FILE__, __LINE__, __func__);
+  for(double wsec = 1.0 / sysconf(_SC_CLK_TCK); true; wsec *= 2){
+    if(!BDBLOCKMETHOD(bdb, true)) return false;
+    if(!bdb->open || !bdb->wmode){
+      tcbdbsetecode(bdb, TCEINVALID, __FILE__, __LINE__, __func__);
+      BDBUNLOCKMETHOD(bdb);
+      return false;
+    }
+    if(!bdb->tran) break;
     BDBUNLOCKMETHOD(bdb);
-    return false;
+    if(wsec > 1.0) wsec = 1.0;
+    tcsleep(wsec);
   }
   if(!tcbdbmemsync(bdb, false)){
     BDBUNLOCKMETHOD(bdb);
@@ -3570,7 +3576,10 @@ static bool tcbdbcurjumpimpl(BDBCUR *cur, const char *kbuf, int ksiz, bool forwa
     } else {
       rv = bdb->cmp(kbuf, ksiz, dbuf, rec->ksiz, bdb->cmpop);
     }
-    if(rv < 0) return true;
+    if(rv < 0){
+      cur->vidx = 0;
+      return true;
+    }
     cur->vidx = rec->rest ? TCLISTNUM(rec->rest) : 0;
     return tcbdbcurnextimpl(cur);
   }
@@ -4012,7 +4021,7 @@ void tcbdbprintleaf(TCBDB *bdb, BDBLEAF *leaf){
 }
 
 
-/* Print indexes of a node object into the debugging output.
+/* Print indices of a node object into the debugging output.
    `bdb' specifies the B+ tree database object.
    `node' specifies the node object. */
 void tcbdbprintnode(TCBDB *bdb, BDBNODE *node){

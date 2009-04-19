@@ -39,6 +39,7 @@ static int runput(int argc, char **argv);
 static int runout(int argc, char **argv);
 static int runget(int argc, char **argv);
 static int runlist(int argc, char **argv);
+static int runoptimize(int argc, char **argv);
 static int runmisc(int argc, char **argv);
 static int runmap(int argc, char **argv);
 static int runversion(int argc, char **argv);
@@ -49,6 +50,7 @@ static int procput(const char *name, const char *kbuf, int ksiz, const char *vbu
 static int procout(const char *name, const char *kbuf, int ksiz);
 static int procget(const char *name, const char *kbuf, int ksiz, int sep, bool px, bool pz);
 static int proclist(const char *name, int sep, int max, bool pv, bool px, const char *fmstr);
+static int procoptimize(const char *name, const char *params);
 static int procmisc(const char *name, const char *func, const TCLIST *args, int sep, bool px);
 static int procmap(const char *name, const char *dest, const char *fmstr);
 static int procversion(void);
@@ -71,6 +73,8 @@ int main(int argc, char **argv){
     rv = runget(argc, argv);
   } else if(!strcmp(argv[1], "list")){
     rv = runlist(argc, argv);
+  } else if(!strcmp(argv[1], "optimize")){
+    rv = runoptimize(argc, argv);
   } else if(!strcmp(argv[1], "misc")){
     rv = runmisc(argc, argv);
   } else if(!strcmp(argv[1], "map")){
@@ -95,6 +99,7 @@ static void usage(void){
   fprintf(stderr, "  %s out [-sx] [-sep chr] name key\n", g_progname);
   fprintf(stderr, "  %s get [-sx] [-sep chr] [-px] [-pz] name key\n", g_progname);
   fprintf(stderr, "  %s list [-sep chr] [-m num] [-pv] [-px] [-fm str] name\n", g_progname);
+  fprintf(stderr, "  %s optimize name [params]\n", g_progname);
   fprintf(stderr, "  %s misc [-sx] [-sep chr] [-px] name func [arg...]\n", g_progname);
   fprintf(stderr, "  %s map [-fm str] name dest\n", g_progname);
   fprintf(stderr, "  %s version\n", g_progname);
@@ -126,7 +131,8 @@ static char *strtozsv(const char *str, int sep, int *sp){
 
 /* print error information */
 static void printerr(TCADB *adb){
-  fprintf(stderr, "%s: error\n", g_progname);
+  const char *path = tcadbpath(adb);
+  fprintf(stderr, "%s: %s: error\n", g_progname, path ? path : "-");
 }
 
 
@@ -389,6 +395,27 @@ static int runlist(int argc, char **argv){
 }
 
 
+/* parse arguments of optimize command */
+static int runoptimize(int argc, char **argv){
+  char *name = NULL;
+  char *params = NULL;
+  for(int i = 2; i < argc; i++){
+    if(!name && argv[i][0] == '-'){
+      usage();
+    } else if(!name){
+      name = argv[i];
+    } else if(!params){
+      params = argv[i];
+    } else {
+      usage();
+    }
+  }
+  if(!name) usage();
+  int rv = procoptimize(name, params);
+  return rv;
+}
+
+
 /* parse arguments of misc command */
 static int runmisc(int argc, char **argv){
   char *name = NULL;
@@ -498,6 +525,9 @@ static int procinform(const char *name){
     return 1;
   }
   bool err = false;
+  const char *path = tcadbpath(adb);
+  if(!path) path = "(unknown)";
+  printf("path: %s\n", path);
   const char *type = "(unknown)";
   switch(tcadbomode(adb)){
   case ADBOVOID: type = "not opened"; break;
@@ -506,6 +536,7 @@ static int procinform(const char *name){
   case ADBOHDB: type = "hash database"; break;
   case ADBOBDB: type = "B+ tree database"; break;
   case ADBOFDB: type = "fixed-length database"; break;
+  case ADBOTDB: type = "table database"; break;
   }
   printf("database type: %s\n", type);
   printf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
@@ -670,6 +701,28 @@ static int proclist(const char *name, int sep, int max, bool pv, bool px, const 
       tcfree(kbuf);
       if(max >= 0 && ++cnt >= max) break;
     }
+  }
+  if(!tcadbclose(adb)){
+    if(!err) printerr(adb);
+    err = true;
+  }
+  tcadbdel(adb);
+  return err ? 1 : 0;
+}
+
+
+/* perform optimize command */
+static int procoptimize(const char *name, const char *params){
+  TCADB *adb = tcadbnew();
+  if(!tcadbopen(adb, name)){
+    printerr(adb);
+    tcadbdel(adb);
+    return 1;
+  }
+  bool err = false;
+  if(!tcadboptimize(adb, params)){
+    printerr(adb);
+    err = true;
   }
   if(!tcadbclose(adb)){
     if(!err) printerr(adb);

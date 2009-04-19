@@ -5758,6 +5758,23 @@ void *tcstrjoin4(const TCMAP *map, int *sp){
 }
 
 
+/* Suspend execution of the current thread. */
+bool tcsleep(double sec){
+  if(!isnormal(sec) || sec <= 0.0) return false;
+  if(sec <= 1.0 / sysconf(_SC_CLK_TCK)) return sched_yield() == 0;
+  double integ, fract;
+  fract = modf(sec, &integ);
+  struct timespec req, rem;
+  req.tv_sec = integ;
+  req.tv_nsec = tclmin(fract * 1000.0 * 1000.0 * 1000.0, 999999999);
+  while(nanosleep(&req, &rem) != 0){
+    if(errno != EINTR) return false;
+    req = rem;
+  }
+  return true;
+}
+
+
 
 /*************************************************************************************************
  * filesystem utilities

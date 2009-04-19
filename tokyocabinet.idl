@@ -19,13 +19,13 @@
  */
 module TokyoCabinet {
   //----------------------------------------------------------------
-  // list of strings (substituted for by the native mechanism).
+  // list of strings (substituted for by the native mechanism)
   //----------------------------------------------------------------
   interface List {
     string get(in long index);
   };
   //----------------------------------------------------------------
-  // map of strings (substituted for by the native mechanism).
+  // map of strings (substituted for by the native mechanism)
   //----------------------------------------------------------------
   interface Map {
     string get(in string key);
@@ -307,6 +307,7 @@ module TokyoCabinet {
     long addint(in string key, in long num);
     double adddouble(in string key, in double num);
     boolean sync();
+    boolean optimize(in string params);
     boolean vanish();
     boolean copy(in string path);
     boolean tranbegin();

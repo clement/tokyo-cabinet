@@ -111,10 +111,6 @@ typedef struct {                         // type of structure for a duplication 
   ((TC_hdb)->mmtx ? tchdblockdb(TC_hdb) : true)
 #define HDBUNLOCKDB(TC_hdb) \
   ((TC_hdb)->mmtx ? tchdbunlockdb(TC_hdb) : true)
-#define HDBLOCKTRAN(TC_hdb) \
-  ((TC_hdb)->mmtx ? tchdblocktran(TC_hdb) : true)
-#define HDBUNLOCKTRAN(TC_hdb) \
-  ((TC_hdb)->mmtx ? tchdbunlocktran(TC_hdb) : true)
 #define HDBLOCKWAL(TC_hdb) \
   ((TC_hdb)->mmtx ? tchdblockwal(TC_hdb) : true)
 #define HDBUNLOCKWAL(TC_hdb) \
@@ -187,8 +183,6 @@ static bool tchdblockallrecords(TCHDB *hdb, bool wr);
 static bool tchdbunlockallrecords(TCHDB *hdb);
 static bool tchdblockdb(TCHDB *hdb);
 static bool tchdbunlockdb(TCHDB *hdb);
-static bool tchdblocktran(TCHDB *hdb);
-static bool tchdbunlocktran(TCHDB *hdb);
 static bool tchdblockwal(TCHDB *hdb);
 static bool tchdbunlockwal(TCHDB *hdb);
 
@@ -1019,7 +1013,7 @@ bool tchdbvanish(TCHDB *hdb){
 bool tchdbcopy(TCHDB *hdb, const char *path){
   assert(hdb && path);
   if(!HDBLOCKMETHOD(hdb, false)) return false;
-  if(hdb->fd < 0 || !(hdb->omode & HDBOWRITER)){
+  if(hdb->fd < 0){
     tchdbsetecode(hdb, TCEINVALID, __FILE__, __LINE__, __func__);
     HDBUNLOCKMETHOD(hdb);
     return false;
@@ -1043,11 +1037,17 @@ bool tchdbcopy(TCHDB *hdb, const char *path){
 /* Begin the transaction of a hash database object. */
 bool tchdbtranbegin(TCHDB *hdb){
   assert(hdb);
-  if(!HDBLOCKMETHOD(hdb, true)) return false;
-  if(hdb->fd < 0 || !(hdb->omode & HDBOWRITER) || hdb->fatal || hdb->tran){
-    tchdbsetecode(hdb, TCEINVALID, __FILE__, __LINE__, __func__);
+  for(double wsec = 1.0 / sysconf(_SC_CLK_TCK); true; wsec *= 2){
+    if(!HDBLOCKMETHOD(hdb, true)) return false;
+    if(hdb->fd < 0 || !(hdb->omode & HDBOWRITER) || hdb->fatal){
+      tchdbsetecode(hdb, TCEINVALID, __FILE__, __LINE__, __func__);
+      HDBUNLOCKMETHOD(hdb);
+      return false;
+    }
+    if(!hdb->tran) break;
     HDBUNLOCKMETHOD(hdb);
-    return false;
+    if(wsec > 1.0) wsec = 1.0;
+    tcsleep(wsec);
   }
   if(hdb->async && !tchdbflushdrp(hdb)){
     HDBUNLOCKMETHOD(hdb);
@@ -1084,10 +1084,6 @@ bool tchdbtranbegin(TCHDB *hdb){
     HDBUNLOCKMETHOD(hdb);
     return false;
   }
-  if(!HDBLOCKTRAN(hdb)){
-    HDBUNLOCKMETHOD(hdb);
-    return false;
-  }
   hdb->tran = true;
   HDBUNLOCKMETHOD(hdb);
   return true;
@@ -1111,7 +1107,6 @@ bool tchdbtrancommit(TCHDB *hdb){
     err = true;
   }
   hdb->tran = false;
-  HDBUNLOCKTRAN(hdb);
   HDBUNLOCKMETHOD(hdb);
   return !err;
 }
@@ -1140,11 +1135,11 @@ bool tchdbtranabort(TCHDB *hdb){
   } else {
     tchdbloadmeta(hdb, hbuf);
   }
+  hdb->iter = 0;
   hdb->xfsiz = 0;
   hdb->fbpnum = 0;
   if(hdb->recc) tcmdbvanish(hdb->recc);
   hdb->tran = false;
-  HDBUNLOCKTRAN(hdb);
   HDBUNLOCKMETHOD(hdb);
   return !err;
 }
@@ -1648,7 +1643,6 @@ bool tchdbtranvoid(TCHDB *hdb){
     return false;
   }
   hdb->tran = false;
-  HDBUNLOCKTRAN(hdb);
   HDBUNLOCKMETHOD(hdb);
   return true;
 }
@@ -3237,7 +3231,6 @@ static bool tchdbcloseimpl(TCHDB *hdb){
   if(hdb->tran){
     if(!tchdbwalrestore(hdb, hdb->path)) err = true;
     hdb->tran = false;
-    HDBUNLOCKTRAN(hdb);
   }
   if(hdb->walfd >= 0){
     if(close(hdb->walfd) == -1){
@@ -4513,34 +4506,6 @@ static bool tchdblockdb(TCHDB *hdb){
 static bool tchdbunlockdb(TCHDB *hdb){
   assert(hdb);
   if(pthread_mutex_unlock(hdb->dmtx) != 0){
-    tchdbsetecode(hdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
-  }
-  TCTESTYIELD();
-  return true;
-}
-
-
-/* Lock the transaction of the hash database object.
-   `hdb' specifies the hash database object.
-   If successful, the return value is true, else, it is false. */
-static bool tchdblocktran(TCHDB *hdb){
-  assert(hdb);
-  if(pthread_mutex_lock(hdb->tmtx) != 0){
-    tchdbsetecode(hdb, TCETHREAD, __FILE__, __LINE__, __func__);
-    return false;
-  }
-  TCTESTYIELD();
-  return true;
-}
-
-
-/* Unlock the transaction of the hash database object.
-   `hdb' specifies the hash database object.
-   If successful, the return value is true, else, it is false. */
-static bool tchdbunlocktran(TCHDB *hdb){
-  assert(hdb);
-  if(pthread_mutex_unlock(hdb->tmtx) != 0){
     tchdbsetecode(hdb, TCETHREAD, __FILE__, __LINE__, __func__);
     return false;
   }

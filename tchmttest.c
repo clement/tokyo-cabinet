@@ -1377,6 +1377,33 @@ static void *threadwicked(void *targ){
       break;
     default:
       if(id == 0) iputchar('@');
+      if(tchdbtranbegin(hdb)){
+        if(myrand(2) == 0){
+          if(!tchdbput(hdb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(hdb, "tchdbput");
+            err = true;
+          }
+        } else {
+          if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
+            eprint(hdb, "tchdbout");
+            err = true;
+          }
+        }
+        if(nc && myrand(2) == 0){
+          if(!tchdbtrancommit(hdb)){
+            eprint(hdb, "tchdbtrancommit");
+            err = true;
+          }
+        } else {
+          if(!tchdbtranabort(hdb)){
+            eprint(hdb, "tchdbtranabort");
+            err = true;
+          }
+        }
+      } else {
+        eprint(hdb, "tchdbtranbegin");
+        err = true;
+      }
       if(myrand(1000) == 0){
         if(!tchdbforeach(hdb, iterfunc, NULL)){
           eprint(hdb, "tchdbforeach");
@@ -1390,7 +1417,7 @@ static void *threadwicked(void *targ){
     if(id == 0){
       if(i % 50 == 0) iprintf(" (%08d)\n", i);
       if(id == 0 && i == rnum / 4){
-        if(!tchdboptimize(hdb, rnum / 50, -1, -1, -1)){
+        if(!tchdboptimize(hdb, rnum / 50, -1, -1, -1) && tchdbecode(hdb) != TCEINVALID){
           eprint(hdb, "tchdboptimize");
           err = true;
         }
@@ -1595,7 +1622,7 @@ static void *threadrace(void *targ){
       if(myrand(mid) == 0){
         iprintf("[o]");
         if(!tchdboptimize(hdb, myrand(rnum) + 1, myrand(10), myrand(10), 0)){
-          eprint(hdb, "tchdbvanish");
+          eprint(hdb, "tchdboptimize");
           err = true;
         }
       }

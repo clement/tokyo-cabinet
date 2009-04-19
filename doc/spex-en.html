@@ -41,6 +41,7 @@
 <li><a href="#tcfdbapi">The Fixed-length Database API</a></li>
 <li><a href="#tctdbapi">The Table Database API</a></li>
 <li><a href="#tcadbapi">The Abstract Database API</a></li>
+<li><a href="#fileformat">File Format</a></li>
 <li><a href="#license">License</a></li>
 </ol>
 
@@ -56,7 +57,7 @@
 
 <p>As for database of fixed-length array, records are stored with unique natural numbers.  It is impossible to store two or more records with a key overlaps.  Moreover, the length of each record is limited by the specified length.  Provided operations are the same as ones of hash database.</p>
 
-<p>Table database is also provided as a variant of hash database.  Each record is identified by the primary key and has a set of named columns.  Although there is no concept of data schema, it is possible to search for records with complex conditions efficiently by using indexes of arbitrary columns.</p>
+<p>Table database is also provided as a variant of hash database.  Each record is identified by the primary key and has a set of named columns.  Although there is no concept of data schema, it is possible to search for records with complex conditions efficiently by using indices of arbitrary columns.</p>
 
 <p>Tokyo Cabinet is written in the C language, and provided as API of C, Perl, Ruby, Java, and Lua.  Tokyo Cabinet is available on platforms which have API conforming to C99 and POSIX.  Tokyo Cabinet is a free software licensed under the GNU Lesser General Public License.</p>
 
@@ -117,7 +118,7 @@
 
 <p>Table database supports query functions with not only the primary key but also with conditions about arbitrary columns.  Each column condition is composed of the name of a column and a condition expression.  Operators of full matching, forward matching, regular expression matching, and so on are provided for the string type.  Operators of full matching, range matching and so on are provided for the number type.  A query can contain multiple conditions.  The order of the result set can be specified as the ascending or descending order of strings or numbers.</p>
 
-<p>You can create indexes for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indexes have types for strings or numbers.  The query optimizer uses indexes in suitable way according to each query.  Indexes are implemented as different files of B+ tree database.</p>
+<p>You can create indices for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indices have types for strings or numbers.  The query optimizer uses indices in suitable way according to each query.  Indices are implemented as different files of B+ tree database.</p>
 
 <h3 id="features_practical">Practical Functionality</h3>
 
@@ -5307,7 +5308,7 @@ int main(int argc, char **argv){
 <dd>`<var>lcnum</var>' specifies the maximum number of leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 4096.</dd>
 <dd>`<var>ncnum</var>' specifies the maximum number of non-leaf nodes to be cached.  If it is not more than 0, the default value is specified.  The default value is 512.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>Note that the caching parameters should be set before the database is opened.  Leaf nodes and non-leaf nodes are used in column indexes.</dd>
+<dd>Note that the caching parameters should be set before the database is opened.  Leaf nodes and non-leaf nodes are used in column indices.</dd>
 </dl>
 
 <p>The function `tctdbsetxmsiz' is used in order to set the size of the extra mapped memory of a table database object.</p>
@@ -5692,7 +5693,7 @@ int main(int argc, char **argv){
 <dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
 <dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>Note that the setting indexes should be set after the database is opened.</dd>
+<dd>Note that the setting indices should be set after the database is opened.</dd>
 </dl>
 
 
@@ -6045,7 +6046,7 @@ int main(int argc, char **argv){
 
 <p>Objects whose type is pointer to `<code>TCADB</code>' are used to handle abstract databases.  An abstract database object is created with the function `<code>tcadbnew</code>' and is deleted with the function `<code>tcadbdel</code>'.  To avoid memory leak, it is important to delete every object when it is no longer in use.</p>
 
-<p>Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `<code>tcadbopen</code>' is used to open a concrete database and the function `<code>tcadbclose</code>' is used to close the database.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
+<p>Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `<code>tcadbopen</code>' is used to open a concrete database and the function `<code>tcadbclose</code>' is used to close the database.  To avoid data missing or corruption, it is important to close every database instance when it is no longer in use.</p>
 
 <h3 id="tcadbapi_api">API</h3>
 
@@ -6297,6 +6298,16 @@ int main(int argc, char **argv){
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
+<p>The function `tcadboptimize' is used in order to optimize the storage of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>bool tcadboptimize(TCADB *<var>adb</var>, const char *<var>params</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>`<var>params</var>' specifies the string of the tuning parameters, which works as with the tuning of parameters the function `tcadbopen'.  If it is `NULL', it is not used.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>This function is useful to reduce the size of the database storage with data fragmentation by successive updating.</dd>
+</dl>
+
 <p>The function `tcadbvanish' is used in order to remove all records of an abstract database object.</p>
 
 <dl class="api">
@@ -6340,6 +6351,14 @@ int main(int argc, char **argv){
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Update in the transaction is discarded when it is aborted.  The state of the database is rollbacked to before transaction.</dd>
+</dl>
+
+<p>The function `tcadbpath' is used in order to get the file path of an abstract database object.</p>
+
+<dl class="api">
+<dt><code>const char *tcadbpath(TCADB *<var>adb</var>);</code></dt>
+<dd>`<var>adb</var>' specifies the abstract database object.</dd>
+<dd>The return value is the path of the database file or `NULL' if the object does not connect to any database.  "*" stands for on-memory hash database.  "+" stands for on-memory tree database.</dd>
 </dl>
 
 <p>The function `tcadbrnum' is used in order to get the number of records of an abstract database object.</p>
@@ -6455,7 +6474,7 @@ int main(int argc, char **argv){
 
 <p>This command returns 0 on success, another on failure.</p>
 
-<p>The command `<code>tcamgr</code>' is a utility for test and debugging of the abstract database API and its applications.  `<var>name</var>' specifies the name of a database.  `<var>key</var>' specifies the key of a record.  `<var>value</var>' specifies the value of a record.  `<var>func</var>' specifies the name of a function.  `<var>arg</var>' specifies the arguments of the function.  `<var>dest</var>' specifies the path of the destination file.</p>
+<p>The command `<code>tcamgr</code>' is a utility for test and debugging of the abstract database API and its applications.  `<var>name</var>' specifies the name of a database.  `<var>key</var>' specifies the key of a record.  `<var>value</var>' specifies the value of a record.  `<var>params</var>' specifies the tuning parameters.  `<var>func</var>' specifies the name of a function.  `<var>arg</var>' specifies the arguments of the function.  `<var>dest</var>' specifies the path of the destination file.</p>
 
 <dl class="api">
 <dt><code>tcamgr create <var>name</var></code></dt>
@@ -6470,6 +6489,8 @@ int main(int argc, char **argv){
 <dd>Print the value of a record.</dd>
 <dt><code>tcamgr list [-sep <var>chr</var>] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>name</var></code></dt>
 <dd>Print keys of all records, separated by line feeds.</dd>
+<dt><code>tcamgr optimize <var>name</var> <var>params</var></code></dt>
+<dd>Optimize a database file.</dd>
 <dt><code>tcamgr misc [-sx] [-sep <var>chr</var>] [-px] <var>name</var> <var>func</var> [<var>arg</var>...]</code></dt>
 <dd>Call a versatile function for miscellaneous operations.</dd>
 <dt><code>tcamgr map [-fm <var>str</var>] <var>name</var> <var>dest</var></code></dt>
@@ -6501,6 +6522,563 @@ int main(int argc, char **argv){
 <p>To use the abstract database API easily, the CGI script `<code>tcawmgr.cgi</code>' is provided.</p>
 
 <p>The CGI script `<code>tcawmgr.cgi</code>' is a utility to browse and edit an abstract database by Web interface.  The database should be placed in the same directory of the CGI script and named as "<code>casket.tch</code>", "<code>casket.tcb</code>", or "<code>casket.tcf</code>".  And, its permission should allow reading and writing by the user executing the CGI script.  Install the CGI script in a public directory of your Web server then you can start to use the CGI script by accessing the assigned URL.</p>
+
+<hr />
+
+<h2 id="fileformat">File Format</h2>
+
+<p>This section describes the format of the database files of Tokyo Cabinet.</p>
+
+<h3 id="fileformat_tchdb">File Format of Hash Database</h3>
+
+<p>There are four sections in the file managed by the hash database; the header section, the bucket section, the free block pool section, and the record section.  Numeric values in the file are serialized in the little endian order or in the variable length format.  The latter format is delta encoding based on the 128-radix numbering.</p>
+
+<p>The header section is from the top of the file and its length is 256 bytes.  There are the following information.</p>
+
+<table summary="database header format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>magic number</td>
+<td class="number">0</td>
+<td class="number">32</td>
+<td>identification of the database.  Begins with "ToKyO CaBiNeT"</td>
+</tr>
+<tr>
+<td>database type</td>
+<td class="number">32</td>
+<td class="number">1</td>
+<td>hash (0x01) / B+ tree (0x02) / fixed-length (0x03) / table (0x04)</td>
+</tr>
+<tr>
+<td>additional flags</td>
+<td class="number">33</td>
+<td class="number">1</td>
+<td>logical union of open (1&lt;&lt;0) and fatal (1&lt;&lt;1)</td>
+</tr>
+<tr>
+<td>alignment power</td>
+<td class="number">34</td>
+<td class="number">1</td>
+<td>the alignment size, by power of 2</td>
+</tr>
+<tr>
+<td>free block pool power</td>
+<td class="number">35</td>
+<td class="number">1</td>
+<td>the number of elements in the free block pool, by power of 2</td>
+</tr>
+<tr>
+<td>options</td>
+<td class="number">36</td>
+<td class="number">1</td>
+<td>logical union of large (1&lt;&lt;0), Deflate (1&lt;&lt;1), BZIP2 (1&lt;&lt;2), TCBS (1&lt;&lt;3), extra codec (1&lt;&lt;4)</td>
+</tr>
+<tr>
+<td>bucket number</td>
+<td class="number">40</td>
+<td class="number">8</td>
+<td>the number of elements of the bucket array</td>
+</tr>
+<tr>
+<td>record number</td>
+<td class="number">48</td>
+<td class="number">8</td>
+<td>the number of records in the database</td>
+</tr>
+<tr>
+<td>file size</td>
+<td class="number">56</td>
+<td class="number">8</td>
+<td>the file size of the database</td>
+</tr>
+<tr>
+<td>first record</td>
+<td class="number">64</td>
+<td class="number">8</td>
+<td>the offset of the first record</td>
+</tr>
+<tr>
+<td>opaque region</td>
+<td class="number">128</td>
+<td class="number">128</td>
+<td>users can use this region arbitrarily</td>
+</tr>
+</table>
+
+<p>The bucket section trails the header section and its size is defined by the bucket number.  Each element of the bucket array indicates the offset of the first record of the hash chain.  The format of each element is the fixed length number and its size is 4 bytes in the normal mode or 8 bytes in the large mode.  The offset is recorded as the quotient by the alignment.</p>
+
+<p>The free block pool section trails the bucket section and its size is defined by the free block pool number.  Each element of the free block pool indicates the offset and the size of each free block.  The offset is recorded as the difference of the former free block and as the quotient by the alignment.  The offset and the size are serialized in the variable length format.</p>
+
+<p>The record section trails the free block pool section and occupies the rest region to the end of the file.  Each element has the following information.  The region of each record begins at the offset of the multiple of the alignment.</p>
+
+<table summary="record format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>magic number</td>
+<td class="number">0</td>
+<td class="number">1</td>
+<td>identification of record block. always 0xC8</td>
+</tr>
+<tr>
+<td>hash value</td>
+<td class="number">1</td>
+<td class="number">1</td>
+<td>the hash value to decide the path of the hash chain</td>
+</tr>
+<tr>
+<td>left chain</td>
+<td class="number">2</td>
+<td class="number">4</td>
+<td>the alignment quotient of the destination of the left chain</td>
+</tr>
+<tr>
+<td>right chain</td>
+<td class="number">6</td>
+<td class="number">4</td>
+<td>the alignment quotient of the destination of the right chain</td>
+</tr>
+<tr>
+<td>padding size</td>
+<td class="number">10</td>
+<td class="number">2</td>
+<td>the size of the padding</td>
+</tr>
+<tr>
+<td>key size</td>
+<td class="number">12</td>
+<td class="number">vary</td>
+<td>the size of the key</td>
+</tr>
+<tr>
+<td>value size</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the size of the value</td>
+</tr>
+<tr>
+<td>key</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the data of the key</td>
+</tr>
+<tr>
+<td>value</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the data of the value</td>
+</tr>
+<tr>
+<td>padding</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>useless data</td>
+</tr>
+</table>
+
+<p>However, regions of free blocks contain the following information.</p>
+
+<table summary="free block format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>magic number</td>
+<td class="number">0</td>
+<td class="number">1</td>
+<td>identification of record block. always 0xB0</td>
+</tr>
+<tr>
+<td>block size</td>
+<td class="number">1</td>
+<td class="number">4</td>
+<td>size of the block</td>
+</tr>
+</table>
+
+<p>The transaction log is recorded in the file whose name is composed of the database name and the suffix ".wal".  The top eight bytes indicate the file size of the beginning of the transaction.  After that, there are the following information.</p>
+
+<table summary="transaction log format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>offset</td>
+<td class="number">0</td>
+<td class="number">8</td>
+<td>the offset of the updated region</td>
+</tr>
+<tr>
+<td>size</td>
+<td class="number">8</td>
+<td class="number">4</td>
+<td>the size of the updated region</td>
+</tr>
+<tr>
+<td>data</td>
+<td class="number">12</td>
+<td class="number">vary</td>
+<td>the data before update</td>
+</tr>
+</table>
+
+<h3 id="fileformat_tcbdb">File Format of B+ Tree Database</h3>
+
+<p>All data managed by the B+ tree database are recorded in the hash database.  Recorded data are classified into meta data and logical pages.  Logical pages are classified into leaf nodes and non-leaf nodes.  The formats of the fixed length number and the variable length number are the same as with the hash database.</p>
+
+<p>Meta data are recorded in the opaque region in the header of the hash database and have the following information.</p>
+
+<table summary="database header format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+
+<tr>
+<td>comparison function</td>
+<td class="number">0</td>
+<td class="number">1</td>
+<td>tccmplexical (0x00), tccmpdecimal (0x01), tccmpint32 (0x02), tccmpint64 (0x03), other (0xff)</td>
+</tr>
+<tr>
+<td>reserved region</td>
+<td class="number">1</td>
+<td class="number">7</td>
+<td>not used</td>
+</tr>
+<tr>
+<td>record number of leaf node</td>
+<td class="number">8</td>
+<td class="number">4</td>
+<td>the maximum number of records in a leaf node</td>
+</tr>
+<tr>
+<td>index number of non-leaf node</td>
+<td class="number">12</td>
+<td class="number">4</td>
+<td>the maximum number of indices in a leaf node</td>
+</tr>
+<tr>
+<td>root node ID</td>
+<td class="number">16</td>
+<td class="number">8</td>
+<td>the page ID of the root node of B+ tree</td>
+</tr>
+<tr>
+<td>first leaf ID</td>
+<td class="number">24</td>
+<td class="number">8</td>
+<td>the page ID of the first leaf node</td>
+</tr>
+<tr>
+<td>last leaf ID</td>
+<td class="number">32</td>
+<td class="number">8</td>
+<td>the page ID of the last leaf node</td>
+</tr>
+<tr>
+<td>leaf number</td>
+<td class="number">40</td>
+<td class="number">8</td>
+<td>the number of the leaf nodes</td>
+</tr>
+<tr>
+<td>non-leaf number</td>
+<td class="number">48</td>
+<td class="number">8</td>
+<td>the number of the non-leaf nodes</td>
+</tr>
+<tr>
+<td>record number</td>
+<td class="number">56</td>
+<td class="number">8</td>
+<td>the number of records in the database</td>
+</tr>
+</table>
+
+<p>Each leaf node contains a list of records.  Each non-leaf node contains a list of indices to child nodes.  Though each record is a logical unit of user data, records with the same key are integrated into one record physically.  Each physical record has the following information.</p>
+
+<table summary="record format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>key size</td>
+<td class="number">0</td>
+<td class="number">vary</td>
+<td>the size of the key</td>
+</tr>
+<tr>
+<td>value size</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the size of the value</td>
+</tr>
+<tr>
+<td>duplication number</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the number of values with the same key</td>
+</tr>
+<tr>
+<td>key</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the data of the key</td>
+</tr>
+<tr>
+<td>value</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the data of the value</td>
+</tr>
+<tr>
+<td>duplicated records</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>a list of value sizes and value data</td>
+</tr>
+</table>
+
+<p>Each leaf node is a physical unit of a set of records.  Each leaf node is identified by the sequential ID number from 1.  Each leaf node is recorded in the hash database.  The key is a string in the hexadecimal numbering.  The value has the following information.  Records are kept in the ascending order of keys.</p>
+
+<table summary="leaf node format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>previous leaf</td>
+<td class="number">0</td>
+<td class="number">vary</td>
+<td>the ID number of the previous leaf node</td>
+</tr>
+<tr>
+<td>next leaf</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the ID number of the next leaf node</td>
+</tr>
+<tr>
+<td>record list</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the serialized data of all records in the node</td>
+</tr>
+</table>
+
+<p>Each index is a logical unit of pointer to the child node.  Each index has the following information.</p>
+
+<table summary="index format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>page ID</td>
+<td class="number">0</td>
+<td class="number">vary</td>
+<td>the ID number of the referred page</td>
+</tr>
+<tr>
+<td>key size</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the size of the key</td>
+</tr>
+<tr>
+<td>key</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the data of the key</td>
+</tr>
+</table>
+
+<p>Each non-leaf node is a physical unit of a set of indices.  Each non-leaf node is identified by the sequential number from 281474976710657.  Each non-leaf node is recorded in the hash database.  The key is a string begins with "#" and is trailed by the hexadecimal number of the ID number subtracted by 281474976710657.  The value has the following information.  Indices are kept in the ascending order of keys.</p>
+
+<table summary="non-leaf format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>accession ID</td>
+<td class="number">0</td>
+<td class="number">vary</td>
+<td>the ID number of the first child node</td>
+</tr>
+<tr>
+<td>index list</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the serialized data of all indices in the node</td>
+</tr>
+</table>
+
+<h3 id="fileformat_tcfdb">File Format of Fixed-length Database</h3>
+
+<p>There are two sections in the file managed by the fixed-length database; the header section, and the record section.  Numeric values in the file are serialized in the little endian order.</p>
+
+<p>The header section is from the top of the file and its length is 256 bytes. There are the following information.</p>
+
+<table summary="database header format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>magic number</td>
+<td class="number">0</td>
+<td class="number">32</td>
+<td>identification of the database. Begins with "ToKyO CaBiNeT"</td>
+</tr>
+<tr>
+<td>database type</td>
+<td class="number">32</td>
+<td class="number">1</td>
+<td>always 0x03</td>
+</tr>
+<tr>
+<td>additional flags</td>
+<td class="number">33</td>
+<td class="number">1</td>
+<td>logical union of open (1&lt;&lt;0) and fatal (1&lt;&lt;1)</td>
+</tr>
+<tr>
+<td>record number</td>
+<td class="number">48</td>
+<td class="number">8</td>
+<td>the number of records in the database</td>
+</tr>
+<tr>
+<td>file size</td>
+<td class="number">56</td>
+<td class="number">8</td>
+<td>the file size of the database</td>
+</tr>
+<tr>
+<td>record width</td>
+<td class="number">64</td>
+<td class="number">8</td>
+<td>the width of each record</td>
+</tr>
+<tr>
+<td>limit size</td>
+<td class="number">72</td>
+<td class="number">8</td>
+<td>the limit size of the database</td>
+</tr>
+<tr>
+<td>least ID</td>
+<td class="number">80</td>
+<td class="number">8</td>
+<td>the least ID number of records</td>
+</tr>
+<tr>
+<td>greatest ID</td>
+<td class="number">88</td>
+<td class="number">8</td>
+<td>the greatest ID number of records</td>
+</tr>
+<tr>
+<td>opaque region</td>
+<td class="number">128</td>
+<td class="number">128</td>
+<td>users can use this region arbitrarily</td>
+</tr>
+</table>
+
+<p>The record section trails the header section and occupies the rest region to the end of the file. Each element has the following information.  The size region takes 1 byte if the record width is less than 256 bytes, or takes 2 bytes if the record width is less than 65536, else takes 4 bytes.  The size of each record is the summation of the size of the width region and the record width.  So, the region of each record begins at the offset generated by the ID number subtracted by 1 and multiplied by the record width and the added by 256.</p>
+
+<table summary="record format">
+<tr>
+<td class="label">name</td>
+<td class="label">offset</td>
+<td class="label">length</td>
+<td class="label">feature</td>
+</tr>
+<tr>
+<td>value size</td>
+<td class="number">0</td>
+<td class="number">vary</td>
+<td>the size of the value</td>
+</tr>
+<tr>
+<td>value</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>the data of the value</td>
+</tr>
+<tr>
+<td>padding</td>
+<td class="number">vary</td>
+<td class="number">vary</td>
+<td>padding.  If the size of the value is 0, the first byte indicates whether the record exists or not</td>
+</tr>
+</table>
+
+<p>The naming convention and the file format of the transaction log file is the same as the one of the hash database.</p>
+
+<h3 id="fileformat_note">Note</h3>
+
+<p>Because database files are not sparse, you can copy them as with normal files.  Moreover, the database formats don't depend on the byte order of the running environment, you can migrate the database files between environments with different byte orders.</p>
+
+<p>If possible, set the MIME type `<code>application/x-tokyocabinet-hash</code>' when sending files of the hash database.  The suffix of the file name should be `<code>.tch</code>'.  As for the B+ tree database, `<code>application/x-tokyocabinet-btree</code>' and `<code>.tcb</code>'.  As for the fixed-length database, `<code>application/x-tokyocabinet-fixed</code>' and `<code>.tcf</code>'.  As for the table database, `<code>application/x-tokyocabinet-btree</code>' and `<code>.tct</code>'.</p>
+
+<p>To make the `<code>file</code>' command identify the database formats, append the following lines to the `<code>magic</code>' file.</p>
+
+<pre># Tokyo Cabinet magic data
+0       string    ToKyO\ CaBiNeT\n   Tokyo Cabinet
+&gt;14     string    x                  \b (%s)
+&gt;32     byte      0                  \b, Hash
+!:mime  application/x-tokyocabinet-hash
+&gt;32     byte      1                  \b, B+ tree
+!:mime  application/x-tokyocabinet-btree
+&gt;32     byte      2                  \b, Fixed-length
+!:mime  application/x-tokyocabinet-fixed
+&gt;32     byte      3                  \b, Table
+!:mime  application/x-tokyocabinet-table
+&gt;33     byte      &amp;1                 \b, [open]
+&gt;33     byte      &amp;2                 \b, [fatal]
+&gt;34     byte      x                  \b, apow=%d
+&gt;35     byte      x                  \b, fpow=%d
+&gt;36     byte      &amp;1                 \b, [large]
+&gt;36     byte      &amp;2                 \b, [deflate]
+&gt;36     byte      &amp;4                 \b, [bzip]
+&gt;36     byte      &amp;8                 \b, [tcbs]
+&gt;36     byte      &amp;16                \b, [excodec]
+&gt;40     lequad    x                  \b, bnum=%lld
+&gt;48     lequad    x                  \b, rnum=%lld
+&gt;56     lequad    x                  \b, fsiz=%lld
+</pre>
 
 <hr />
 

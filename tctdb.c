@@ -586,7 +586,7 @@ bool tctdbvanish(TCTDB *tdb){
 bool tctdbcopy(TCTDB *tdb, const char *path){
   assert(tdb && path);
   if(!TDBLOCKMETHOD(tdb, false)) return false;
-  if(!tdb->open || !tdb->wmode || tdb->tran){
+  if(!tdb->open){
     tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
     TDBUNLOCKMETHOD(tdb);
     return false;
@@ -601,16 +601,23 @@ bool tctdbcopy(TCTDB *tdb, const char *path){
 /* Begin the transaction of a table database object. */
 bool tctdbtranbegin(TCTDB *tdb){
   assert(tdb);
-  if(!TDBLOCKMETHOD(tdb, true)) return false;
-  if(!tdb->open || !tdb->wmode || tdb->tran){
-    tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
+  for(double wsec = 1.0 / sysconf(_SC_CLK_TCK); true; wsec *= 2){
+    if(!TDBLOCKMETHOD(tdb, true)) return false;
+    if(!tdb->open || !tdb->wmode){
+      tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
+      TDBUNLOCKMETHOD(tdb);
+      return false;
+    }
+    if(!tdb->tran) break;
     TDBUNLOCKMETHOD(tdb);
-    return false;
+    if(wsec > 1.0) wsec = 1.0;
+    tcsleep(wsec);
   }
   if(!tctdbtranbeginimpl(tdb)){
     TDBUNLOCKMETHOD(tdb);
     return false;
   }
+  tdb->tran = true;
   TDBUNLOCKMETHOD(tdb);
   return true;
 }
@@ -625,12 +632,11 @@ bool tctdbtrancommit(TCTDB *tdb){
     TDBUNLOCKMETHOD(tdb);
     return false;
   }
-  if(!tctdbtrancommitimpl(tdb)){
-    TDBUNLOCKMETHOD(tdb);
-    return false;
-  }
+  tdb->tran = false;
+  bool err = false;
+  if(!tctdbtrancommitimpl(tdb)) err = true;
   TDBUNLOCKMETHOD(tdb);
-  return true;
+  return !err;
 }
 
 
@@ -643,12 +649,11 @@ bool tctdbtranabort(TCTDB *tdb){
     TDBUNLOCKMETHOD(tdb);
     return false;
   }
-  if(!tctdbtranabortimpl(tdb)){
-    TDBUNLOCKMETHOD(tdb);
-    return false;
-  }
+  tdb->tran = false;
+  bool err = false;
+  if(!tctdbtranabortimpl(tdb)) err = true;
   TDBUNLOCKMETHOD(tdb);
-  return true;
+  return !err;
 }
 
 
@@ -1060,7 +1065,7 @@ uint64_t tctdbbnumused(TCTDB *tdb){
 }
 
 
-/* Get the number of column indexes of a table database object. */
+/* Get the number of column indices of a table database object. */
 int tctdbinum(TCTDB *tdb){
   assert(tdb);
   if(!tdb->open){
@@ -1729,7 +1734,6 @@ static bool tctdbtranbeginimpl(TCTDB *tdb){
       break;
     }
   }
-  tdb->tran = true;
   return !err;
 }
 
@@ -1756,7 +1760,6 @@ static bool tctdbtrancommitimpl(TCTDB *tdb){
       break;
     }
   }
-  tdb->tran = false;
   return !err;
 }
 
@@ -1782,7 +1785,6 @@ static bool tctdbtranabortimpl(TCTDB *tdb){
       break;
     }
   }
-  tdb->tran = false;
   return !err;
 }
 
@@ -2830,7 +2832,7 @@ static bool tctdbqryallcondmatch(TDBQRY *qry, const char *pkbuf, int pksiz){
           break;
         }
       } else {
-        if(!cond->sign){
+        if(cond->sign){
           ok = false;
           break;
         }
@@ -3174,7 +3176,7 @@ static int tdbcmpsortkeynumdesc(const TDBSORTKEY *a, const TDBSORTKEY *b){
 }
 
 
-/* Add a record into indexes of a table database object.
+/* Add a record into indices of a table database object.
    `tdb' specifies the table database object.
    `pkbuf' specifies the pointer to the region of the primary key.
    `pksiz' specifies the size of the region of the primary key.
@@ -3222,7 +3224,7 @@ static bool tctdbidxput(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols){
 }
 
 
-/* Remove a record from indexes of a table database object.
+/* Remove a record from indices of a table database object.
    `tdb' specifies the table database object.
    `pkbuf' specifies the pointer to the region of the primary key.
    `pksiz' specifies the size of the region of the primary key.

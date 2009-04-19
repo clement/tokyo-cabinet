@@ -58,8 +58,8 @@ typedef struct {                         /* type of structure for a table databa
   uint8_t opts;                          /* options */
   int32_t lcnum;                         /* max number of cached leaves */
   int32_t ncnum;                         /* max number of cached nodes */
-  TDBIDX *idxs;                          /* column indexes */
-  int inum;                              /* number of column indexes */
+  TDBIDX *idxs;                          /* column indices */
+  int inum;                              /* number of column indices */
   bool tran;                             /* whether in the transaction */
 } TCTDB;
 
@@ -229,7 +229,7 @@ bool tctdbtune(TCTDB *tdb, int64_t bnum, int8_t apow, int8_t fpow, uint8_t opts)
    the default value is specified.  The default value is 512.
    If successful, the return value is true, else, it is false.
    Note that the caching parameters should be set before the database is opened.  Leaf nodes and
-   non-leaf nodes are used in column indexes. */
+   non-leaf nodes are used in column indices. */
 bool tctdbsetcache(TCTDB *tdb, int32_t rcnum, int32_t lcnum, int32_t ncnum);
 
 
@@ -616,7 +616,7 @@ uint64_t tctdbfsiz(TCTDB *tdb);
    removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely
    returns failure.
    If successful, the return value is true, else, it is false.
-   Note that the setting indexes should be set after the database is opened. */
+   Note that the setting indices should be set after the database is opened. */
 bool tctdbsetindex(TCTDB *tdb, const char *name, int type);
 
 
@@ -811,9 +811,9 @@ char *tctdbopaque(TCTDB *tdb);
 uint64_t tctdbbnumused(TCTDB *tdb);
 
 
-/* Get the number of column indexes of a table database object.
+/* Get the number of column indices of a table database object.
    `tdb' specifies the table database object.
-   The return value is the number of column indexes or 0 if the object does not connect to any
+   The return value is the number of column indices or 0 if the object does not connect to any
    database file. */
 int tctdbinum(TCTDB *tdb);
 

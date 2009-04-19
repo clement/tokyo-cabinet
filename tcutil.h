@@ -2596,6 +2596,12 @@ char *tcstrjoin3(const TCMAP *map, char delim);
 void *tcstrjoin4(const TCMAP *map, int *sp);
 
 
+/* Suspend execution of the current thread.
+   `sec' specifies the interval of the suspension in seconds.
+   If successful, the return value is true, else, it is false. */
+bool tcsleep(double sec);
+
+
 
 /*************************************************************************************************
  * filesystem utilities
@@ -3290,8 +3296,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.14"
-#define _TC_LIBVER     805
+#define _TC_VERSION    "1.4.15"
+#define _TC_LIBVER     806
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

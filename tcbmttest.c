@@ -1328,6 +1328,33 @@ static void *threadwicked(void *targ){
       break;
     default:
       if(id == 0) iputchar('@');
+      if(tcbdbtranbegin(bdb)){
+        if(myrand(2) == 0){
+          if(!tcbdbput(bdb, kbuf, ksiz, vbuf, vsiz)){
+            eprint(bdb, "tcbdbput");
+            err = true;
+          }
+        } else {
+          if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
+            eprint(bdb, "tcbdbout");
+            err = true;
+          }
+        }
+        if(nc && myrand(2) == 0){
+          if(!tcbdbtrancommit(bdb)){
+            eprint(bdb, "tcbdbtrancommit");
+            err = true;
+          }
+        } else {
+          if(!tcbdbtranabort(bdb)){
+            eprint(bdb, "tcbdbtranabort");
+            err = true;
+          }
+        }
+      } else {
+        eprint(bdb, "tcbdbtranbegin");
+        err = true;
+      }
       if(myrand(1000) == 0){
         if(!tcbdbforeach(bdb, iterfunc, NULL)){
           eprint(bdb, "tcbdbforeach");
@@ -1341,7 +1368,7 @@ static void *threadwicked(void *targ){
     if(id == 0){
       if(i % 50 == 0) iprintf(" (%08d)\n", i);
       if(id == 0 && i == rnum / 4){
-        if(!tcbdboptimize(bdb, -1, -1, -1, -1, -1, -1)){
+        if(!tcbdboptimize(bdb, -1, -1, -1, -1, -1, -1) && tcbdbecode(bdb) != TCEINVALID){
           eprint(bdb, "tcbdboptimize");
           err = true;
         }
