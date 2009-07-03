@@ -240,7 +240,31 @@ bool tcfdbopen(TCFDB *fdb, const char *path, int omode){
     FDBUNLOCKMETHOD(fdb);
     return false;
   }
+  char *rpath = tcrealpath(path);
+  if(!rpath){
+    int ecode = TCEOPEN;
+    switch(errno){
+    case EACCES: ecode = TCENOPERM; break;
+    case ENOENT: ecode = TCENOFILE; break;
+    case ENOTDIR: ecode = TCENOFILE; break;
+    }
+    tcfdbsetecode(fdb, ecode, __FILE__, __LINE__, __func__);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  if(!tcpathlock(rpath)){
+    tcfdbsetecode(fdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    TCFREE(rpath);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
   bool rv = tcfdbopenimpl(fdb, path, omode);
+  if(rv){
+    fdb->rpath = rpath;
+  } else {
+    tcpathunlock(rpath);
+    TCFREE(rpath);
+  }
   FDBUNLOCKMETHOD(fdb);
   return rv;
 }
@@ -256,6 +280,9 @@ bool tcfdbclose(TCFDB *fdb){
     return false;
   }
   bool rv = tcfdbcloseimpl(fdb);
+  tcpathunlock(fdb->rpath);
+  TCFREE(fdb->rpath);
+  fdb->rpath = NULL;
   FDBUNLOCKMETHOD(fdb);
   return rv;
 }
@@ -908,13 +935,10 @@ bool tcfdbtranbegin(TCFDB *fdb){
     if(wsec > 1.0) wsec = 1.0;
     tcsleep(wsec);
   }
-  fdb->flags &= ~FDBFOPEN;
   if(!tcfdbmemsync(fdb, false)){
-    fdb->flags |= FDBFOPEN;
     FDBUNLOCKMETHOD(fdb);
     return false;
   }
-  fdb->flags |= FDBFOPEN;
   if((fdb->omode & FDBOTSYNC) && fsync(fdb->fd) == -1){
     tcfdbsetecode(fdb, TCESYNC, __FILE__, __LINE__, __func__);
     return false;
@@ -928,6 +952,7 @@ bool tcfdbtranbegin(TCFDB *fdb){
       switch(errno){
       case EACCES: ecode = TCENOPERM; break;
       case ENOENT: ecode = TCENOFILE; break;
+      case ENOTDIR: ecode = TCENOFILE; break;
       }
       tcfdbsetecode(fdb, ecode, __FILE__, __LINE__, __func__);
       FDBUNLOCKMETHOD(fdb);
@@ -935,10 +960,13 @@ bool tcfdbtranbegin(TCFDB *fdb){
     }
     fdb->walfd = walfd;
   }
+  tcfdbsetflag(fdb, FDBFOPEN, false);
   if(!tcfdbwalinit(fdb)){
+    tcfdbsetflag(fdb, FDBFOPEN, true);
     FDBUNLOCKMETHOD(fdb);
     return false;
   }
+  tcfdbsetflag(fdb, FDBFOPEN, true);
   fdb->tran = true;
   FDBUNLOCKMETHOD(fdb);
   return true;
@@ -1441,6 +1469,7 @@ static void tcfdbclear(TCFDB *fdb){
   fdb->tmtx = NULL;
   fdb->wmtx = NULL;
   fdb->eckey = NULL;
+  fdb->rpath = NULL;
   fdb->type = TCDBTFIXED;
   fdb->flags = 0;
   fdb->width = FDBDEFWIDTH;
@@ -1590,6 +1619,7 @@ static int tcfdbwalrestore(TCFDB *fdb, const char *path){
         switch(errno){
         case EACCES: ecode = TCENOPERM; break;
         case ENOENT: ecode = TCENOFILE; break;
+        case ENOTDIR: ecode = TCENOFILE; break;
         }
         tcfdbsetecode(fdb, ecode, __FILE__, __LINE__, __func__);
         err = true;
@@ -1711,6 +1741,7 @@ static bool tcfdbopenimpl(TCFDB *fdb, const char *path, int omode){
     switch(errno){
     case EACCES: ecode = TCENOPERM; break;
     case ENOENT: ecode = TCENOFILE; break;
+    case ENOTDIR: ecode = TCENOFILE; break;
     }
     tcfdbsetecode(fdb, ecode, __FILE__, __LINE__, __func__);
     return false;
@@ -2423,8 +2454,10 @@ static bool tcfdbvanishimpl(TCFDB *fdb){
 static bool tcfdbcopyimpl(TCFDB *fdb, const char *path){
   assert(fdb && path);
   bool err = false;
-  fdb->flags &= ~FDBFOPEN;
-  if((fdb->omode & FDBOWRITER) && !tcfdbmemsync(fdb, false)) err = true;
+  if(fdb->omode & FDBOWRITER){
+    if(!tcfdbmemsync(fdb, false)) err = true;
+    tcfdbsetflag(fdb, FDBFOPEN, false);
+  }
   if(*path == '@'){
     char tsbuf[TCNUMBUFSIZ];
     sprintf(tsbuf, "%llu", (unsigned long long)(tctime() * 1000000));
@@ -2439,7 +2472,7 @@ static bool tcfdbcopyimpl(TCFDB *fdb, const char *path){
       err = true;
     }
   }
-  fdb->flags |= FDBFOPEN;
+  if(fdb->omode & FDBOWRITER) tcfdbsetflag(fdb, FDBFOPEN, true);
   return !err;
 }
 
@@ -2669,6 +2702,7 @@ void tcfdbprintmeta(TCFDB *fdb){
   wp += sprintf(wp, " tmtx=%p", (void *)fdb->tmtx);
   wp += sprintf(wp, " wmtx=%p", (void *)fdb->wmtx);
   wp += sprintf(wp, " eckey=%p", (void *)fdb->eckey);
+  wp += sprintf(wp, " rpath=%s", fdb->rpath ? fdb->rpath : "-");
   wp += sprintf(wp, " type=%02X", fdb->type);
   wp += sprintf(wp, " flags=%02X", fdb->flags);
   wp += sprintf(wp, " width=%u", fdb->width);

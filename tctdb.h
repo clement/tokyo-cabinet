@@ -475,6 +475,20 @@ void *tctdbiternext(TCTDB *tdb, int *sp);
 char *tctdbiternext2(TCTDB *tdb);
 
 
+/* Get the columns of the next record of the iterator of a table database object.
+   `tdb' specifies the table database object.
+   If successful, the return value is a map object of the columns of the next record, else, it is
+   `NULL'.  `NULL' is returned when no record is to be get out of the iterator.  The primary key
+   is added into the map as a column of an empty string key.
+   Because the object of the return value is created with the function `tcmapnew', it should be
+   deleted with the function `tcmapdel' when it is no longer in use.  It is possible to access
+   every record by iteration of calling this function.  However, it is not assured if updating
+   the database is occurred while the iteration.  Besides, the order of this traversal access
+   method is arbitrary, so it is not assured that the order of storing matches the one of the
+   traversal access. */
+TCMAP *tctdbiternext3(TCTDB *tdb);
+
+
 /* Get forward matching primary keys in a table database object.
    `tdb' specifies the table database object.
    `pbuf' specifies the pointer to the region of the prefix.

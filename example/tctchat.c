@@ -33,14 +33,14 @@ static void proc(TCTMPL *tmpl, TCMPOOL *mpool){
     query[clen] = '\0';
   }
   if(query) tcwwwformdecode(query, params);
+  const char *type = tcmapget4(params, "type", "");
   const char *author = tcmapget4(params, "author", "");
   const char *text = tcmapget4(params, "text", "");
   int page = tcatoi(tcmapget4(params, "page", "1"));
   const char *dbpath = tctmplconf(tmpl, "dbpath");
   if(!dbpath) dbpath = "casket.tct";
   TCLIST *msgs = tcmpoollistnew(mpool);
-  TCTDB *tdb = tctdbnew();
-  tcmpoolpush(mpool, tdb, (void (*)(void *))tctdbdel);
+  TCTDB *tdb = tcmpoolpush(mpool, tctdbnew(), (void (*)(void *))tctdbdel);
   rp = getenv("REQUEST_METHOD");
   if(rp && !strcmp(rp, "POST") && *author != '\0' && *text != '\0'){
     if(!tctdbopen(tdb, dbpath, TDBOWRITER | TDBOCREAT))
@@ -59,19 +59,16 @@ static void proc(TCTMPL *tmpl, TCMPOOL *mpool){
       tclistprintf(msgs, "The database could not be opened (%s).", tctdberrmsg(tctdbecode(tdb)));
   }
   TCLIST *logs = tcmpoollistnew(mpool);
-  TDBQRY *qry = tctdbqrynew(tdb);
-  tcmpoolpush(mpool, qry, (void (*)(void *))tctdbqrydel);
+  TDBQRY *qry = tcmpoolpush(mpool, tctdbqrynew(tdb), (void (*)(void *))tctdbqrydel);
   tctdbqrysetorder(qry, "", TDBQONUMDESC);
   tctdbqrysetlimit(qry, 16, page > 0 ? (page - 1) * 16 : 0);
-  TCLIST *res = tctdbqrysearch(qry);
-  tcmpoolpushlist(mpool, res);
+  TCLIST *res = tcmpoolpushlist(mpool, tctdbqrysearch(qry));
   int rnum = tclistnum(res);
   for(int i = rnum - 1; i >= 0; i--){
     int pksiz;
     const char *pkbuf = tclistval(res, i, &pksiz);
-    TCMAP *cols = tctdbget(tdb, pkbuf, pksiz);
+    TCMAP *cols = tcmpoolpushmap(mpool, tctdbget(tdb, pkbuf, pksiz));
     if(cols){
-      tcmpoolpushmap(mpool, cols);
       tcmapprintf(cols, "pk", "%s", pkbuf);
       char date[64];
       tcdatestrwww(tcatoi(pkbuf) / 1000, INT_MAX, date);
@@ -87,9 +84,10 @@ static void proc(TCTMPL *tmpl, TCMPOOL *mpool){
   tcmapprintf(vars, "author", "%s", author);
   if(page > 1) tcmapprintf(vars, "prev", "%d", page - 1);
   if(tctdbrnum(tdb) > page * 16) tcmapprintf(vars, "next", "%d", page + 1);
-  char *str = tctmpldump(tmpl, vars);
-  printf("Content-Type: text/html; charset=UTF-8\r\n");
+  char *str = tcmpoolpushptr(mpool, tctmpldump(tmpl, vars));
+  printf("Content-Type: %s\r\n", !strcmp(type, "xml") ? "application/xml" :
+         !strcmp(type, "xhtml") ? "application/xhtml+xml" : "text/html; charset=UTF-8");
+  printf("Cache-Control: no-cache\r\n");
   printf("\r\n");
   fwrite(str, 1, strlen(str), stdout);
-  tcfree(str);
 }

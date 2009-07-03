@@ -4537,8 +4537,9 @@ void tcmpooldel(TCMPOOL *mpool){
 
 
 /* Relegate an arbitrary object to a memory pool object. */
-void tcmpoolpush(TCMPOOL *mpool, void *ptr, void (*del)(void *)){
-  assert(mpool && ptr && del);
+void *tcmpoolpush(TCMPOOL *mpool, void *ptr, void (*del)(void *)){
+  assert(mpool && del);
+  if(!ptr) return NULL;
   if(pthread_mutex_lock(mpool->mutex) != 0) tcmyfatal("locking failed");
   int num = mpool->num;
   if(num >= mpool->anum){
@@ -4549,41 +4550,42 @@ void tcmpoolpush(TCMPOOL *mpool, void *ptr, void (*del)(void *)){
   mpool->elems[num].del = del;
   mpool->num++;
   pthread_mutex_unlock(mpool->mutex);
+  return ptr;
 }
 
 
 /* Relegate an allocated region to a memory pool object. */
-void tcmpoolpushptr(TCMPOOL *mpool, void *ptr){
-  assert(mpool && ptr);
-  tcmpoolpush(mpool, ptr, (void (*)(void *))free);
+void *tcmpoolpushptr(TCMPOOL *mpool, void *ptr){
+  assert(mpool);
+  return tcmpoolpush(mpool, ptr, (void (*)(void *))free);
 }
 
 
 /* Relegate an extensible string object to a memory pool object. */
-void tcmpoolpushxstr(TCMPOOL *mpool, TCXSTR *xstr){
-  assert(mpool && xstr);
-  tcmpoolpush(mpool, xstr, (void (*)(void *))tcxstrdel);
+TCXSTR *tcmpoolpushxstr(TCMPOOL *mpool, TCXSTR *xstr){
+  assert(mpool);
+  return tcmpoolpush(mpool, xstr, (void (*)(void *))tcxstrdel);
 }
 
 
 /* Relegate a list object to a memory pool object. */
-void tcmpoolpushlist(TCMPOOL *mpool, TCLIST *list){
-  assert(mpool && list);
-  tcmpoolpush(mpool, list, (void (*)(void *))tclistdel);
+TCLIST *tcmpoolpushlist(TCMPOOL *mpool, TCLIST *list){
+  assert(mpool);
+  return tcmpoolpush(mpool, list, (void (*)(void *))tclistdel);
 }
 
 
 /* Relegate a map object to a memory pool object. */
-void tcmpoolpushmap(TCMPOOL *mpool, TCMAP *map){
-  assert(mpool && map);
-  tcmpoolpush(mpool, map, (void (*)(void *))tcmapdel);
+TCMAP *tcmpoolpushmap(TCMPOOL *mpool, TCMAP *map){
+  assert(mpool);
+  return tcmpoolpush(mpool, map, (void (*)(void *))tcmapdel);
 }
 
 
 /* Relegate a tree object to a memory pool object. */
-void tcmpoolpushtree(TCMPOOL *mpool, TCTREE *tree){
-  assert(mpool && tree);
-  tcmpoolpush(mpool, tree, (void (*)(void *))tctreedel);
+TCTREE *tcmpoolpushtree(TCMPOOL *mpool, TCTREE *tree){
+  assert(mpool);
+  return tcmpoolpush(mpool, tree, (void (*)(void *))tctreedel);
 }
 
 
@@ -4656,7 +4658,7 @@ static void tcmpooldelglobal(void){
 
 #define TCRANDDEV      "/dev/urandom"    // path of the random device file
 #define TCDISTMAXLEN   4096              // maximum size of a string for distance checking
-#define TCDISTBUFSIZ   16384             // size of an distance buffer
+#define TCDISTBUFSIZ   16384             // size of a distance buffer
 #define TCCHIDXVNNUM   128               // number of virtual node of consistent hashing
 
 
@@ -6070,8 +6072,29 @@ TCMAP *tcsysinfo(void){
 char *tcrealpath(const char *path){
   assert(path);
   char buf[PATH_MAX+1];
-  if(!realpath(path, buf)) return NULL;
-  return tcstrdup(buf);
+  if(realpath(path, buf)) return tcstrdup(buf);
+  if(errno == ENOENT){
+    const char *pv = strrchr(path, MYPATHCHR);
+    if(pv){
+      if(pv == path) return tcstrdup(path);
+      char *prefix = tcmemdup(path, pv - path);
+      if(!realpath(prefix, buf)){
+        TCFREE(prefix);
+        return NULL;
+      }
+      TCFREE(prefix);
+      pv++;
+    } else {
+      if(!realpath(MYCDIRSTR, buf)) return NULL;
+      pv = path;
+    }
+    if(buf[0] == MYPATHCHR && buf[1] == '\0') buf[0] = '\0';
+    char *str;
+    TCMALLOC(str, strlen(buf) + strlen(pv) + 2);
+    sprintf(str, "%s%c%s", buf, MYPATHCHR, pv);
+    return str;
+  }
+  return NULL;
 }
 
 
@@ -7602,6 +7625,179 @@ TCMAP *tcxmlattrs(const char *str){
 }
 
 
+/* Escape meta characters in a string with backslash escaping of the C language. */
+char *tccstrescape(const char *str){
+  assert(str);
+  int asiz = TCXSTRUNIT * 2;
+  char *buf;
+  TCMALLOC(buf, asiz + 4);
+  int wi = 0;
+  bool hex = false;
+  int c;
+  while((c = *(unsigned char *)str) != '\0'){
+    if(wi >= asiz){
+      asiz *= 2;
+      TCREALLOC(buf, buf, asiz + 4);
+    }
+    if(c < ' ' || c == 0x7f || c == '"' || c == '\'' || c == '\\'){
+      switch(c){
+      case '\t': wi += sprintf(buf + wi, "\\t"); break;
+      case '\n': wi += sprintf(buf + wi, "\\n"); break;
+      case '\r': wi += sprintf(buf + wi, "\\r"); break;
+      case '\\': wi += sprintf(buf + wi, "\\\\"); break;
+      default:
+        wi += sprintf(buf + wi, "\\x%02X", c);
+        hex = true;
+        break;
+      }
+    } else {
+      if(hex && ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))){
+        wi += sprintf(buf + wi, "\\x%02X", c);
+        hex = true;
+      } else {
+        buf[wi++] = c;
+        hex = false;
+      }
+    }
+    str++;
+  }
+  buf[wi] = '\0';
+  return buf;
+}
+
+
+/* Unescape a string escaped by backslash escaping of the C language. */
+char *tccstrunescape(const char *str){
+  assert(str);
+  int asiz = TCXSTRUNIT * 2;
+  char *buf;
+  TCMALLOC(buf, asiz + 4);
+  int wi = 0;
+  int c;
+  while((c = *(unsigned char *)str) != '\0'){
+    if(wi >= asiz){
+      asiz *= 2;
+      TCREALLOC(buf, buf, asiz + 4);
+    }
+    if(c == '\\' && str[1] != '\0'){
+      str++;
+      int si = wi;
+      switch(*str){
+      case 'a': buf[wi++] = '\a'; break;
+      case 'b': buf[wi++] = '\b'; break;
+      case 't': buf[wi++] = '\t'; break;
+      case 'n': buf[wi++] = '\n'; break;
+      case 'v': buf[wi++] = '\v'; break;
+      case 'f': buf[wi++] = '\f'; break;
+      case 'r': buf[wi++] = '\r'; break;
+      }
+      if(si == wi){
+        c = *str;
+        if(c == 'x'){
+          str++;
+          int code = 0;
+          for(int i = 0; i < 2; i++){
+            c = *str;
+            if(c >= '0' && c <= '9'){
+              code = code * 0x10 + c - '0';
+            } else if(c >= 'A' && c <= 'F'){
+              code = code * 0x10 + c - 'A' + 10;
+            } else if(c >= 'a' && c <= 'f'){
+              code = code * 0x10 + c - 'a' + 10;
+            } else {
+              break;
+            }
+            str++;
+          }
+          buf[wi++] = code;
+        } else if(c == 'u' || c == 'U'){
+          int len = (c == 'U') ? 8 : 4;
+          str++;
+          int code = 0;
+          for(int i = 0; i < len; i++){
+            c = *str;
+            if(c >= '0' && c <= '9'){
+              code = code * 0x10 + c - '0';
+            } else if(c >= 'A' && c <= 'F'){
+              code = code * 0x10 + c - 'A' + 10;
+            } else if(c >= 'a' && c <= 'f'){
+              code = code * 0x10 + c - 'a' + 10;
+            } else {
+              break;
+            }
+            str++;
+          }
+          uint16_t ary[1];
+          ary[0] = code;
+          tcstrucstoutf(ary, 1, buf + wi);
+          wi += strlen(buf + wi);
+        } else if(c >= '0' && c <= '8'){
+          int code = 0;
+          for(int i = 0; i < 3; i++){
+            c = *str;
+            if(c >= '0' && c <= '7'){
+              code = code * 8 + c - '0';
+            } else {
+              break;
+            }
+            str++;
+          }
+          buf[wi++] = code;
+        } else if(c != '\0'){
+          buf[wi++] = c;
+          str++;
+        }
+      } else {
+        str++;
+      }
+    } else {
+      buf[wi++] = c;
+      str++;
+    }
+  }
+  buf[wi] = '\0';
+  return buf;
+}
+
+
+/* Escape meta characters in a string with backslash escaping of JSON. */
+char *tcjsonescape(const char *str){
+  assert(str);
+  int asiz = TCXSTRUNIT * 2;
+  char *buf;
+  TCMALLOC(buf, asiz + 6);
+  int wi = 0;
+  int c;
+  while((c = *(unsigned char *)str) != '\0'){
+    if(wi >= asiz){
+      asiz *= 2;
+      TCREALLOC(buf, buf, asiz + 6);
+    }
+    if(c < ' ' || c == 0x7f || c == '"' || c == '\'' || c == '\\'){
+      switch(c){
+      case '\t': wi += sprintf(buf + wi, "\\t"); break;
+      case '\n': wi += sprintf(buf + wi, "\\n"); break;
+      case '\r': wi += sprintf(buf + wi, "\\r"); break;
+      case '\\': wi += sprintf(buf + wi, "\\\\"); break;
+      default: wi += sprintf(buf + wi, "\\u%04X", c); break;
+      }
+    } else {
+      buf[wi++] = c;
+    }
+    str++;
+  }
+  buf[wi] = '\0';
+  return buf;
+}
+
+
+/* Unescape a string escaped by backslash escaping of JSON. */
+char *tcjsonunescape(const char *str){
+  assert(str);
+  return tccstrunescape(str);
+}
+
+
 
 /*************************************************************************************************
  * template serializer
@@ -8031,8 +8227,16 @@ static int tctmpldumpeval(TCXSTR *xstr, const char *expr, const TCLIST *elems, i
           char *ebuf = tchexencode(vbuf, vsiz);
           tcxstrcat2(xstr, ebuf);
           TCFREE(ebuf);
-        } else if(!strcmp(enc, "XML") || !strcmp(enc, "HTML")){
+        } else if(!strcmp(enc, "XML")){
           char *ebuf = tcxmlescape(vbuf);
+          tcxstrcat2(xstr, ebuf);
+          TCFREE(ebuf);
+        } else if(!strcmp(enc, "CSTR")){
+          char *ebuf = tccstrescape(vbuf);
+          tcxstrcat2(xstr, ebuf);
+          TCFREE(ebuf);
+        } else if(!strcmp(enc, "JSON")){
+          char *ebuf = tcjsonescape(vbuf);
           tcxstrcat2(xstr, ebuf);
           TCFREE(ebuf);
         } else if(!strcmp(enc, "MD5")){
@@ -8297,8 +8501,8 @@ typedef struct {                         // type of structure for a BWT characte
 
 
 /* private function prototypes */
-static void tcglobalmutexinit(void);
-static void tcglobalmutexdestroy(void);
+static void tcglobalinit(void);
+static void tcglobaldestroy(void);
 static void tcbwtsortstrcount(const char **arrays, int anum, int len, int level);
 static void tcbwtsortstrinsert(const char **arrays, int anum, int len, int skip);
 static void tcbwtsortstrheap(const char **arrays, int anum, int len, int skip);
@@ -8390,20 +8594,22 @@ void tczerounmap(void *ptr){
 
 
 /* Global mutex object. */
+static pthread_once_t tcglobalonce = PTHREAD_ONCE_INIT;
 static pthread_rwlock_t tcglobalmutex;
-static pthread_once_t tcglobalmutexonce = PTHREAD_ONCE_INIT;
+static pthread_mutex_t tcpathmutex;
+static TCMAP *tcpathmap;
 
 
 /* Lock the global mutex object. */
 bool tcglobalmutexlock(void){
-  pthread_once(&tcglobalmutexonce, tcglobalmutexinit);
+  pthread_once(&tcglobalonce, tcglobalinit);
   return pthread_rwlock_wrlock(&tcglobalmutex) == 0;
 }
 
 
 /* Lock the global mutex object by shared locking. */
 bool tcglobalmutexlockshared(void){
-  pthread_once(&tcglobalmutexonce, tcglobalmutexinit);
+  pthread_once(&tcglobalonce, tcglobalinit);
   return pthread_rwlock_rdlock(&tcglobalmutex) == 0;
 }
 
@@ -8411,6 +8617,30 @@ bool tcglobalmutexlockshared(void){
 /* Unlock the global mutex object. */
 bool tcglobalmutexunlock(void){
   return pthread_rwlock_unlock(&tcglobalmutex) == 0;
+}
+
+
+/* Lock the absolute path of a file. */
+bool tcpathlock(const char *path){
+  assert(path);
+  pthread_once(&tcglobalonce, tcglobalinit);
+  if(pthread_mutex_lock(&tcpathmutex) != 0) return false;
+  bool err = false;
+  if(tcpathmap && !tcmapputkeep2(tcpathmap, path, "")) err = true;
+  if(pthread_mutex_unlock(&tcpathmutex) != 0) err = true;
+  return !err;
+}
+
+
+/* Unock the absolute path of a file. */
+bool tcpathunlock(const char *path){
+  assert(path);
+  pthread_once(&tcglobalonce, tcglobalinit);
+  if(pthread_mutex_lock(&tcpathmutex) != 0) return false;
+  bool err = false;
+  if(tcpathmap && !tcmapout2(tcpathmap, path)) err = true;
+  if(pthread_mutex_unlock(&tcpathmutex) != 0) err = true;
+  return !err;
 }
 
 
@@ -8784,15 +9014,22 @@ uint64_t tcpagealign(uint64_t off){
 
 
 /* Initialize the global mutex object */
-static void tcglobalmutexinit(void){
-  if(!TCUSEPTHREAD) memset(&tcglobalmutex, 0, sizeof(tcglobalmutex));
+static void tcglobalinit(void){
+  if(!TCUSEPTHREAD){
+    memset(&tcglobalmutex, 0, sizeof(tcglobalmutex));
+    memset(&tcpathmutex, 0, sizeof(tcpathmutex));
+  }
   if(pthread_rwlock_init(&tcglobalmutex, NULL) != 0) tcmyfatal("rwlock error");
-  atexit(tcglobalmutexdestroy);
+  if(pthread_mutex_init(&tcpathmutex, NULL) != 0) tcmyfatal("mutex error");
+  tcpathmap = tcmapnew2(TCMAPTINYBNUM);
+  atexit(tcglobaldestroy);
 }
 
 
 /* Destroy the global mutex object */
-static void tcglobalmutexdestroy(void){
+static void tcglobaldestroy(void){
+  tcmapdel(tcpathmap);
+  pthread_mutex_destroy(&tcpathmutex);
   pthread_rwlock_destroy(&tcglobalmutex);
 }
 

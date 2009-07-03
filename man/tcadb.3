@@ -24,7 +24,7 @@ To use the abstract database API, include `\fBtcutil.h\fR', `\fBtcadb.h\fR', and
 .PP
 Objects whose type is pointer to `\fBTCADB\fR' are used to handle abstract databases.  An abstract database object is created with the function `\fBtcadbnew\fR' and is deleted with the function `\fBtcadbdel\fR'.  To avoid memory leak, it is important to delete every object when it is no longer in use.
 .PP
-Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `\fBtcadbopen\fR' is used to open a concrete database and the function `\fBtcadbclose\fR' is used to close the database.  To avoid data missing or corruption, it is important to close every database instance when it is no longer in use.
+Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `\fBtcadbopen\fR' is used to open a concrete database and the function `\fBtcadbclose\fR' is used to close the database.  To avoid data missing or corruption, it is important to close every database instance when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.
 
 .SH API
 .PP

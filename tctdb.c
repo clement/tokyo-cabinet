@@ -497,6 +497,22 @@ char *tctdbiternext2(TCTDB *tdb){
 }
 
 
+/* Get the columns of the next record of the iterator of a table database object. */
+TCMAP *tctdbiternext3(TCTDB *tdb){
+  assert(tdb);
+  TCXSTR *kstr = tcxstrnew();
+  TCXSTR *vstr = tcxstrnew();
+  TCMAP *cols = NULL;
+  if(tchdbiternext3(tdb->hdb, kstr, vstr)){
+    cols = tcmapload(TCXSTRPTR(vstr), TCXSTRSIZE(vstr));
+    tcmapput(cols, "", 0, TCXSTRPTR(kstr), TCXSTRSIZE(kstr));
+  }
+  tcxstrdel(vstr);
+  tcxstrdel(kstr);
+  return cols;
+}
+
+
 /* Get forward matching primary keys in a table database object. */
 TCLIST *tctdbfwmkeys(TCTDB *tdb, const void *pbuf, int psiz, int max){
   assert(tdb && pbuf && psiz >= 0);

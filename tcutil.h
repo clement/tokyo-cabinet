@@ -2179,50 +2179,59 @@ void tcmpooldel(TCMPOOL *mpool);
 
 /* Relegate an arbitrary object to a memory pool object.
    `mpool' specifies the memory pool object.
-   `ptr' specifies the pointer to the object to be relegated.
+   `ptr' specifies the pointer to the object to be relegated.  If it is `NULL', this function has
+   no effect.
    `del' specifies the pointer to the function to delete the object.
+   The return value is the pointer to the given object.
    This function assures that the specified object is deleted when the memory pool object is
    deleted. */
-void tcmpoolpush(TCMPOOL *mpool, void *ptr, void (*del)(void *));
+void *tcmpoolpush(TCMPOOL *mpool, void *ptr, void (*del)(void *));
 
 
 /* Relegate an allocated region to a memory pool object.
-   `ptr' specifies the pointer to the region to be relegated.
+   `mpool' specifies the memory pool object.
+   `ptr' specifies the pointer to the region to be relegated.  If it is `NULL', this function has
+   no effect.
+   The return value is the pointer to the given object.
    This function assures that the specified region is released when the memory pool object is
    deleted. */
-void tcmpoolpushptr(TCMPOOL *mpool, void *ptr);
+void *tcmpoolpushptr(TCMPOOL *mpool, void *ptr);
 
 
 /* Relegate an extensible string object to a memory pool object.
    `mpool' specifies the memory pool object.
-   `xstr' specifies the extensible string object.
+   `xstr' specifies the extensible string object.  If it is `NULL', this function has no effect.
+   The return value is the pointer to the given object.
    This function assures that the specified object is deleted when the memory pool object is
    deleted. */
-void tcmpoolpushxstr(TCMPOOL *mpool, TCXSTR *xstr);
+TCXSTR *tcmpoolpushxstr(TCMPOOL *mpool, TCXSTR *xstr);
 
 
 /* Relegate a list object to a memory pool object.
    `mpool' specifies the memory pool object.
-   `list' specifies the list object.
+   `list' specifies the list object.  If it is `NULL', this function has no effect.
+   The return value is the pointer to the given object.
    This function assures that the specified object is deleted when the memory pool object is
    deleted. */
-void tcmpoolpushlist(TCMPOOL *mpool, TCLIST *list);
+TCLIST *tcmpoolpushlist(TCMPOOL *mpool, TCLIST *list);
 
 
 /* Relegate a map object to a memory pool object.
    `mpool' specifies the memory pool object.
-   `map' specifies the map object.
+   `map' specifies the map object.  If it is `NULL', this function has no effect.
+   The return value is the pointer to the given object.
    This function assures that the specified object is deleted when the memory pool object is
    deleted. */
-void tcmpoolpushmap(TCMPOOL *mpool, TCMAP *map);
+TCMAP *tcmpoolpushmap(TCMPOOL *mpool, TCMAP *map);
 
 
 /* Relegate a tree object to a memory pool object.
    `mpool' specifies the memory pool object.
-   `tree' specifies the tree object.
+   `tree' specifies the tree object.  If it is `NULL', this function has no effect.
+   The return value is the pointer to the given object.
    This function assures that the specified object is deleted when the memory pool object is
    deleted. */
-void tcmpoolpushtree(TCMPOOL *mpool, TCTREE *tree);
+TCTREE *tcmpoolpushtree(TCMPOOL *mpool, TCTREE *tree);
 
 
 /* Allocate a region relegated to a memory pool object.
@@ -3168,7 +3177,7 @@ void tcwwwformdecode(const char *str, TCMAP *params);
 
 
 /* Split an XML string into tags and text sections.
-   `str' specifies the XML string.
+   `str' specifies the string.
    The return value is the list object whose elements are strings of tags or text sections.
    Because the object of the return value is created with the function `tclistnew', it should
    be deleted with the function `tclistdel' when it is no longer in use.  Because this function
@@ -3183,6 +3192,38 @@ TCLIST *tcxmlbreak(const char *str);
    Because the object of the return value is created with the function `tcmapnew', it should
    be deleted with the function `tcmapdel' when it is no longer in use. */
 TCMAP *tcxmlattrs(const char *str);
+
+
+/* Escape meta characters in a string with backslash escaping of the C language.
+   `str' specifies the string.
+   The return value is the pointer to the escaped string.
+   Because the region of the return value is allocated with the `malloc' call, it should be
+   released with the `free' call if when is no longer in use. */
+char *tccstrescape(const char *str);
+
+
+/* Unescape a string escaped by backslash escaping of the C language.
+   `str' specifies the string.
+   The return value is the unescaped string.
+   Because the region of the return value is allocated with the `malloc' call, it should be
+   released with the `free' call if when is no longer in use. */
+char *tccstrunescape(const char *str);
+
+
+/* Escape meta characters in a string with backslash escaping of JSON.
+   `str' specifies the string.
+   The return value is the pointer to the escaped string.
+   Because the region of the return value is allocated with the `malloc' call, it should be
+   released with the `free' call if when is no longer in use. */
+char *tcjsonescape(const char *str);
+
+
+/* Unescape a string escaped by backslash escaping of JSON.
+   `str' specifies the string.
+   The return value is the unescaped string.
+   Because the region of the return value is allocated with the `malloc' call, it should be
+   released with the `free' call if when is no longer in use. */
+char *tcjsonunescape(const char *str);
 
 
 
@@ -3229,16 +3270,17 @@ void tctmplsetsep(TCTMPL *tmpl, const char *begsep, const char *endsep);
    separator of a directive is leaded by "\", the next linefeed character is ignored.  Variable
    expansion directive needs the parameter for the variable name.  The optional parameter "DEF"
    trailed by a string specifies the default value.  The optional parameter "ENC" trailed by a
-   string specifies the encoding format.  "URL" for the URL escape encoding and "XML" for the XML
-   escape encoding are supported.  The conditional directive needs the parameter for the variable
-   name.  If the variable exists, the block to the correspondent ending directive is evaluated,
-   else, the block is ignored.  The optional parameter "EQ" trailed by a string specifies the
-   string full matching test.  The optional parameter "RX" trailed by a string specifies the
-   regular expression matching test.  The optional parameter "NOT" inverts the logical
-   determination.  The iterator directive needs the parameter for the variable name of a list
-   object.  The block to the correspondent ending directive is evaluated for each element of the
-   list.  The optional parameter specifies the local variable name of each element.  The
-   configuration directive needs the parameters for the variable name and its value. */
+   string specifies the encoding format.  "URL" for the URL escape encoding, "XML" for the XML
+   escape encoding, "CSTR" for C-string escape encoding, and "JSON" for JSON escape encoding are
+   supported.  The conditional directive needs the parameter for the variable name.  If the
+   variable exists, the block to the correspondent ending directive is evaluated, else, the block
+   is ignored.  The optional parameter "EQ" trailed by a string specifies the string full
+   matching test.  The optional parameter "RX" trailed by a string specifies the regular
+   expression matching test.  The optional parameter "NOT" inverts the logical determination.
+   The iterator directive needs the parameter for the variable name of a list object.  The block
+   to the correspondent ending directive is evaluated for each element of the list.  The optional
+   parameter specifies the local variable name of each element.  The configuration directive
+   needs the parameters for the variable name and its value. */
 void tctmplload(TCTMPL *tmpl, const char *str);
 
 
@@ -3521,8 +3563,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.24"
-#define _TC_LIBVER     815
+#define _TC_VERSION    "1.4.25"
+#define _TC_LIBVER     816
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */
@@ -3598,6 +3640,18 @@ bool tcglobalmutexlockshared(void);
 /* Unlock the global mutex object.
    If successful, the return value is true, else, it is false. */
 bool tcglobalmutexunlock(void);
+
+
+/* Lock the absolute path of a file.
+   `path' specifies the path of the file.
+   If successful, the return value is true, else, it is false. */
+bool tcpathlock(const char *path);
+
+
+/* Unock the absolute path of a file.
+   `path' specifies the path of the file.
+   If successful, the return value is true, else, it is false. */
+bool tcpathunlock(const char *path);
 
 
 /* Convert an integer to the string as binary numbers.

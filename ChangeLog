@@ -1,3 +1,21 @@
+2009-06-09  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tccstrescape, tccstrunescape, tcjsonescape, tcjsonunescape): new functions.
+
+	* tcutil.c (tcpathlock, tcpathunlock): new functions.
+
+	* tchdb.c (tchdbopen): double opening detection was added.
+
+	* tchdb.c (tchdbtranbegin): a bug of invalid flag setting was fixed.
+
+	* tcfdb.c (tcfdbopen): double opening detection was added.
+
+	* tcfdb.c (tcfdbtranbegin): a bug of invalid flag setting was fixed.
+
+	* tctdb.c (tctdbiternext3): new function.
+
+	- Release: 1.4.25
+
 2009-06-04  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tcwwwformencode, tcwwwformdecode): new functions.

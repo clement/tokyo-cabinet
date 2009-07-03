@@ -2855,15 +2855,18 @@ The function `tcmpoolpush' is used in order to relegate an arbitrary object to a
 .PP
 .RS
 .br
-\fBvoid tcmpoolpush(TCMPOOL *\fImpool\fB, void *\fIptr\fB, void (*\fIdel\fB)(void *));\fR
+\fBvoid *tcmpoolpush(TCMPOOL *\fImpool\fB, void *\fIptr\fB, void (*\fIdel\fB)(void *));\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
 .RS
-`\fIptr\fR' specifies the pointer to the object to be relegated.
+`\fIptr\fR' specifies the pointer to the object to be relegated.  If it is `NULL', this function has no effect.
 .RE
 .RS
 `\fIdel\fR' specifies the pointer to the function to delete the object.
+.RE
+.RS
+The return value is the pointer to the given object.
 .RE
 .RS
 This function assures that the specified object is deleted when the memory pool object is deleted.
@@ -2874,9 +2877,15 @@ The function `tcmpoolpushptr' is used in order to relegate an allocated region t
 .PP
 .RS
 .br
-\fBvoid tcmpoolpushptr(TCMPOOL *\fImpool\fB, void *\fIptr\fB);\fR
+\fBvoid *tcmpoolpushptr(TCMPOOL *\fImpool\fB, void *\fIptr\fB);\fR
 .RS
-`\fIptr\fR' specifies the pointer to the region to be relegated.
+`\fImpool\fR' specifies the memory pool object.
+.RE
+.RS
+`\fIptr\fR' specifies the pointer to the region to be relegated.  If it is `NULL', this function has no effect.
+.RE
+.RS
+The return value is the pointer to the given object.
 .RE
 .RS
 This function assures that the specified region is released when the memory pool object is deleted.
@@ -2887,12 +2896,15 @@ The function `tcmpoolpushxstr' is used in order to relegate an extensible string
 .PP
 .RS
 .br
-\fBvoid tcmpoolpushxstr(TCMPOOL *\fImpool\fB, TCXSTR *\fIxstr\fB);\fR
+\fBTCXSTR *tcmpoolpushxstr(TCMPOOL *\fImpool\fB, TCXSTR *\fIxstr\fB);\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
 .RS
-`\fIxstr\fR' specifies the extensible string object.
+`\fIxstr\fR' specifies the extensible string object.  If it is `NULL', this function has no effect.
+.RE
+.RS
+The return value is the pointer to the given object.
 .RE
 .RS
 This function assures that the specified object is deleted when the memory pool object is deleted.
@@ -2903,12 +2915,15 @@ The function `tcmpoolpushlist' is used in order to relegate a list object to a m
 .PP
 .RS
 .br
-\fBvoid tcmpoolpushlist(TCMPOOL *\fImpool\fB, TCLIST *\fIlist\fB);\fR
+\fBTCLIST *tcmpoolpushlist(TCMPOOL *\fImpool\fB, TCLIST *\fIlist\fB);\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
 .RS
-`\fIlist\fR' specifies the list object.
+`\fIlist\fR' specifies the list object.  If it is `NULL', this function has no effect.
+.RE
+.RS
+The return value is the pointer to the given object.
 .RE
 .RS
 This function assures that the specified object is deleted when the memory pool object is deleted.
@@ -2919,12 +2934,15 @@ The function `tcmpoolpushmap' is used in order to relegate a map object to a mem
 .PP
 .RS
 .br
-\fBvoid tcmpoolpushmap(TCMPOOL *\fImpool\fB, TCMAP *\fImap\fB);\fR
+\fBTCMAP *tcmpoolpushmap(TCMPOOL *\fImpool\fB, TCMAP *\fImap\fB);\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
 .RS
-`\fImap\fR' specifies the map object.
+`\fImap\fR' specifies the map object.  If it is `NULL', this function has no effect.
+.RE
+.RS
+The return value is the pointer to the given object.
 .RE
 .RS
 This function assures that the specified object is deleted when the memory pool object is deleted.
@@ -2935,12 +2953,15 @@ The function `tcmpoolpushtree' is used in order to relegate a tree object to a m
 .PP
 .RS
 .br
-\fBvoid tcmpoolpushtree(TCMPOOL *\fImpool\fB, TCTREE *\fItree\fB);\fR
+\fBTCTREE *tcmpoolpushtree(TCMPOOL *\fImpool\fB, TCTREE *\fItree\fB);\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
 .RS
-`\fItree\fR' specifies the tree object.
+`\fItree\fR' specifies the tree object.  If it is `NULL', this function has no effect.
+.RE
+.RS
+The return value is the pointer to the given object.
 .RE
 .RS
 This function assures that the specified object is deleted when the memory pool object is deleted.

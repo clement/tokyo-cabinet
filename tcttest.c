@@ -1065,6 +1065,15 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
+  TCTDB *tdbdup = tctdbnew();
+  if(tctdbopen(tdbdup, path, TDBOREADER)){
+    eprint(tdb, "(validation)");
+    err = true;
+  } else if(tctdbecode(tdbdup) != TCETHREAD){
+    eprint(tdb, "(validation)");
+    err = true;
+  }
+  tctdbdel(tdbdup);
   iprintf("writing:\n");
   for(int i = 1; i <= rnum; i++){
     int id = (int)tctdbgenuid(tdb);
@@ -1744,15 +1753,28 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
         }
       }
       for(int j = myrand(rnum) / 1000 + 1; j >= 0; j--){
-        int iksiz;
-        char *ikbuf = tctdbiternext(tdb, &iksiz);
-        if(ikbuf){
-          tcfree(ikbuf);
+        if(j % 3 == 0){
+          ncols = tctdbiternext3(tdb);
+          if(ncols){
+            tcmapdel(ncols);
+          } else {
+            int ecode = tctdbecode(tdb);
+            if(ecode != TCEINVALID && ecode != TCENOREC){
+              eprint(tdb, "tctdbiternext3");
+              err = true;
+            }
+          }
         } else {
-          int ecode = tctdbecode(tdb);
-          if(ecode != TCEINVALID && ecode != TCENOREC){
-            eprint(tdb, "tctdbiternext");
-            err = true;
+          int iksiz;
+          char *ikbuf = tctdbiternext(tdb, &iksiz);
+          if(ikbuf){
+            tcfree(ikbuf);
+          } else {
+            int ecode = tctdbecode(tdb);
+            if(ecode != TCEINVALID && ecode != TCENOREC){
+              eprint(tdb, "tctdbiternext");
+              err = true;
+            }
           }
         }
       }

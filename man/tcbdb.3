@@ -26,7 +26,7 @@ To use the B+ tree database API, include `\fBtcutil.h\fR', `\fBtcbdb.h\fR', and 
 .PP
 Objects whose type is pointer to `\fBTCBDB\fR' are used to handle B+ tree databases.  A B+ tree database object is created with the function `\fBtcbdbnew\fR' and is deleted with the function `\fBtcbdbdel\fR'.  To avoid memory leak, it is important to delete every object when it is no longer in use.
 .PP
-Before operations to store or retrieve records, it is necessary to open a database file and connect the B+ tree database object to it.  The function `\fBtcbdbopen\fR' is used to open a database file and the function `\fBtcbdbclose\fR' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.
+Before operations to store or retrieve records, it is necessary to open a database file and connect the B+ tree database object to it.  The function `\fBtcbdbopen\fR' is used to open a database file and the function `\fBtcbdbclose\fR' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.
 
 .SH API
 .PP

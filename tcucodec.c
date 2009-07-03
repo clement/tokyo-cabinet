@@ -36,6 +36,7 @@ static int runtcbs(int argc, char **argv);
 static int runzlib(int argc, char **argv);
 static int runbzip(int argc, char **argv);
 static int runxml(int argc, char **argv);
+static int runcstr(int argc, char **argv);
 static int runucs(int argc, char **argv);
 static int runhash(int argc, char **argv);
 static int rundate(int argc, char **argv);
@@ -52,6 +53,7 @@ static int proctcbs(const char *ibuf, int isiz, bool dec);
 static int proczlib(const char *ibuf, int isiz, bool dec, bool gz);
 static int procbzip(const char *ibuf, int isiz, bool dec);
 static int procxml(const char *ibuf, int isiz, bool dec, bool br);
+static int proccstr(const char *ibuf, int isiz, bool dec, bool js);
 static int procucs(const char *ibuf, int isiz, bool dec);
 static int prochash(const char *ibuf, int isiz, bool crc, int ch);
 static int procdate(const char *str, int jl, bool wf, bool rf);
@@ -84,6 +86,8 @@ int main(int argc, char **argv){
     rv = runbzip(argc, argv);
   } else if(!strcmp(argv[1], "xml")){
     rv = runxml(argc, argv);
+  } else if(!strcmp(argv[1], "cstr")){
+    rv = runcstr(argc, argv);
   } else if(!strcmp(argv[1], "ucs")){
     rv = runucs(argc, argv);
   } else if(!strcmp(argv[1], "hash")){
@@ -117,7 +121,8 @@ static void usage(void){
   fprintf(stderr, "  %s zlib [-d] [-gz] [file]\n", g_progname);
   fprintf(stderr, "  %s bzip [-d] [file]\n", g_progname);
   fprintf(stderr, "  %s xml [-d] [-br] [file]\n", g_progname);
-  fprintf(stderr, "  %s ucs [-d] [file]\n", g_progname);
+  fprintf(stderr, "  %s cstr [-d] [file]\n", g_progname);
+  fprintf(stderr, "  %s ucs [-d] [-js] [file]\n", g_progname);
   fprintf(stderr, "  %s hash [-crc] [-ch num] [file]\n", g_progname);
   fprintf(stderr, "  %s date [-ds str] [-jl num] [-wf] [-rf]\n", g_progname);
   fprintf(stderr, "  %s tmpl [-var name val] [file]\n", g_progname);
@@ -529,6 +534,45 @@ static int runxml(int argc, char **argv){
     return 1;
   }
   int rv = procxml(ibuf, isiz, dec, br);
+  if(path && path[0] == '@') printf("\n");
+  tcfree(ibuf);
+  return rv;
+}
+
+
+/* parse arguments of cstr command */
+static int runcstr(int argc, char **argv){
+  char *path = NULL;
+  bool dec = false;
+  bool js = false;
+  for(int i = 2; i < argc; i++){
+    if(!path && argv[i][0] == '-'){
+      if(!strcmp(argv[i], "-d")){
+        dec = true;
+      } else if(!strcmp(argv[i], "-js")){
+        js = true;
+      } else {
+        usage();
+      }
+    } else if(!path){
+      path = argv[i];
+    } else {
+      usage();
+    }
+  }
+  char *ibuf;
+  int isiz;
+  if(path && path[0] == '@'){
+    isiz = strlen(path) - 1;
+    ibuf = tcmemdup(path + 1, isiz);
+  } else {
+    ibuf = tcreadfile(path, -1, &isiz);
+  }
+  if(!ibuf){
+    eprintf("%s: cannot open", path ? path : "(stdin)");
+    return 1;
+  }
+  int rv = proccstr(ibuf, isiz, dec, js);
   if(path && path[0] == '@') printf("\n");
   tcfree(ibuf);
   return rv;
@@ -1007,6 +1051,33 @@ static int procxml(const char *ibuf, int isiz, bool dec, bool br){
     char *obuf = tcxmlescape(ibuf);
     fwrite(obuf, 1, strlen(obuf), stdout);
     tcfree(obuf);
+  }
+  return 0;
+}
+
+
+/* perform cstr command */
+static int proccstr(const char *ibuf, int isiz, bool dec, bool js){
+  if(js){
+    if(dec){
+      char *ostr = tcjsonunescape(ibuf);
+      printf("%s", ostr);
+      tcfree(ostr);
+    } else {
+      char *ostr = tcjsonescape(ibuf);
+      printf("%s", ostr);
+      tcfree(ostr);
+    }
+  } else {
+    if(dec){
+      char *ostr = tccstrunescape(ibuf);
+      printf("%s", ostr);
+      tcfree(ostr);
+    } else {
+      char *ostr = tccstrescape(ibuf);
+      printf("%s", ostr);
+      tcfree(ostr);
+    }
   }
   return 0;
 }

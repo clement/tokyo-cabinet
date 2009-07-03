@@ -49,6 +49,7 @@ typedef struct {                         /* type of structure for a fixed-length
   void *tmtx;                            /* mutex for transaction */
   void *wmtx;                            /* mutex for write ahead logging */
   void *eckey;                           /* key for thread specific error code */
+  char *rpath;                           /* real path for locking */
   uint8_t type;                          /* database type */
   uint8_t flags;                         /* additional flags */
   uint32_t width;                        /* width of the value of each record */

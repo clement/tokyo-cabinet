@@ -1163,6 +1163,18 @@ static int procmisc(int rnum){
     if(strcmp(dec, str)) err = true;
     tcfree(dec);
     tcfree(buf);
+    buf = tccstrescape(str);
+    if(strcmp(buf, "5%2+3-1=4 \\x22Yes/No\\x22 <a&b>")) err = true;
+    dec = tccstrunescape(buf);
+    if(strcmp(dec, str)) err = true;
+    tcfree(dec);
+    tcfree(buf);
+    buf = tcjsonescape(str);
+    if(strcmp(buf, "5%2+3-1=4 \\u0022Yes/No\\u0022 <a&b>")) err = true;
+    dec = tcjsonunescape(buf);
+    if(strcmp(dec, str)) err = true;
+    tcfree(dec);
+    tcfree(buf);
     if(i % 10 == 1){
       TCMAP *params = tcmapnew3("one", "=first=", "two", "&second&", "three", "#third#", NULL);
       char *estr = tcwwwformencode(params);
@@ -1287,6 +1299,15 @@ static int procmisc(int rnum){
         if(sign != (j % 3 == 0 || j % 7 == 0)) err = true;
       }
       tcfree(buf);
+    }
+    if(i % 100 == 1){
+      char path[RECBUFSIZ];
+      sprintf(path, "%d", myrand(10));
+      if(tcpathlock(path)){
+        if(!tcpathunlock(path)) err = true;
+      } else {
+        err = true;
+      }
     }
     if(rnum > 250 && i % (rnum / 250) == 0){
       iputchar('.');

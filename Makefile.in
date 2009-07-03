@@ -218,6 +218,8 @@ check-util :
 	$(RUNENV) $(RUNCMD) ./tcucodec zlib -d check.in > check.out
 	$(RUNENV) $(RUNCMD) ./tcucodec xml Makefile > check.in
 	$(RUNENV) $(RUNCMD) ./tcucodec xml -d check.in > check.out
+	$(RUNENV) $(RUNCMD) ./tcucodec cstr Makefile > check.in
+	$(RUNENV) $(RUNCMD) ./tcucodec cstr -d check.in > check.out
 	$(RUNENV) $(RUNCMD) ./tcucodec ucs Makefile > check.in
 	$(RUNENV) $(RUNCMD) ./tcucodec ucs -d check.in > check.out
 	$(RUNENV) $(RUNCMD) ./tcucodec date -ds '1978-02-11T18:05:30+09:00' -rf > check.out

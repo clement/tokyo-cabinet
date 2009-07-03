@@ -878,18 +878,19 @@ static int proclist(const char *path, int omode, int max, bool pv, bool px, cons
       printerr(tdb);
       err = true;
     }
-    char *pkbuf;
-    int pksiz;
     int cnt = 0;
-    while((pkbuf = tctdbiternext(tdb, &pksiz)) != NULL){
-      printdata(pkbuf, pksiz, px);
-      if(pv){
-        TCMAP *cols = tctdbget(tdb, pkbuf, pksiz);
-        if(cols){
+    TCMAP *cols;
+    while((cols = tctdbiternext3(tdb)) != NULL){
+      int pksiz;
+      const char *pkbuf = tcmapget(cols, "", 0, &pksiz);
+      if(pkbuf){
+        printdata(pkbuf, pksiz, px);
+        if(pv){
           tcmapiterinit(cols);
           const char *kbuf;
           int ksiz;
           while((kbuf = tcmapiternext(cols, &ksiz)) != NULL){
+            if(*kbuf == '\0') continue;
             int vsiz;
             const char *vbuf = tcmapiterval(kbuf, &vsiz);
             putchar('\t');
@@ -897,10 +898,9 @@ static int proclist(const char *path, int omode, int max, bool pv, bool px, cons
             putchar('\t');
             printdata(vbuf, vsiz, px);
           }
-          tcmapdel(cols);
         }
       }
-      tcfree(pkbuf);
+      tcmapdel(cols);
       putchar('\n');
       if(max >= 0 && ++cnt >= max) break;
     }

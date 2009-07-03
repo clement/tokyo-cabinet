@@ -361,7 +361,31 @@ bool tchdbopen(TCHDB *hdb, const char *path, int omode){
     HDBUNLOCKMETHOD(hdb);
     return false;
   }
+  char *rpath = tcrealpath(path);
+  if(!rpath){
+    int ecode = TCEOPEN;
+    switch(errno){
+    case EACCES: ecode = TCENOPERM; break;
+    case ENOENT: ecode = TCENOFILE; break;
+    case ENOTDIR: ecode = TCENOFILE; break;
+    }
+    tchdbsetecode(hdb, ecode, __FILE__, __LINE__, __func__);
+    HDBUNLOCKMETHOD(hdb);
+    return false;
+  }
+  if(!tcpathlock(rpath)){
+    tchdbsetecode(hdb, TCETHREAD, __FILE__, __LINE__, __func__);
+    TCFREE(rpath);
+    HDBUNLOCKMETHOD(hdb);
+    return false;
+  }
   bool rv = tchdbopenimpl(hdb, path, omode);
+  if(rv){
+    hdb->rpath = rpath;
+  } else {
+    tcpathunlock(rpath);
+    TCFREE(rpath);
+  }
   HDBUNLOCKMETHOD(hdb);
   return rv;
 }
@@ -377,6 +401,9 @@ bool tchdbclose(TCHDB *hdb){
     return false;
   }
   bool rv = tchdbcloseimpl(hdb);
+  tcpathunlock(hdb->rpath);
+  TCFREE(hdb->rpath);
+  hdb->rpath = NULL;
   HDBUNLOCKMETHOD(hdb);
   return rv;
 }
@@ -1093,13 +1120,10 @@ bool tchdbtranbegin(TCHDB *hdb){
     HDBUNLOCKMETHOD(hdb);
     return false;
   }
-  hdb->flags &= ~HDBFOPEN;
   if(!tchdbmemsync(hdb, false)){
-    hdb->flags |= HDBFOPEN;
     HDBUNLOCKMETHOD(hdb);
     return false;
   }
-  hdb->flags |= HDBFOPEN;
   if((hdb->omode & HDBOTSYNC) && fsync(hdb->fd) == -1){
     tchdbsetecode(hdb, TCESYNC, __FILE__, __LINE__, __func__);
     return false;
@@ -1113,6 +1137,7 @@ bool tchdbtranbegin(TCHDB *hdb){
       switch(errno){
       case EACCES: ecode = TCENOPERM; break;
       case ENOENT: ecode = TCENOFILE; break;
+      case ENOTDIR: ecode = TCENOFILE; break;
       }
       tchdbsetecode(hdb, ecode, __FILE__, __LINE__, __func__);
       HDBUNLOCKMETHOD(hdb);
@@ -1120,10 +1145,13 @@ bool tchdbtranbegin(TCHDB *hdb){
     }
     hdb->walfd = walfd;
   }
+  tchdbsetflag(hdb, HDBFOPEN, false);
   if(!tchdbwalinit(hdb)){
+    tchdbsetflag(hdb, HDBFOPEN, true);
     HDBUNLOCKMETHOD(hdb);
     return false;
   }
+  tchdbsetflag(hdb, HDBFOPEN, true);
   hdb->tran = true;
   HDBUNLOCKMETHOD(hdb);
   return true;
@@ -2005,6 +2033,7 @@ static void tchdbclear(TCHDB *hdb){
   hdb->tmtx = NULL;
   hdb->wmtx = NULL;
   hdb->eckey = NULL;
+  hdb->rpath = NULL;
   hdb->type = TCDBTHASH;
   hdb->flags = 0;
   hdb->bnum = HDBDEFBNUM;
@@ -3173,6 +3202,7 @@ static int tchdbwalrestore(TCHDB *hdb, const char *path){
         switch(errno){
         case EACCES: ecode = TCENOPERM; break;
         case ENOENT: ecode = TCENOFILE; break;
+        case ENOTDIR: ecode = TCENOFILE; break;
         }
         tchdbsetecode(hdb, ecode, __FILE__, __LINE__, __func__);
         err = true;
@@ -3300,6 +3330,7 @@ static bool tchdbopenimpl(TCHDB *hdb, const char *path, int omode){
     switch(errno){
     case EACCES: ecode = TCENOPERM; break;
     case ENOENT: ecode = TCENOFILE; break;
+    case ENOTDIR: ecode = TCENOFILE; break;
     }
     tchdbsetecode(hdb, ecode, __FILE__, __LINE__, __func__);
     return false;
@@ -4584,10 +4615,10 @@ static bool tchdbvanishimpl(TCHDB *hdb){
 static bool tchdbcopyimpl(TCHDB *hdb, const char *path){
   assert(hdb && path);
   bool err = false;
-  hdb->flags &= ~HDBFOPEN;
   if(hdb->omode & HDBOWRITER){
     if(!tchdbsavefbp(hdb)) err = true;
     if(!tchdbmemsync(hdb, false)) err = true;
+    tchdbsetflag(hdb, HDBFOPEN, false);
   }
   if(*path == '@'){
     char tsbuf[TCNUMBUFSIZ];
@@ -4603,7 +4634,7 @@ static bool tchdbcopyimpl(TCHDB *hdb, const char *path){
       err = true;
     }
   }
-  hdb->flags |= HDBFOPEN;
+  if(hdb->omode & HDBOWRITER) tchdbsetflag(hdb, HDBFOPEN, true);
   return !err;
 }
 
@@ -4972,6 +5003,7 @@ void tchdbprintmeta(TCHDB *hdb){
   wp += sprintf(wp, " tmtx=%p", (void *)hdb->tmtx);
   wp += sprintf(wp, " wmtx=%p", (void *)hdb->wmtx);
   wp += sprintf(wp, " eckey=%p", (void *)hdb->eckey);
+  wp += sprintf(wp, " rpath=%s", hdb->rpath ? hdb->rpath : "-");
   wp += sprintf(wp, " type=%02X", hdb->type);
   wp += sprintf(wp, " flags=%02X", hdb->flags);
   wp += sprintf(wp, " bnum=%llu", (unsigned long long)hdb->bnum);

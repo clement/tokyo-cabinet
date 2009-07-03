@@ -24,7 +24,7 @@ To use the table database API, include `\fBtcutil.h\fR', `\fBtctdb.h\fR', and re
 .PP
 Objects whose type is pointer to `\fBTCTDB\fR' are used to handle table databases.  A table database object is created with the function `\fBtctdbnew\fR' and is deleted with the function `\fBtctdbdel\fR'.  To avoid memory leak, it is important to delete every object when it is no longer in use.
 .PP
-Before operations to store or retrieve records, it is necessary to open a database file and connect the table database object to it.  The function `\fBtctdbopen\fR' is used to open a database file and the function `\fBtctdbclose\fR' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.
+Before operations to store or retrieve records, it is necessary to open a database file and connect the table database object to it.  The function `\fBtctdbopen\fR' is used to open a database file and the function `\fBtctdbclose\fR' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.
 
 .SH API
 .PP
@@ -631,6 +631,22 @@ If successful, the return value is the string of the next primary key, else, it 
 .RE
 .RS
 Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.  It is possible to access every record by iteration of calling this function.  However, it is not assured if updating the database is occurred while the iteration.  Besides, the order of this traversal access method is arbitrary, so it is not assured that the order of storing matches the one of the traversal access.
+.RE
+.RE
+.PP
+The function `tctdbiternext3' is used in order to get the columns of the next record of the iterator of a table database object.
+.PP
+.RS
+.br
+\fBTCMAP *tctdbiternext3(TCTDB *\fItdb\fB);\fR
+.RS
+`\fItdb\fR' specifies the table database object.
+.RE
+.RS
+If successful, the return value is a map object of the columns of the next record, else, it is `NULL'.  `NULL' is returned when no record is to be get out of the iterator.  The primary key is added into the map as a column of an empty string key.
+.RE
+.RS
+Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.  It is possible to access every record by iteration of calling this function.  However, it is not assured if updating the database is occurred while the iteration.  Besides, the order of this traversal access method is arbitrary, so it is not assured that the order of storing matches the one of the traversal access.
 .RE
 .RE
 .PP

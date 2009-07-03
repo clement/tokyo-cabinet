@@ -26,7 +26,7 @@ To use the hash database API, include `\fBtcutil.h\fR', `\fBtchdb.h\fR', and rel
 .PP
 Objects whose type is pointer to `\fBTCHDB\fR' are used to handle hash databases.  A hash database object is created with the function `\fBtchdbnew\fR' and is deleted with the function `\fBtchdbdel\fR'.  To avoid memory leak, it is important to delete every object when it is no longer in use.
 .PP
-Before operations to store or retrieve records, it is necessary to open a database file and connect the hash database object to it.  The function `\fBtchdbopen\fR' is used to open a database file and the function `\fBtchdbclose\fR' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.
+Before operations to store or retrieve records, it is necessary to open a database file and connect the hash database object to it.  The function `\fBtchdbopen\fR' is used to open a database file and the function `\fBtchdbclose\fR' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.
 
 .SH API
 .PP

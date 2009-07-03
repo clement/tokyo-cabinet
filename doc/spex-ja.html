@@ -1817,54 +1817,61 @@
 <p>The function `tcmpoolpush' is used in order to relegate an arbitrary object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpush(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>, void (*<var>del</var>)(void *));</code></dt>
+<dt><code>void *tcmpoolpush(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>, void (*<var>del</var>)(void *));</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>ptr</var>' specifies the pointer to the object to be relegated.</dd>
+<dd>`<var>ptr</var>' specifies the pointer to the object to be relegated.  If it is `NULL', this function has no effect.</dd>
 <dd>`<var>del</var>' specifies the pointer to the function to delete the object.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushptr' is used in order to relegate an allocated region to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushptr(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>);</code></dt>
-<dd>`<var>ptr</var>' specifies the pointer to the region to be relegated.</dd>
+<dt><code>void *tcmpoolpushptr(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>);</code></dt>
+<dd>`<var>mpool</var>' specifies the memory pool object.</dd>
+<dd>`<var>ptr</var>' specifies the pointer to the region to be relegated.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified region is released when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushxstr' is used in order to relegate an extensible string object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushxstr(TCMPOOL *<var>mpool</var>, TCXSTR *<var>xstr</var>);</code></dt>
+<dt><code>TCXSTR *tcmpoolpushxstr(TCMPOOL *<var>mpool</var>, TCXSTR *<var>xstr</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>xstr</var>' specifies the extensible string object.</dd>
+<dd>`<var>xstr</var>' specifies the extensible string object.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushlist' is used in order to relegate a list object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushlist(TCMPOOL *<var>mpool</var>, TCLIST *<var>list</var>);</code></dt>
+<dt><code>TCLIST *tcmpoolpushlist(TCMPOOL *<var>mpool</var>, TCLIST *<var>list</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>list</var>' specifies the list object.</dd>
+<dd>`<var>list</var>' specifies the list object.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushmap' is used in order to relegate a map object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushmap(TCMPOOL *<var>mpool</var>, TCMAP *<var>map</var>);</code></dt>
+<dt><code>TCMAP *tcmpoolpushmap(TCMPOOL *<var>mpool</var>, TCMAP *<var>map</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>map</var>' specifies the map object.</dd>
+<dd>`<var>map</var>' specifies the map object.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushtree' is used in order to relegate a tree object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushtree(TCMPOOL *<var>mpool</var>, TCTREE *<var>tree</var>);</code></dt>
+<dt><code>TCTREE *tcmpoolpushtree(TCMPOOL *<var>mpool</var>, TCTREE *<var>tree</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>tree</var>' specifies the tree object.</dd>
+<dd>`<var>tree</var>' specifies the tree object.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
@@ -2872,6 +2879,8 @@ int main(int argc, char **argv){
 <dd>BZIP2の圧縮とその伸長を行う。</dd>
 <dt><code>tcucodec xml [-d] [-br] [<var>file</var>]</code></dt>
 <dd>XMLの処理を行う。デフォルトではメタ文字のエスケープを行う。</dd>
+<dt><code>tcucodec cstr [-d] [-js] [<var>file</var>]</code></dt>
+<dd>C文字列のエスケープとそのアンエスケープを行う。</dd>
 <dt><code>tcucodec ucs [-d] [<var>file</var>]</code></dt>
 <dd>UTF-8の文字列をUCS-2の配列に変換する。</dd>
 <dt><code>tcucodec hash [-crc] [-ch <var>num</var>] [<var>file</var>]</code></dt>
@@ -2899,6 +2908,7 @@ int main(int argc, char **argv){
 <li><code>-bwt</code> : 前処理としてBWTを用いる。</li>
 <li><code>-gz</code> : GZIP形式を用いる。</li>
 <li><code>-crc</code> : CRC32関数を用いる。</li>
+<li><code>-js</code> : JSON互換形式を用いる。</li>
 <li><code>-ch <var>num</var></code> : コンシステントハッシュ関数を用いる。</li>
 <li><code>-ds <var>str</var></code> : 時刻を指定する。</li>
 <li><code>-jl <var>num</var></code> : 時差を指定する。</li>
@@ -2933,7 +2943,7 @@ int main(int argc, char **argv){
 
 <p>ハッシュデータベースを扱う際には、`<code>TCHDB</code>' 型へのポインタをオブジェクトとして用います。ハッシュデータベースオブジェクトは、関数 `<code>tchdbnew</code>' で作成し、関数 `<code>tchdbdel</code>' で破棄します。作成したオブジェクトを使い終わったら必ず破棄してください。そうしないとメモリリークが発生します。</p>
 
-<p>レコードの格納や探索を行う前提として、ハッシューデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tchdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tchdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。</p>
+<p>レコードの格納や探索を行う前提として、ハッシューデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tchdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tchdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。単一のプロセス内で複数のデータベースオブジェクトが同じデータベースファイルを同時に開くことはできません。</p>
 
 <h3 id="tchdbapi_api">API（英語ゴメン）</h3>
 
@@ -3607,7 +3617,7 @@ int main(int argc, char **argv){
 
 <p>B+木データベースを扱う際には、`<code>TCBDB</code>' 型へのポインタをオブジェクトとして用います。B+木データベースオブジェクトは、関数 `<code>tcbdbnew</code>' で作成し、関数 `<code>tcbdbdel</code>' で破棄します。作成したオブジェクトを使い終わったら必ず破棄してください。そうしないとメモリリークが発生します。</p>
 
-<p>レコードの格納や探索を行う前提として、B+木ーデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tcbdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcbdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。</p>
+<p>レコードの格納や探索を行う前提として、B+木ーデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tcbdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcbdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。単一のプロセス内で複数のデータベースオブジェクトが同じデータベースファイルを同時に開くことはできません。</p>
 
 <h3 id="tcbdbapi_api">API（英語ゴメソ）</h3>
 
@@ -4531,7 +4541,7 @@ int main(int argc, char **argv){
 
 <p>固定長データベースを扱う際には、`<code>TCFDB</code>' 型へのポインタをオブジェクトとして用います。固定長データベースオブジェクトは、関数 `<code>tcfdbnew</code>' で作成し、関数 `<code>tcfdbdel</code>' で破棄します。作成したオブジェクトを使い終わったら必ず破棄してください。そうしないとメモリリークが発生します。</p>
 
-<p>レコードの格納や探索を行う前提として、固定長データベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tcfdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcfdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。</p>
+<p>レコードの格納や探索を行う前提として、固定長データベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tcfdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcfdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。単一のプロセス内で複数のデータベースオブジェクトが同じデータベースファイルを同時に開くことはできません。</p>
 
 <h3 id="tcfdbapi_api">API（英語スマソ）</h3>
 
@@ -5219,7 +5229,7 @@ int main(int argc, char **argv){
 
 <p>テーブルデータベースを扱う際には、`<code>TCTDB</code>' 型へのポインタをオブジェクトとして用います。テーブルデータベースオブジェクトは、関数 `<code>tctdbnew</code>' で作成し、関数 `<code>tctdbdel</code>' で破棄します。作成したオブジェクトを使い終わったら必ず破棄してください。そうしないとメモリリークが発生します。</p>
 
-<p>レコードの格納や探索を行う前提として、テーブルデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tctdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tctdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。</p>
+<p>レコードの格納や探索を行う前提として、テーブルデータベースオブジェクトをデータベースファイルと接続させる必要があります。データベースファイルを開いて接続するには関数 `<code>tctdbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tctdbclose</code>' を用います。開いたデータベースファイルは必ず閉じてください。そうしないとデータベースファイルが壊れたり格納したデータが失われたりする可能性があります。単一のプロセス内で複数のデータベースオブジェクトが同じデータベースファイルを同時に開くことはできません。</p>
 
 <h3 id="tctdbapi_api">API（英語スマメ）</h3>
 
@@ -5533,6 +5543,15 @@ int main(int argc, char **argv){
 <dd>`<var>tdb</var>' specifies the table database object.</dd>
 <dd>If successful, the return value is the string of the next primary key, else, it is `NULL'.  `NULL' is returned when no record is to be get out of the iterator.</dd>
 <dd>Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.  It is possible to access every record by iteration of calling this function.  However, it is not assured if updating the database is occurred while the iteration.  Besides, the order of this traversal access method is arbitrary, so it is not assured that the order of storing matches the one of the traversal access.</dd>
+</dl>
+
+<p>The function `tctdbiternext3' is used in order to get the columns of the next record of the iterator of a table database object.</p>
+
+<dl class="api">
+<dt><code>TCMAP *tctdbiternext3(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>If successful, the return value is a map object of the columns of the next record, else, it is `NULL'.  `NULL' is returned when no record is to be get out of the iterator.  The primary key is added into the map as a column of an empty string key.</dd>
+<dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.  It is possible to access every record by iteration of calling this function.  However, it is not assured if updating the database is occurred while the iteration.  Besides, the order of this traversal access method is arbitrary, so it is not assured that the order of storing matches the one of the traversal access.</dd>
 </dl>
 
 <p>The function `tctdbfwmkeys' is used in order to get forward matching primary keys in a table database object.</p>
@@ -6035,7 +6054,7 @@ int main(int argc, char **argv){
 
 <p>抽象データベースを扱う際には、`<code>TCADB</code>' 型へのポインタをオブジェクトとして用います。B+木データベースオブジェクトは、関数 `<code>tcadbnew</code>' で作成し、関数 `<code>tcadbdel</code>' で破棄します。作成したオブジェクトを使い終わったら必ず破棄してください。そうしないとメモリリークが発生します。</p>
 
-<p>レコードの格納や探索を行う前提として、抽象データベースオブジェクトを具象データベースと接続させる必要があります。具象データベースを開いて接続するには関数 `<code>tcadbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcadbclose</code>' を用います。開いた具象データベースは必ず閉じてください。そうしないと具象データベースが壊れたり格納したデータが失われたりする可能性があります。</p>
+<p>レコードの格納や探索を行う前提として、抽象データベースオブジェクトを具象データベースと接続させる必要があります。具象データベースを開いて接続するには関数 `<code>tcadbopen</code>' を用い、接続の解除してファイルを閉じるには関数 `<code>tcadbclose</code>' を用います。開いた具象データベースは必ず閉じてください。そうしないと具象データベースが壊れたり格納したデータが失われたりする可能性があります。単一のプロセス内で複数のデータベースオブジェクトが同じデータベースファイルを同時に開くことはできません。</p>
 
 <h3 id="tcadbapi_api">API（英語ごめんね）</h3>
 

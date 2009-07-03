@@ -1815,54 +1815,61 @@
 <p>The function `tcmpoolpush' is used in order to relegate an arbitrary object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpush(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>, void (*<var>del</var>)(void *));</code></dt>
+<dt><code>void *tcmpoolpush(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>, void (*<var>del</var>)(void *));</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>ptr</var>' specifies the pointer to the object to be relegated.</dd>
+<dd>`<var>ptr</var>' specifies the pointer to the object to be relegated.  If it is `NULL', this function has no effect.</dd>
 <dd>`<var>del</var>' specifies the pointer to the function to delete the object.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushptr' is used in order to relegate an allocated region to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushptr(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>);</code></dt>
-<dd>`<var>ptr</var>' specifies the pointer to the region to be relegated.</dd>
+<dt><code>void *tcmpoolpushptr(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>);</code></dt>
+<dd>`<var>mpool</var>' specifies the memory pool object.</dd>
+<dd>`<var>ptr</var>' specifies the pointer to the region to be relegated.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified region is released when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushxstr' is used in order to relegate an extensible string object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushxstr(TCMPOOL *<var>mpool</var>, TCXSTR *<var>xstr</var>);</code></dt>
+<dt><code>TCXSTR *tcmpoolpushxstr(TCMPOOL *<var>mpool</var>, TCXSTR *<var>xstr</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>xstr</var>' specifies the extensible string object.</dd>
+<dd>`<var>xstr</var>' specifies the extensible string object.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushlist' is used in order to relegate a list object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushlist(TCMPOOL *<var>mpool</var>, TCLIST *<var>list</var>);</code></dt>
+<dt><code>TCLIST *tcmpoolpushlist(TCMPOOL *<var>mpool</var>, TCLIST *<var>list</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>list</var>' specifies the list object.</dd>
+<dd>`<var>list</var>' specifies the list object.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushmap' is used in order to relegate a map object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushmap(TCMPOOL *<var>mpool</var>, TCMAP *<var>map</var>);</code></dt>
+<dt><code>TCMAP *tcmpoolpushmap(TCMPOOL *<var>mpool</var>, TCMAP *<var>map</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>map</var>' specifies the map object.</dd>
+<dd>`<var>map</var>' specifies the map object.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
 <p>The function `tcmpoolpushtree' is used in order to relegate a tree object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolpushtree(TCMPOOL *<var>mpool</var>, TCTREE *<var>tree</var>);</code></dt>
+<dt><code>TCTREE *tcmpoolpushtree(TCMPOOL *<var>mpool</var>, TCTREE *<var>tree</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
-<dd>`<var>tree</var>' specifies the tree object.</dd>
+<dd>`<var>tree</var>' specifies the tree object.  If it is `NULL', this function has no effect.</dd>
+<dd>The return value is the pointer to the given object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
@@ -2870,6 +2877,8 @@ int main(int argc, char **argv){
 <dd>Perform BZIP2 encoding and its decoding.</dd>
 <dt><code>tcucodec xml [-d] [-br] [<var>file</var>]</code></dt>
 <dd>Process XML.  By default, escape meta characters.</dd>
+<dt><code>tcucodec cstr [-d] [-js] [<var>file</var>]</code></dt>
+<dd>Perform C-string escaping and its unescaping.</dd>
 <dt><code>tcucodec ucs [-d] [<var>file</var>]</code></dt>
 <dd>Convert UTF-8 string into UCS-2 array.</dd>
 <dt><code>tcucodec hash [-crc] [-ch <var>num</var>] [<var>file</var>]</code></dt>
@@ -2897,6 +2906,7 @@ int main(int argc, char **argv){
 <li><code>-bwt</code> : convert by BWT as preprocessing.</li>
 <li><code>-gz</code> : use GZIP format.</li>
 <li><code>-crc</code> : use CRC32 function.</li>
+<li><code>-js</code> : use JSON compatible format.</li>
 <li><code>-ch <var>num</var></code> : use consistent hashing function.</li>
 <li><code>-ds <var>str</var></code> : specify the time.</li>
 <li><code>-jl <var>num</var></code> : specify the jet lag.</li>
@@ -2931,7 +2941,7 @@ int main(int argc, char **argv){
 
 <p>Objects whose type is pointer to `<code>TCHDB</code>' are used to handle hash databases.  A hash database object is created with the function `<code>tchdbnew</code>' and is deleted with the function `<code>tchdbdel</code>'.  To avoid memory leak, it is important to delete every object when it is no longer in use.</p>
 
-<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the hash database object to it.  The function `<code>tchdbopen</code>' is used to open a database file and the function `<code>tchdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
+<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the hash database object to it.  The function `<code>tchdbopen</code>' is used to open a database file and the function `<code>tchdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.</p>
 
 <h3 id="tchdbapi_api">API</h3>
 
@@ -3605,7 +3615,7 @@ int main(int argc, char **argv){
 
 <p>Objects whose type is pointer to `<code>TCBDB</code>' are used to handle B+ tree databases.  A B+ tree database object is created with the function `<code>tcbdbnew</code>' and is deleted with the function `<code>tcbdbdel</code>'.  To avoid memory leak, it is important to delete every object when it is no longer in use.</p>
 
-<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the B+ tree database object to it.  The function `<code>tcbdbopen</code>' is used to open a database file and the function `<code>tcbdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
+<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the B+ tree database object to it.  The function `<code>tcbdbopen</code>' is used to open a database file and the function `<code>tcbdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.</p>
 
 <h3 id="tcbdbapi_api">API</h3>
 
@@ -4529,7 +4539,7 @@ int main(int argc, char **argv){
 
 <p>Objects whose type is pointer to `<code>TCFDB</code>' are used to handle fixed-length databases.  A fixed-length database object is created with the function `<code>tcfdbnew</code>' and is deleted with the function `<code>tcfdbdel</code>'.  To avoid memory leak, it is important to delete every object when it is no longer in use.</p>
 
-<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the fixed-length database object to it.  The function `<code>tcfdbopen</code>' is used to open a database file and the function `<code>tcfdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
+<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the fixed-length database object to it.  The function `<code>tcfdbopen</code>' is used to open a database file and the function `<code>tcfdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.</p>
 
 <h3 id="tcfdbapi_api">API</h3>
 
@@ -5217,7 +5227,7 @@ int main(int argc, char **argv){
 
 <p>Objects whose type is pointer to `<code>TCTDB</code>' are used to handle table databases.  A table database object is created with the function `<code>tctdbnew</code>' and is deleted with the function `<code>tctdbdel</code>'.  To avoid memory leak, it is important to delete every object when it is no longer in use.</p>
 
-<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the table database object to it.  The function `<code>tctdbopen</code>' is used to open a database file and the function `<code>tctdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.</p>
+<p>Before operations to store or retrieve records, it is necessary to open a database file and connect the table database object to it.  The function `<code>tctdbopen</code>' is used to open a database file and the function `<code>tctdbclose</code>' is used to close the database file.  To avoid data missing or corruption, it is important to close every database file when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.</p>
 
 <h3 id="tctdbapi_api">API</h3>
 
@@ -5531,6 +5541,15 @@ int main(int argc, char **argv){
 <dd>`<var>tdb</var>' specifies the table database object.</dd>
 <dd>If successful, the return value is the string of the next primary key, else, it is `NULL'.  `NULL' is returned when no record is to be get out of the iterator.</dd>
 <dd>Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.  It is possible to access every record by iteration of calling this function.  However, it is not assured if updating the database is occurred while the iteration.  Besides, the order of this traversal access method is arbitrary, so it is not assured that the order of storing matches the one of the traversal access.</dd>
+</dl>
+
+<p>The function `tctdbiternext3' is used in order to get the columns of the next record of the iterator of a table database object.</p>
+
+<dl class="api">
+<dt><code>TCMAP *tctdbiternext3(TCTDB *<var>tdb</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object.</dd>
+<dd>If successful, the return value is a map object of the columns of the next record, else, it is `NULL'.  `NULL' is returned when no record is to be get out of the iterator.  The primary key is added into the map as a column of an empty string key.</dd>
+<dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.  It is possible to access every record by iteration of calling this function.  However, it is not assured if updating the database is occurred while the iteration.  Besides, the order of this traversal access method is arbitrary, so it is not assured that the order of storing matches the one of the traversal access.</dd>
 </dl>
 
 <p>The function `tctdbfwmkeys' is used in order to get forward matching primary keys in a table database object.</p>
@@ -6035,7 +6054,7 @@ int main(int argc, char **argv){
 
 <p>Objects whose type is pointer to `<code>TCADB</code>' are used to handle abstract databases.  An abstract database object is created with the function `<code>tcadbnew</code>' and is deleted with the function `<code>tcadbdel</code>'.  To avoid memory leak, it is important to delete every object when it is no longer in use.</p>
 
-<p>Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `<code>tcadbopen</code>' is used to open a concrete database and the function `<code>tcadbclose</code>' is used to close the database.  To avoid data missing or corruption, it is important to close every database instance when it is no longer in use.</p>
+<p>Before operations to store or retrieve records, it is necessary to connect the abstract database object to the concrete one.  The function `<code>tcadbopen</code>' is used to open a concrete database and the function `<code>tcadbclose</code>' is used to close the database.  To avoid data missing or corruption, it is important to close every database instance when it is no longer in use.  It is forbidden for multible database objects in a process to open the same database at the same time.</p>
 
 <h3 id="tcadbapi_api">API</h3>
 

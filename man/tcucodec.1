@@ -59,6 +59,11 @@ Perform BZIP2 encoding and its decoding.
 Process XML.  By default, escape meta characters.
 .RE
 .br
+\fBtcucodec cstr \fR[\fB\-d\fR]\fB \fR[\fB\-js\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
+.RS
+Perform C\-string escaping and its unescaping.
+.RE
+.br
 \fBtcucodec ucs \fR[\fB\-d\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
 .RS
 Convert UTF\-8 string into UCS\-2 array.
@@ -111,6 +116,8 @@ Options feature the following.
 \fB\-gz\fR : use GZIP format.
 .br
 \fB\-crc\fR : use CRC32 function.
+.br
+\fB\-js\fR : use JSON compatible format.
 .br
 \fB\-ch \fInum\fR\fR : use consistent hashing function.
 .br
