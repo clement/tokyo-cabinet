@@ -24,6 +24,7 @@
 /* global variables */
 const char *g_progname;                  // program name
 unsigned int g_randseed;                 // random seed
+ADBSKEL g_skeleton;                      // skeleton database
 
 
 /* function prototypes */
@@ -34,6 +35,7 @@ static void iputchar(int c);
 static void eprint(TCADB *adb, const char *func);
 static void sysprint(void);
 static int myrand(int range);
+static void setskel(ADBSKEL *skel);
 static void *pdprocfunccmp(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int runwrite(int argc, char **argv);
@@ -76,6 +78,13 @@ int main(int argc, char **argv){
     rv = runcompare(argc, argv);
   } else {
     usage();
+  }
+  if(rv != 0){
+    printf("FAILED:");
+    for(int i = 0; i < argc; i++){
+      printf(" %s", argv[i]);
+    }
+    printf("\n\n");
   }
   return rv;
 }
@@ -143,6 +152,41 @@ static int myrand(int range){
   int low = range * (rand() / (RAND_MAX + 1.0));
   low &= (unsigned int)INT_MAX >> 4;
   return (high + low) % range;
+}
+
+
+/* set the transparent skeleton database */
+static void setskel(ADBSKEL *skel){
+  memset(skel, 0, sizeof(skel));
+  skel->opq = tcadbnew();
+  skel->del = (void (*)(void *))tcadbdel;
+  skel->open = (bool (*)(void *, const char *))tcadbopen;
+  skel->close = (bool (*)(void *))tcadbclose;
+  skel->put = (bool (*)(void *, const void *, int, const void *, int))tcadbput;
+  skel->putkeep = (bool (*)(void *, const void *, int, const void *, int))tcadbputkeep;
+  skel->putcat = (bool (*)(void *, const void *, int, const void *, int))tcadbputcat;
+  skel->out = (bool (*)(void *, const void *, int))tcadbout;
+  skel->get = (void *(*)(void *, const void *, int, int *))tcadbget;
+  skel->vsiz = (int (*)(void *, const void *, int))tcadbvsiz;
+  skel->iterinit = (bool (*)(void *))tcadbiterinit;
+  skel->iternext = (void *(*)(void *, int *))tcadbiternext;
+  skel->fwmkeys = (TCLIST *(*)(void *, const void *, int, int))tcadbfwmkeys;
+  skel->addint = (int (*)(void *, const void *, int, int))tcadbaddint;
+  skel->adddouble = (double (*)(void *, const void *, int, double))tcadbadddouble;
+  skel->sync = (bool (*)(void *))tcadbsync;
+  skel->optimize = (bool (*)(void *, const char *))tcadboptimize;
+  skel->vanish = (bool (*)(void *))tcadbvanish;
+  skel->copy = (bool (*)(void *, const char *))tcadbcopy;
+  skel->tranbegin = (bool (*)(void *))tcadbtranbegin;
+  skel->trancommit = (bool (*)(void *))tcadbtrancommit;
+  skel->tranabort = (bool (*)(void *))tcadbtranabort;
+  skel->path = (const char *(*)(void *))tcadbpath;
+  skel->rnum = (uint64_t (*)(void *))tcadbrnum;
+  skel->size = (uint64_t (*)(void *))tcadbsize;
+  skel->misc = (TCLIST *(*)(void *, const char *, const TCLIST *))tcadbmisc;
+  skel->putproc =
+    (bool (*)(void *, const void *, int, const char *, int, TCPDPROC, void *))tcadbputproc;
+  skel->foreach = (bool (*)(void *, TCITER, void *))tcadbforeach;
 }
 
 
@@ -332,6 +376,16 @@ static int procwrite(const char *name, int rnum){
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
+  ADBSKEL skel;
+  if(*name == '@'){
+    setskel(&skel);
+    if(!tcadbsetskel(adb, &skel)){
+      eprint(adb, "tcadbsetskel");
+      err = true;
+      skel.del(skel.opq);
+    }
+    name++;
+  }
   if(!tcadbopen(adb, name)){
     eprint(adb, "tcadbopen");
     err = true;
@@ -369,6 +423,16 @@ static int procread(const char *name){
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
+  ADBSKEL skel;
+  if(*name == '@'){
+    setskel(&skel);
+    if(!tcadbsetskel(adb, &skel)){
+      eprint(adb, "tcadbsetskel");
+      err = true;
+      skel.del(skel.opq);
+    }
+    name++;
+  }
   if(!tcadbopen(adb, name)){
     eprint(adb, "tcadbopen");
     err = true;
@@ -410,6 +474,16 @@ static int procremove(const char *name){
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
+  ADBSKEL skel;
+  if(*name == '@'){
+    setskel(&skel);
+    if(!tcadbsetskel(adb, &skel)){
+      eprint(adb, "tcadbsetskel");
+      err = true;
+      skel.del(skel.opq);
+    }
+    name++;
+  }
   if(!tcadbopen(adb, name)){
     eprint(adb, "tcadbopen");
     err = true;
@@ -450,6 +524,16 @@ static int procrcat(const char *name, int rnum){
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
+  ADBSKEL skel;
+  if(*name == '@'){
+    setskel(&skel);
+    if(!tcadbsetskel(adb, &skel)){
+      eprint(adb, "tcadbsetskel");
+      err = true;
+      skel.del(skel.opq);
+    }
+    name++;
+  }
   if(!tcadbopen(adb, name)){
     eprint(adb, "tcadbopen");
     err = true;
@@ -487,6 +571,16 @@ static int procmisc(const char *name, int rnum){
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
+  ADBSKEL skel;
+  if(*name == '@'){
+    setskel(&skel);
+    if(!tcadbsetskel(adb, &skel)){
+      eprint(adb, "tcadbsetskel");
+      err = true;
+      skel.del(skel.opq);
+    }
+    name++;
+  }
   if(!tcadbopen(adb, name)){
     eprint(adb, "tcadbopen");
     err = true;
@@ -938,6 +1032,16 @@ static int procwicked(const char *name, int rnum){
   bool err = false;
   double stime = tctime();
   TCADB *adb = tcadbnew();
+  ADBSKEL skel;
+  if(*name == '@'){
+    setskel(&skel);
+    if(!tcadbsetskel(adb, &skel)){
+      eprint(adb, "tcadbsetskel");
+      err = true;
+      skel.del(skel.opq);
+    }
+    name++;
+  }
   if(!tcadbopen(adb, name)){
     eprint(adb, "tcadbopen");
     err = true;

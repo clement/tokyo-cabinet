@@ -119,6 +119,13 @@ int main(int argc, char **argv){
   } else {
     usage();
   }
+  if(rv != 0){
+    printf("FAILED:");
+    for(int i = 0; i < argc; i++){
+      printf(" %s", argv[i]);
+    }
+    printf("\n\n");
+  }
   return rv;
 }
 

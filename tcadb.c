@@ -53,7 +53,6 @@ static int tcadbtdbqrygetout(const void *pkbuf, int pksiz, TCMAP *cols, void *op
 TCADB *tcadbnew(void){
   TCADB *adb;
   TCMALLOC(adb, sizeof(*adb));
-  adb->name = NULL;
   adb->omode = ADBOVOID;
   adb->mdb = NULL;
   adb->ndb = NULL;
@@ -65,6 +64,7 @@ TCADB *tcadbnew(void){
   adb->capsiz = -1;
   adb->capcnt = 0;
   adb->cur = NULL;
+  adb->skel = NULL;
   return adb;
 }
 
@@ -72,7 +72,12 @@ TCADB *tcadbnew(void){
 /* Delete an abstract database object. */
 void tcadbdel(TCADB *adb){
   assert(adb);
-  if(adb->name) tcadbclose(adb);
+  if(adb->omode != ADBOVOID) tcadbclose(adb);
+  if(adb->skel){
+    ADBSKEL *skel = adb->skel;
+    if(skel->del) skel->del(skel->opq);
+    TCFREE(skel);
+  }
   TCFREE(adb);
 }
 
@@ -80,7 +85,7 @@ void tcadbdel(TCADB *adb){
 /* Open an abstract database. */
 bool tcadbopen(TCADB *adb, const char *name){
   assert(adb && name);
-  if(adb->name) return false;
+  if(adb->omode != ADBOVOID) return false;
   TCLIST *elems = tcstrsplit(name, "#");
   char *path = tclistshift2(elems);
   if(!path){
@@ -160,7 +165,16 @@ bool tcadbopen(TCADB *adb, const char *name){
   }
   tclistdel(elems);
   adb->omode = ADBOVOID;
-  if(!tcstricmp(path, "*")){
+  if(adb->skel){
+    ADBSKEL *skel = adb->skel;
+    if(!skel->open) return false;
+    if(!skel->open(skel->opq, name)){
+      if(idxs) tclistdel(idxs);
+      TCFREE(path);
+      return false;
+    }
+    adb->omode = ADBOSKEL;
+  } else if(!tcstricmp(path, "*")){
     adb->mdb = bnum > 0 ? tcmdbnew2(bnum) : tcmdbnew();
     adb->capnum = capnum;
     adb->capsiz = capsiz;
@@ -190,6 +204,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     if(onbmode) omode |= HDBOLCKNB;
     if(!tchdbopen(hdb, path, omode)){
       tchdbdel(hdb);
+      if(idxs) tclistdel(idxs);
       TCFREE(path);
       return false;
     }
@@ -214,6 +229,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     if(onbmode) omode |= BDBOLCKNB;
     if(!tcbdbopen(bdb, path, omode)){
       tcbdbdel(bdb);
+      if(idxs) tclistdel(idxs);
       TCFREE(path);
       return false;
     }
@@ -231,6 +247,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     if(onbmode) omode |= FDBOLCKNB;
     if(!tcfdbopen(fdb, path, omode)){
       tcfdbdel(fdb);
+      if(idxs) tclistdel(idxs);
       TCFREE(path);
       return false;
     }
@@ -254,6 +271,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     if(onbmode) omode |= TDBOLCKNB;
     if(!tctdbopen(tdb, path, omode)){
       tctdbdel(tdb);
+      if(idxs) tclistdel(idxs);
       TCFREE(path);
       return false;
     }
@@ -276,7 +294,6 @@ bool tcadbopen(TCADB *adb, const char *name){
   if(idxs) tclistdel(idxs);
   TCFREE(path);
   if(adb->omode == ADBOVOID) return false;
-  adb->name = tcstrdup(name);
   return true;
 }
 
@@ -285,7 +302,7 @@ bool tcadbopen(TCADB *adb, const char *name){
 bool tcadbclose(TCADB *adb){
   assert(adb);
   int err = false;
-  if(!adb->name) return false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     tcmdbdel(adb->mdb);
@@ -316,12 +333,18 @@ bool tcadbclose(TCADB *adb){
     tctdbdel(adb->tdb);
     adb->tdb = NULL;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->close){
+      if(!skel->close(skel->opq)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
   }
-  TCFREE(adb->name);
-  adb->name = NULL;
   adb->omode = ADBOVOID;
   return !err;
 }
@@ -332,6 +355,7 @@ bool tcadbput(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int vsiz
   assert(adb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0);
   bool err = false;
   char numbuf[TCNUMBUFSIZ];
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     if(adb->capnum > 0 || adb->capsiz > 0){
@@ -375,6 +399,14 @@ bool tcadbput(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int vsiz
     }
     if(!tctdbput2(adb->tdb, kbuf, ksiz, vbuf, vsiz)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->put){
+      if(!skel->put(skel->opq, kbuf, ksiz, vbuf, vsiz)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -395,6 +427,7 @@ bool tcadbputkeep(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int 
   assert(adb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0);
   bool err = false;
   char numbuf[TCNUMBUFSIZ];
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     if(tcmdbputkeep(adb->mdb, kbuf, ksiz, vbuf, vsiz)){
@@ -442,6 +475,14 @@ bool tcadbputkeep(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int 
     }
     if(!tctdbputkeep2(adb->tdb, kbuf, ksiz, vbuf, vsiz)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->putkeep){
+      if(!skel->putkeep(skel->opq, kbuf, ksiz, vbuf, vsiz)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -462,6 +503,7 @@ bool tcadbputcat(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int v
   assert(adb && kbuf && ksiz >= 0 && vbuf && vsiz >= 0);
   bool err = false;
   char numbuf[TCNUMBUFSIZ];
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     if(adb->capnum > 0 || adb->capsiz > 0){
@@ -505,6 +547,14 @@ bool tcadbputcat(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int v
     }
     if(!tctdbputcat2(adb->tdb, kbuf, ksiz, vbuf, vsiz)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->putcat){
+      if(!skel->putcat(skel->opq, kbuf, ksiz, vbuf, vsiz)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -524,6 +574,7 @@ bool tcadbputcat2(TCADB *adb, const char *kstr, const char *vstr){
 bool tcadbout(TCADB *adb, const void *kbuf, int ksiz){
   assert(adb && kbuf && ksiz >= 0);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     if(!tcmdbout(adb->mdb, kbuf, ksiz)) err = true;
@@ -542,6 +593,14 @@ bool tcadbout(TCADB *adb, const void *kbuf, int ksiz){
     break;
   case ADBOTDB:
     if(!tctdbout(adb->tdb, kbuf, ksiz)) err = true;
+    break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->out){
+      if(!skel->out(skel->opq, kbuf, ksiz)) err = true;
+    } else {
+      err = true;
+    }
     break;
   default:
     err = true;
@@ -562,6 +621,7 @@ bool tcadbout2(TCADB *adb, const char *kstr){
 void *tcadbget(TCADB *adb, const void *kbuf, int ksiz, int *sp){
   assert(adb && kbuf && ksiz >= 0 && sp);
   char *rv;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = tcmdbget(adb->mdb, kbuf, ksiz, sp);
@@ -580,6 +640,14 @@ void *tcadbget(TCADB *adb, const void *kbuf, int ksiz, int *sp){
     break;
   case ADBOTDB:
     rv = tctdbget2(adb->tdb, kbuf, ksiz, sp);
+    break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->get){
+      rv = skel->get(skel->opq, kbuf, ksiz, sp);
+    } else {
+      rv = NULL;
+    }
     break;
   default:
     rv = NULL;
@@ -601,6 +669,7 @@ char *tcadbget2(TCADB *adb, const char *kstr){
 int tcadbvsiz(TCADB *adb, const void *kbuf, int ksiz){
   assert(adb && kbuf && ksiz >= 0);
   int rv;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = tcmdbvsiz(adb->mdb, kbuf, ksiz);
@@ -619,6 +688,14 @@ int tcadbvsiz(TCADB *adb, const void *kbuf, int ksiz){
     break;
   case ADBOTDB:
     rv = tctdbvsiz(adb->tdb, kbuf, ksiz);
+    break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->vsiz){
+      rv = skel->vsiz(skel->opq, kbuf, ksiz);
+    } else {
+      rv = -1;
+    }
     break;
   default:
     rv = -1;
@@ -639,6 +716,7 @@ int tcadbvsiz2(TCADB *adb, const char *kstr){
 bool tcadbiterinit(TCADB *adb){
   assert(adb);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     tcmdbiterinit(adb->mdb);
@@ -662,6 +740,14 @@ bool tcadbiterinit(TCADB *adb){
   case ADBOTDB:
     if(!tctdbiterinit(adb->tdb)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->iterinit){
+      if(!skel->iterinit(skel->opq)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -674,6 +760,7 @@ bool tcadbiterinit(TCADB *adb){
 void *tcadbiternext(TCADB *adb, int *sp){
   assert(adb && sp);
   char *rv;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = tcmdbiternext(adb->mdb, sp);
@@ -693,6 +780,14 @@ void *tcadbiternext(TCADB *adb, int *sp){
     break;
   case ADBOTDB:
     rv = tctdbiternext(adb->tdb, sp);
+    break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->iternext){
+      rv = skel->iternext(skel->opq, sp);
+    } else {
+      rv = NULL;
+    }
     break;
   default:
     rv = NULL;
@@ -714,6 +809,7 @@ char *tcadbiternext2(TCADB *adb){
 TCLIST *tcadbfwmkeys(TCADB *adb, const void *pbuf, int psiz, int max){
   assert(adb && pbuf && psiz >= 0);
   TCLIST *rv;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = tcmdbfwmkeys(adb->mdb, pbuf, psiz, max);
@@ -732,6 +828,14 @@ TCLIST *tcadbfwmkeys(TCADB *adb, const void *pbuf, int psiz, int max){
     break;
   case ADBOTDB:
     rv = tctdbfwmkeys(adb->tdb, pbuf, psiz, max);
+    break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->fwmkeys){
+      rv = skel->fwmkeys(skel->opq, pbuf, psiz, max);
+    } else {
+      rv = NULL;
+    }
     break;
   default:
     rv = tclistnew();
@@ -753,6 +857,7 @@ int tcadbaddint(TCADB *adb, const void *kbuf, int ksiz, int num){
   assert(adb && kbuf && ksiz >= 0);
   int rv;
   char numbuf[TCNUMBUFSIZ];
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = tcmdbaddint(adb->mdb, kbuf, ksiz, num);
@@ -794,6 +899,14 @@ int tcadbaddint(TCADB *adb, const void *kbuf, int ksiz, int num){
     }
     rv = tctdbaddint(adb->tdb, kbuf, ksiz, num);
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->addint){
+      rv = skel->addint(skel->opq, kbuf, ksiz, num);
+    } else {
+      rv = INT_MIN;
+    }
+    break;
   default:
     rv = INT_MIN;
     break;
@@ -807,6 +920,7 @@ double tcadbadddouble(TCADB *adb, const void *kbuf, int ksiz, double num){
   assert(adb && kbuf && ksiz >= 0);
   double rv;
   char numbuf[TCNUMBUFSIZ];
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = tcmdbadddouble(adb->mdb, kbuf, ksiz, num);
@@ -848,6 +962,14 @@ double tcadbadddouble(TCADB *adb, const void *kbuf, int ksiz, double num){
     }
     rv = tctdbadddouble(adb->tdb, kbuf, ksiz, num);
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->adddouble){
+      rv = skel->adddouble(skel->opq, kbuf, ksiz, num);
+    } else {
+      rv = nan("");
+    }
+    break;
   default:
     rv = nan("");
     break;
@@ -860,6 +982,7 @@ double tcadbadddouble(TCADB *adb, const void *kbuf, int ksiz, double num){
 bool tcadbsync(TCADB *adb){
   assert(adb);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     if(adb->capnum > 0){
@@ -895,6 +1018,14 @@ bool tcadbsync(TCADB *adb){
     break;
   case ADBOTDB:
     if(!tctdbsync(adb->tdb)) err = true;
+    break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->sync){
+      if(!skel->sync(skel->opq)) err = true;
+    } else {
+      err = true;
+    }
     break;
   default:
     err = true;
@@ -957,6 +1088,7 @@ bool tcadboptimize(TCADB *adb, const char *params){
   tclistdel(elems);
   bool err = false;
   int opts;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     adb->capnum = capnum;
@@ -1007,6 +1139,14 @@ bool tcadboptimize(TCADB *adb, const char *params){
     }
     if(!tctdboptimize(adb->tdb, bnum, apow, fpow, opts)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->optimize){
+      if(!skel->optimize(skel->opq, params)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -1019,6 +1159,7 @@ bool tcadboptimize(TCADB *adb, const char *params){
 bool tcadbvanish(TCADB *adb){
   assert(adb);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     tcmdbvanish(adb->mdb);
@@ -1038,6 +1179,14 @@ bool tcadbvanish(TCADB *adb){
   case ADBOTDB:
     if(!tctdbvanish(adb->tdb)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->vanish){
+      if(!skel->vanish(skel->opq)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -1050,16 +1199,16 @@ bool tcadbvanish(TCADB *adb){
 bool tcadbcopy(TCADB *adb, const char *path){
   assert(adb && path);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
   case ADBONDB:
     if(*path == '@'){
       char tsbuf[TCNUMBUFSIZ];
       sprintf(tsbuf, "%llu", (unsigned long long)(tctime() * 1000000));
-      const char *args[3];
+      const char *args[2];
       args[0] = path + 1;
-      args[1] = adb->name;
-      args[2] = tsbuf;
+      args[1] = tsbuf;
       if(tcsystem(args, sizeof(args) / sizeof(*args)) != 0) err = true;
     } else {
       TCADB *tadb = tcadbnew();
@@ -1095,6 +1244,14 @@ bool tcadbcopy(TCADB *adb, const char *path){
   case ADBOTDB:
     if(!tctdbcopy(adb->tdb, path)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->copy){
+      if(!skel->copy(skel->opq, path)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -1107,6 +1264,7 @@ bool tcadbcopy(TCADB *adb, const char *path){
 bool tcadbtranbegin(TCADB *adb){
   assert(adb);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     err = true;
@@ -1126,6 +1284,14 @@ bool tcadbtranbegin(TCADB *adb){
   case ADBOTDB:
     if(!tctdbtranbegin(adb->tdb)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->tranbegin){
+      if(!skel->tranbegin(skel->opq)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -1138,6 +1304,7 @@ bool tcadbtranbegin(TCADB *adb){
 bool tcadbtrancommit(TCADB *adb){
   assert(adb);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     err = true;
@@ -1157,6 +1324,14 @@ bool tcadbtrancommit(TCADB *adb){
   case ADBOTDB:
     if(!tctdbtrancommit(adb->tdb)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->trancommit){
+      if(!skel->trancommit(skel->opq)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -1169,6 +1344,7 @@ bool tcadbtrancommit(TCADB *adb){
 bool tcadbtranabort(TCADB *adb){
   assert(adb);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     err = true;
@@ -1188,6 +1364,14 @@ bool tcadbtranabort(TCADB *adb){
   case ADBOTDB:
     if(!tctdbtranabort(adb->tdb)) err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->tranabort){
+      if(!skel->tranabort(skel->opq)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -1200,6 +1384,7 @@ bool tcadbtranabort(TCADB *adb){
 const char *tcadbpath(TCADB *adb){
   assert(adb);
   const char *rv;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = "*";
@@ -1219,6 +1404,14 @@ const char *tcadbpath(TCADB *adb){
   case ADBOTDB:
     rv = tctdbpath(adb->tdb);
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->path){
+      rv = skel->path(skel->opq);
+    } else {
+      rv = NULL;
+    }
+    break;
   default:
     rv = NULL;
     break;
@@ -1231,6 +1424,7 @@ const char *tcadbpath(TCADB *adb){
 uint64_t tcadbrnum(TCADB *adb){
   assert(adb);
   uint64_t rv;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = tcmdbrnum(adb->mdb);
@@ -1250,6 +1444,14 @@ uint64_t tcadbrnum(TCADB *adb){
   case ADBOTDB:
     rv = tctdbrnum(adb->tdb);
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->rnum){
+      rv = skel->rnum(skel->opq);
+    } else {
+      rv = 0;
+    }
+    break;
   default:
     rv = 0;
     break;
@@ -1262,6 +1464,7 @@ uint64_t tcadbrnum(TCADB *adb){
 uint64_t tcadbsize(TCADB *adb){
   assert(adb);
   uint64_t rv;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     rv = tcmdbmsiz(adb->mdb);
@@ -1281,6 +1484,14 @@ uint64_t tcadbsize(TCADB *adb){
   case ADBOTDB:
     rv = tctdbfsiz(adb->tdb);
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->size){
+      rv = skel->size(skel->opq);
+    } else {
+      rv = 0;
+    }
+    break;
   default:
     rv = 0;
     break;
@@ -1294,6 +1505,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
   assert(adb && name && args);
   int argc = TCLISTNUM(args);
   TCLIST *rv;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     if(!strcmp(name, "put") || !strcmp(name, "putkeep") || !strcmp(name, "putcat")){
@@ -2107,6 +2319,14 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
       rv = NULL;
     }
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->misc){
+      rv = skel->misc(skel->opq, name, args);
+    } else {
+      rv = NULL;
+    }
+    break;
   default:
     rv = NULL;
     break;
@@ -2119,6 +2339,16 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
 /*************************************************************************************************
  * features for experts
  *************************************************************************************************/
+
+
+/* Set an extra database sleleton to an abstract database object. */
+bool tcadbsetskel(TCADB *adb, ADBSKEL *skel){
+  assert(skel);
+  if(adb->omode != ADBOVOID) return false;
+  if(adb->skel) TCFREE(adb->skel);
+  adb->skel = tcmemdup(skel, sizeof(*skel));
+  return true;
+}
 
 
 /* Get the open mode of an abstract database object. */
@@ -2151,6 +2381,9 @@ void *tcadbreveal(TCADB *adb){
   case ADBOTDB:
     rv = adb->tdb;
     break;
+  case ADBOSKEL:
+    rv = adb->skel;
+    break;
   default:
     rv = NULL;
     break;
@@ -2164,6 +2397,7 @@ bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int 
                   TCPDPROC proc, void *op){
   assert(adb && kbuf && ksiz >= 0 && proc);
   bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     if(tcmdbputproc(adb->mdb, kbuf, ksiz, vbuf, vsiz, proc, op)){
@@ -2207,6 +2441,14 @@ bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int 
   case ADBOTDB:
     err = true;
     break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->putproc){
+      if(!skel->putproc(skel->opq, kbuf, ksiz, vbuf, vsiz, proc, op)) err = true;
+    } else {
+      err = true;
+    }
+    break;
   default:
     err = true;
     break;
@@ -2218,33 +2460,40 @@ bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int 
 /* Process each record atomically of an abstract database object. */
 bool tcadbforeach(TCADB *adb, TCITER iter, void *op){
   assert(adb && iter);
-  bool rv;
+  bool err = false;
+  ADBSKEL *skel;
   switch(adb->omode){
   case ADBOMDB:
     tcmdbforeach(adb->mdb, iter, op);
-    rv = true;
     break;
   case ADBONDB:
     tcndbforeach(adb->ndb, iter, op);
-    rv = true;
     break;
   case ADBOHDB:
-    rv = tchdbforeach(adb->hdb, iter, op);
+    if(!tchdbforeach(adb->hdb, iter, op)) err = true;
     break;
   case ADBOBDB:
-    rv = tcbdbforeach(adb->bdb, iter, op);
+    if(!tcbdbforeach(adb->bdb, iter, op)) err = true;
     break;
   case ADBOFDB:
-    rv = tcfdbforeach(adb->fdb, iter, op);
+    if(!tcfdbforeach(adb->fdb, iter, op)) err = true;
     break;
   case ADBOTDB:
-    rv = tctdbforeach(adb->tdb, iter, op);
+    if(!tctdbforeach(adb->tdb, iter, op)) err = true;
+    break;
+  case ADBOSKEL:
+    skel = adb->skel;
+    if(skel->foreach){
+      if(!skel->foreach(skel->opq, iter, op)) err = true;
+    } else {
+      err = true;
+    }
     break;
   default:
-    rv = false;
+    err = true;
     break;
   }
-  return rv;
+  return !err;
 }
 
 

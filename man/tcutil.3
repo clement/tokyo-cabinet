@@ -3450,7 +3450,7 @@ The function `tcatoi' is used in order to convert a string to an integer.
 .br
 \fBint64_t tcatoi(const char *\fIstr\fB);\fR
 .RS
-`\fIstr\fR' specifies a string.
+`\fIstr\fR' specifies the string.
 .RE
 .RS
 The return value is the integer.  If the string does not contain numeric expression, 0 is returned.
@@ -3466,7 +3466,7 @@ The function `tcatoix' is used in order to convert a string with a metric prefix
 .br
 \fBint64_t tcatoix(const char *\fIstr\fB);\fR
 .RS
-`\fIstr\fR' specifies a string which can be trailed by a binary metric prefix.  "K", "M", "G", "T", "P", and "E" are supported.  They are case\-insensitive.
+`\fIstr\fR' specifies the string, which can be trailed by a binary metric prefix.  "K", "M", "G", "T", "P", and "E" are supported.  They are case\-insensitive.
 .RE
 .RS
 The return value is the integer.  If the string does not contain numeric expression, 0 is returned.  If the integer overflows the domain, `INT64_MAX' or `INT64_MIN' is returned according to the sign.
@@ -3479,7 +3479,7 @@ The function `tcatof' is used in order to convert a string to a real number.
 .br
 \fBdouble tcatof(const char *\fIstr\fB);\fR
 .RS
-`\fIstr\fR' specifies a string.
+`\fIstr\fR' specifies the string.
 .RE
 .RS
 The return value is the real number.  If the string does not contain numeric expression, 0.0 is returned.

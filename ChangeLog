@@ -1,3 +1,13 @@
+2009-04-25  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcatoih): new function.
+
+	* tcbdb.c (tcbdbputimpl): cache adjustment on the putkeep mode was added.
+
+	* tcadb.c (tcadbsetskel): new function.
+
+	- Release: 1.4.18
+
 2009-04-23  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tcmapput, tcmapout, tcmapget): memory usage was reduced.

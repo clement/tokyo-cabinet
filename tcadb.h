@@ -46,7 +46,6 @@ __TCADB_CLINKAGEBEGIN
 
 
 typedef struct {                         /* type of structure for an abstract database */
-  char *name;                            /* name of the database */
   int omode;                             /* open mode */
   TCMDB *mdb;                            /* on-memory hash database object */
   TCNDB *ndb;                            /* on-memory tree database object */
@@ -58,6 +57,7 @@ typedef struct {                         /* type of structure for an abstract da
   int64_t capsiz;                        /* capacity size of using memory */
   uint32_t capcnt;                       /* count for capacity check */
   BDBCUR *cur;                           /* cursor of B+ tree */
+  void *skel;                            /* skeleton database */
 } TCADB;
 
 enum {                                   /* enumeration for open modes */
@@ -67,7 +67,8 @@ enum {                                   /* enumeration for open modes */
   ADBOHDB,                               /* hash database */
   ADBOBDB,                               /* B+ tree database */
   ADBOFDB,                               /* fixed-length database */
-  ADBOTDB                                /* table database */
+  ADBOTDB,                               /* table database */
+  ADBOSKEL                               /* skeleton database */
 };
 
 
@@ -423,6 +424,37 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args);
  *************************************************************************************************/
 
 
+typedef struct _ADBSKEL {                /* type of structure for a extra database skeleton */
+  void *opq;                             /* opaque pointer */
+  void (*del)(void *);                   /* destructor */
+  bool (*open)(void *, const char *);
+  bool (*close)(void *);
+  bool (*put)(void *, const void *, int, const void *, int);
+  bool (*putkeep)(void *, const void *, int, const void *, int);
+  bool (*putcat)(void *, const void *, int, const void *, int);
+  bool (*out)(void *, const void *, int);
+  void *(*get)(void *, const void *, int, int *);
+  int (*vsiz)(void *, const void *, int);
+  bool (*iterinit)(void *);
+  void *(*iternext)(void *, int *);
+  TCLIST *(*fwmkeys)(void *, const void *, int, int);
+  int (*addint)(void *, const void *, int, int);
+  double (*adddouble)(void *, const void *, int, double);
+  bool (*sync)(void *);
+  bool (*optimize)(void *, const char *);
+  bool (*vanish)(void *);
+  bool (*copy)(void *, const char *);
+  bool (*tranbegin)(void *);
+  bool (*trancommit)(void *);
+  bool (*tranabort)(void *);
+  const char *(*path)(void *);
+  uint64_t (*rnum)(void *);
+  uint64_t (*size)(void *);
+  TCLIST *(*misc)(void *, const char *, const TCLIST *);
+  bool (*putproc)(void *, const void *, int, const char *, int, TCPDPROC, void *);
+  bool (*foreach)(void *, TCITER, void *);
+} ADBSKEL;
+
 /* type of the pointer to a mapping function.
    `map' specifies the pointer to the destination manager.
    `kbuf' specifies the pointer to the region of the key.
@@ -433,6 +465,13 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args);
    The return value is true to continue iteration or false to stop iteration. */
 typedef bool (*ADBMAPPROC)(void *map, const char *kbuf, int ksiz, const char *vbuf, int vsiz,
                            void *op);
+
+
+/* Set an extra database sleleton to an abstract database object.
+   `adb' specifies the abstract database object.
+   `skel' specifies the extra database skeleton.
+   If successful, the return value is true, else, it is false. */
+bool tcadbsetskel(TCADB *adb, ADBSKEL *skel);
 
 
 /* Get the open mode of an abstract database object.

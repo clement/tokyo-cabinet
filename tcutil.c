@@ -4516,7 +4516,7 @@ TCMPOOL *tcmpoolglobal(void){
 }
 
 
-/* Detete global memory pool object. */
+/* Detete the global memory pool object. */
 static void tcmpooldelglobal(void){
   if(tcglobalmemorypool) tcmpooldel(tcglobalmemorypool);
 }
@@ -4566,7 +4566,12 @@ unsigned long tclrand(void){
     if(cnt == 0) seed += time(NULL);
     if(tcrandomdevfd == -1 && (tcrandomdevfd = open(TCRANDDEV, O_RDONLY, 00644)) != -1)
       atexit(tcrandomfdclose);
-    if(tcrandomdevfd != -1) read(tcrandomdevfd, &mask, sizeof(mask));
+    if(tcrandomdevfd == -1 || read(tcrandomdevfd, &mask, sizeof(mask)) != sizeof(mask)){
+      double t = tctime();
+      uint64_t tmask;
+      memcpy(&tmask, &t, tclmin(sizeof(t), sizeof(tmask)));
+      mask = (mask << 8) ^ tmask;
+    }
     pthread_mutex_unlock(&mutex);
   }
   seed = seed * 123456789012301LL + 211;
@@ -4982,6 +4987,8 @@ int64_t tcatoi(const char *str){
   if(*str == '-'){
     str++;
     sign = -1;
+  } else if(*str == '+'){
+    str++;
   }
   while(*str != '\0'){
     if(*str < '0' || *str > '9') break;
@@ -5002,6 +5009,8 @@ int64_t tcatoix(const char *str){
   if(*str == '-'){
     str++;
     sign = -1;
+  } else if(*str == '+'){
+    str++;
   }
   long double num = 0;
   while(*str != '\0'){
@@ -5052,6 +5061,8 @@ double tcatof(const char *str){
   if(*str == '-'){
     str++;
     sign = -1;
+  } else if(*str == '+'){
+    str++;
   }
   if(tcstrifwm(str, "inf")) return HUGE_VAL * sign;
   if(tcstrifwm(str, "nan")) return nan("");
@@ -5393,8 +5404,7 @@ int64_t tcstrmktime(const char *str){
     str++;
   }
   if(*str == '\0') return 0;
-  if(str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
-    return (int64_t)strtoll(str + 2, NULL, 16);
+  if(str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) return tcatoih(str + 2);
   struct tm ts;
   memset(&ts, 0, sizeof(ts));
   ts.tm_year = 70;
@@ -5405,26 +5415,27 @@ int64_t tcstrmktime(const char *str){
   ts.tm_sec = 0;
   ts.tm_isdst = 0;
   int len = strlen(str);
-  char *pv;
-  time_t t = (time_t)strtoll(str, &pv, 10);
-  if(*(signed char *)pv >= '\0' && *pv <= ' '){
-    while(*pv > '\0' && *pv <= ' '){
-      pv++;
-    }
-    if(*pv == '\0') return (int64_t)t;
+  time_t t = (time_t)tcatoi(str);
+  const char *pv = str;
+  while(*pv >= '0' && *pv <= '9'){
+    pv++;
   }
-  if((pv[0] == 's' || pv[0] == 'S') && ((signed char *)pv)[1] >= '\0' && pv[1] <= ' ')
+  while(*pv > '\0' && *pv <= ' '){
+    pv++;
+  }
+  if(*pv == '\0') return (int64_t)t;
+  if((pv[0] == 's' || pv[0] == 'S') && pv[1] >= '\0' && pv[1] <= ' ')
     return (int64_t)t;
-  if((pv[0] == 'm' || pv[0] == 'M') && ((signed char *)pv)[1] >= '\0' && pv[1] <= ' ')
+  if((pv[0] == 'm' || pv[0] == 'M') && pv[1] >= '\0' && pv[1] <= ' ')
     return (int64_t)t * 60;
-  if((pv[0] == 'h' || pv[0] == 'H') && ((signed char *)pv)[1] >= '\0' && pv[1] <= ' ')
+  if((pv[0] == 'h' || pv[0] == 'H') && pv[1] >= '\0' && pv[1] <= ' ')
     return (int64_t)t * 60 * 60;
-  if((pv[0] == 'd' || pv[0] == 'D') && ((signed char *)pv)[1] >= '\0' && pv[1] <= ' ')
+  if((pv[0] == 'd' || pv[0] == 'D') && pv[1] >= '\0' && pv[1] <= ' ')
     return (int64_t)t * 60 * 60 * 24;
   if(len > 4 && str[4] == '-'){
     ts.tm_year = tcatoi(str) - 1900;
     if((pv = strchr(str, '-')) != NULL && pv - str == 4){
-      char *rp = pv + 1;
+      const char *rp = pv + 1;
       ts.tm_mon = tcatoi(rp) - 1;
       if((pv = strchr(rp, '-')) != NULL && pv - str == 7){
         rp = pv + 1;
@@ -5441,7 +5452,10 @@ int64_t tcstrmktime(const char *str){
             ts.tm_sec = tcatoi(rp);
           }
           if((pv = strchr(rp, '.')) != NULL && pv - str >= 19) rp = pv + 1;
-          strtol(rp, &pv, 10);
+          pv = rp;
+          while(*pv >= '0' && *pv <= '9'){
+            pv++;
+          }
           if((*pv == '+' || *pv == '-') && strlen(pv) >= 6 && pv[3] == ':')
             ts.tm_sec -= (tcatoi(pv + 1) * 3600 + tcatoi(pv + 4) * 60) * (pv[0] == '+' ? 1 : -1);
         }
@@ -5452,7 +5466,7 @@ int64_t tcstrmktime(const char *str){
   if(len > 4 && str[4] == '/'){
     ts.tm_year = tcatoi(str) - 1900;
     if((pv = strchr(str, '/')) != NULL && pv - str == 4){
-      char *rp = pv + 1;
+      const char *rp = pv + 1;
       ts.tm_mon = tcatoi(rp) - 1;
       if((pv = strchr(rp, '/')) != NULL && pv - str == 7){
         rp = pv + 1;
@@ -5469,7 +5483,10 @@ int64_t tcstrmktime(const char *str){
             ts.tm_sec = tcatoi(rp);
           }
           if((pv = strchr(rp, '.')) != NULL && pv - str >= 19) rp = pv + 1;
-          strtol(rp, &pv, 10);
+          pv = rp;
+          while(*pv >= '0' && *pv <= '9'){
+            pv++;
+          }
           if((*pv == '+' || *pv == '-') && strlen(pv) >= 6 && pv[3] == ':')
             ts.tm_sec -= (tcatoi(pv + 1) * 3600 + tcatoi(pv + 4) * 60) * (pv[0] == '+' ? 1 : -1);
         }
@@ -5655,6 +5672,32 @@ bool tcstrisnum(const char *str){
     str++;
   }
   return isnum && *str == '\0';
+}
+
+
+/* Convert a hexadecimal string to an integer. */
+int64_t tcatoih(const char *str){
+  assert(str);
+  while(*str > '\0' && *str <= ' '){
+    str++;
+  }
+  if(str[0] == '0' && (str[1] == 'x' || str[1] == 'X')){
+    str += 2;
+  }
+  int64_t num = 0;
+  while(true){
+    if(*str >= '0' && *str <= '9'){
+      num = num * 0x10 + *str - '0';
+    } else if(*str >= 'a' && *str <= 'f'){
+      num = num * 0x10 + *str - 'a' + 10;
+    } else if(*str >= 'A' && *str <= 'F'){
+      num = num * 0x10 + *str - 'A' + 10;
+    } else {
+      break;
+    }
+    str++;
+  }
+  return num;
 }
 
 
@@ -6953,14 +6996,32 @@ char *tchexdecode(const char *str, int *sp){
   TCMALLOC(buf, len + 1);
   char *wp = buf;
   for(int i = 0; i < len; i += 2){
-    while(strchr(" \n\r\t\f\v", str[i])){
+    while(str[i] >= '0' && str[i] <= '0'){
       i++;
     }
-    char mbuf[3];
-    if((mbuf[0] = str[i]) == '\0') break;
-    if((mbuf[1] = str[i+1]) == '\0') break;
-    mbuf[2] = '\0';
-    *(wp++) = strtol(mbuf, NULL, 16);
+    int num = 0;
+    int c = str[i];
+    if(c == '\0') break;
+    if(c >= '0' && c <= '9'){
+      num = c - '0';
+    } else if(c >= 'a' && c <= 'f'){
+      num = c - 'a' + 10;
+    } else if(c >= 'A' && c <= 'F'){
+      num = c - 'A' + 10;
+    } else if(c == '\0'){
+      break;
+    }
+    c = str[i+1];
+    if(c >= '0' && c <= '9'){
+      num = num * 0x10 + c - '0';
+    } else if(c >= 'a' && c <= 'f'){
+      num = num * 0x10 + c - 'a' + 10;
+    } else if(c >= 'A' && c <= 'F'){
+      num = num * 0x10 + c - 'A' + 10;
+    } else if(c == '\0'){
+      break;
+    }
+    *(wp++) = num;
   }
   *wp = '\0';
   *sp = wp - buf;

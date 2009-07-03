@@ -2364,7 +2364,7 @@ char *tcstrjoin(const TCLIST *list, char delim);
 
 
 /* Convert a string to an integer.
-   `str' specifies a string.
+   `str' specifies the string.
    The return value is the integer.  If the string does not contain numeric expression, 0 is
    returned.
    This function is equivalent to `atoll' except that it does not depend on the locale. */
@@ -2372,8 +2372,8 @@ int64_t tcatoi(const char *str);
 
 
 /* Convert a string with a metric prefix to an integer.
-   `str' specifies a string which can be trailed by a binary metric prefix.  "K", "M", "G", "T",
-   "P", and "E" are supported.  They are case-insensitive.
+   `str' specifies the string, which can be trailed by a binary metric prefix.  "K", "M", "G",
+   "T", "P", and "E" are supported.  They are case-insensitive.
    The return value is the integer.  If the string does not contain numeric expression, 0 is
    returned.  If the integer overflows the domain, `INT64_MAX' or `INT64_MIN' is returned
    according to the sign. */
@@ -2381,7 +2381,7 @@ int64_t tcatoix(const char *str);
 
 
 /* Convert a string to a real number.
-   `str' specifies a string.
+   `str' specifies the string.
    The return value is the real number.  If the string does not contain numeric expression, 0.0
    is returned.
    This function is equivalent to `atof' except that it does not depend on the locale. */
@@ -2532,6 +2532,13 @@ int tcdayofweek(int year, int mon, int day);
    `str' specifies the string to be checked.
    The return value is true if the string is numeric, else, it is false. */
 bool tcstrisnum(const char *str);
+
+
+/* Convert a hexadecimal string to an integer.
+   `str' specifies the string.
+   The return value is the integer.  If the string does not contain numeric expression, 0 is
+   returned. */
+int64_t tcatoih(const char *str);
 
 
 /* Create a list object by splitting a region by zero code.
@@ -3304,8 +3311,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.17"
-#define _TC_LIBVER     808
+#define _TC_VERSION    "1.4.18"
+#define _TC_LIBVER     809
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

@@ -2822,6 +2822,7 @@ static bool tcbdbcacheadjust(TCBDB *bdb){
   bool err = false;
   if(TCMAPRNUM(bdb->leafc) > bdb->lcnum){
     TCDODEBUG(bdb->cnt_adjleafc++);
+    int ecode = tchdbecode(bdb->hdb);
     bool clk = BDBLOCKCACHE(bdb);
     TCMAP *leafc = bdb->leafc;
     tcmapiterinit(leafc);
@@ -2832,9 +2833,12 @@ static bool tcbdbcacheadjust(TCBDB *bdb){
         err = true;
     }
     if(clk) BDBUNLOCKCACHE(bdb);
+    if(!err && tchdbecode(bdb->hdb) != ecode)
+      tcbdbsetecode(bdb, ecode, __FILE__, __LINE__, __func__);
   }
   if(TCMAPRNUM(bdb->nodec) > bdb->ncnum){
     TCDODEBUG(bdb->cnt_adjnodec++);
+    int ecode = tchdbecode(bdb->hdb);
     bool clk = BDBLOCKCACHE(bdb);
     TCMAP *nodec = bdb->nodec;
     tcmapiterinit(nodec);
@@ -2845,6 +2849,8 @@ static bool tcbdbcacheadjust(TCBDB *bdb){
         err = true;
     }
     if(clk) BDBUNLOCKCACHE(bdb);
+    if(!err && tchdbecode(bdb->hdb) != ecode)
+      tcbdbsetecode(bdb, ecode, __FILE__, __LINE__, __func__);
   }
   return !err;
 }
@@ -3029,7 +3035,10 @@ static bool tcbdbputimpl(TCBDB *bdb, const void *kbuf, int ksiz, const void *vbu
     if(!(leaf = tcbdbleafload(bdb, pid))) return false;
     hlid = 0;
   }
-  if(!tcbdbleafaddrec(bdb, leaf, dmode, kbuf, ksiz, vbuf, vsiz)) return false;
+  if(!tcbdbleafaddrec(bdb, leaf, dmode, kbuf, ksiz, vbuf, vsiz)){
+    if(!bdb->tran) tcbdbcacheadjust(bdb);
+    return false;
+  }
   int rnum = TCPTRLISTNUM(leaf->recs);
   if(rnum > bdb->lmemb || (rnum > 1 && leaf->size > bdb->lsmax)){
     if(hlid > 0 && hlid != tcbdbsearchleaf(bdb, kbuf, ksiz)) return false;

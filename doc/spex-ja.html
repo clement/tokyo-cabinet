@@ -2158,7 +2158,7 @@
 
 <dl class="api">
 <dt><code>int64_t tcatoi(const char *<var>str</var>);</code></dt>
-<dd>`<var>str</var>' specifies a string.</dd>
+<dd>`<var>str</var>' specifies the string.</dd>
 <dd>The return value is the integer.  If the string does not contain numeric expression, 0 is returned.</dd>
 <dd>This function is equivalent to `atoll' except that it does not depend on the locale.</dd>
 </dl>
@@ -2167,7 +2167,7 @@
 
 <dl class="api">
 <dt><code>int64_t tcatoix(const char *<var>str</var>);</code></dt>
-<dd>`<var>str</var>' specifies a string which can be trailed by a binary metric prefix.  "K", "M", "G", "T", "P", and "E" are supported.  They are case-insensitive.</dd>
+<dd>`<var>str</var>' specifies the string, which can be trailed by a binary metric prefix.  "K", "M", "G", "T", "P", and "E" are supported.  They are case-insensitive.</dd>
 <dd>The return value is the integer.  If the string does not contain numeric expression, 0 is returned.  If the integer overflows the domain, `INT64_MAX' or `INT64_MIN' is returned according to the sign.</dd>
 </dl>
 
@@ -2175,7 +2175,7 @@
 
 <dl class="api">
 <dt><code>double tcatof(const char *<var>str</var>);</code></dt>
-<dd>`<var>str</var>' specifies a string.</dd>
+<dd>`<var>str</var>' specifies the string.</dd>
 <dd>The return value is the real number.  If the string does not contain numeric expression, 0.0 is returned.</dd>
 <dd>This function is equivalent to `atof' except that it does not depend on the locale.</dd>
 </dl>
