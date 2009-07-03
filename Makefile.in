@@ -426,7 +426,7 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tcttest read casket
 	$(RUNENV) $(RUNCMD) ./tcttest remove casket
 	$(RUNENV) $(RUNCMD) ./tcttest write -mt -tl -td -rc 50 -lc 5 -nc 5 -xm 500000 \
-	  -is -in -it -if casket 5000 5000 5 5
+	  -is -in -it -if -ix casket 5000 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tcttest read -mt -nb -rc 50 -lc 5 -nc 5 -xm 500000 casket
 	$(RUNENV) $(RUNCMD) ./tcttest remove -mt -rc 50 -lc 5 -nc 5 -xm 500000 -df 5 casket
 	$(RUNENV) $(RUNCMD) ./tcttest rcat -pn 500 -xm 50000 -df 5 -is casket 5000 5000 5 5

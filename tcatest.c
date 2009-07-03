@@ -32,7 +32,7 @@ int main(int argc, char **argv);
 static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
-static void eprint(TCADB *adb, const char *func);
+static void eprint(TCADB *adb, int line, const char *func);
 static void sysprint(void);
 static int myrand(int range);
 static void setskel(ADBSKEL *skel);
@@ -125,9 +125,9 @@ static void iputchar(int c){
 
 
 /* print error message of abstract database */
-static void eprint(TCADB *adb, const char *func){
+static void eprint(TCADB *adb, int line, const char *func){
   const char *path = adb ? tcadbpath(adb) : NULL;
-  fprintf(stderr, "%s: %s: %s: error\n", g_progname, path ? path : "-", func);
+  fprintf(stderr, "%s: %s: %d: %s: error\n", g_progname, path ? path : "-", line, func);
 }
 
 
@@ -380,21 +380,21 @@ static int procwrite(const char *name, int rnum){
   if(*name == '@'){
     setskel(&skel);
     if(!tcadbsetskel(adb, &skel)){
-      eprint(adb, "tcadbsetskel");
+      eprint(adb, __LINE__, "tcadbsetskel");
       err = true;
       skel.del(skel.opq);
     }
     name++;
   }
   if(!tcadbopen(adb, name)){
-    eprint(adb, "tcadbopen");
+    eprint(adb, __LINE__, "tcadbopen");
     err = true;
   }
   for(int i = 1; i <= rnum; i++){
     char buf[RECBUFSIZ];
     int len = sprintf(buf, "%08d", i);
     if(!tcadbput(adb, buf, len, buf, len)){
-      eprint(adb, "tcadbput");
+      eprint(adb, __LINE__, "tcadbput");
       err = true;
       break;
     }
@@ -407,7 +407,7 @@ static int procwrite(const char *name, int rnum){
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
   sysprint();
   if(!tcadbclose(adb)){
-    eprint(adb, "tcadbclose");
+    eprint(adb, __LINE__, "tcadbclose");
     err = true;
   }
   tcadbdel(adb);
@@ -427,14 +427,14 @@ static int procread(const char *name){
   if(*name == '@'){
     setskel(&skel);
     if(!tcadbsetskel(adb, &skel)){
-      eprint(adb, "tcadbsetskel");
+      eprint(adb, __LINE__, "tcadbsetskel");
       err = true;
       skel.del(skel.opq);
     }
     name++;
   }
   if(!tcadbopen(adb, name)){
-    eprint(adb, "tcadbopen");
+    eprint(adb, __LINE__, "tcadbopen");
     err = true;
   }
   int rnum = tcadbrnum(adb);
@@ -444,7 +444,7 @@ static int procread(const char *name){
     int vsiz;
     char *vbuf = tcadbget(adb, kbuf, ksiz, &vsiz);
     if(!vbuf){
-      eprint(adb, "tcadbget");
+      eprint(adb, __LINE__, "tcadbget");
       err = true;
       break;
     }
@@ -458,7 +458,7 @@ static int procread(const char *name){
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
   sysprint();
   if(!tcadbclose(adb)){
-    eprint(adb, "tcadbclose");
+    eprint(adb, __LINE__, "tcadbclose");
     err = true;
   }
   tcadbdel(adb);
@@ -478,14 +478,14 @@ static int procremove(const char *name){
   if(*name == '@'){
     setskel(&skel);
     if(!tcadbsetskel(adb, &skel)){
-      eprint(adb, "tcadbsetskel");
+      eprint(adb, __LINE__, "tcadbsetskel");
       err = true;
       skel.del(skel.opq);
     }
     name++;
   }
   if(!tcadbopen(adb, name)){
-    eprint(adb, "tcadbopen");
+    eprint(adb, __LINE__, "tcadbopen");
     err = true;
   }
   int rnum = tcadbrnum(adb);
@@ -493,7 +493,7 @@ static int procremove(const char *name){
     char kbuf[RECBUFSIZ];
     int ksiz = sprintf(kbuf, "%08d", i);
     if(!tcadbout(adb, kbuf, ksiz)){
-      eprint(adb, "tcadbout");
+      eprint(adb, __LINE__, "tcadbout");
       err = true;
       break;
     }
@@ -506,7 +506,7 @@ static int procremove(const char *name){
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
   sysprint();
   if(!tcadbclose(adb)){
-    eprint(adb, "tcadbclose");
+    eprint(adb, __LINE__, "tcadbclose");
     err = true;
   }
   tcadbdel(adb);
@@ -528,21 +528,21 @@ static int procrcat(const char *name, int rnum){
   if(*name == '@'){
     setskel(&skel);
     if(!tcadbsetskel(adb, &skel)){
-      eprint(adb, "tcadbsetskel");
+      eprint(adb, __LINE__, "tcadbsetskel");
       err = true;
       skel.del(skel.opq);
     }
     name++;
   }
   if(!tcadbopen(adb, name)){
-    eprint(adb, "tcadbopen");
+    eprint(adb, __LINE__, "tcadbopen");
     err = true;
   }
   for(int i = 1; i <= rnum; i++){
     char kbuf[RECBUFSIZ];
     int ksiz = sprintf(kbuf, "%d", myrand(pnum) + 1);
     if(!tcadbputcat(adb, kbuf, ksiz, kbuf, ksiz)){
-      eprint(adb, "tcadbputcat");
+      eprint(adb, __LINE__, "tcadbputcat");
       err = true;
       break;
     }
@@ -555,7 +555,7 @@ static int procrcat(const char *name, int rnum){
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
   sysprint();
   if(!tcadbclose(adb)){
-    eprint(adb, "tcadbclose");
+    eprint(adb, __LINE__, "tcadbclose");
     err = true;
   }
   tcadbdel(adb);
@@ -575,14 +575,14 @@ static int procmisc(const char *name, int rnum){
   if(*name == '@'){
     setskel(&skel);
     if(!tcadbsetskel(adb, &skel)){
-      eprint(adb, "tcadbsetskel");
+      eprint(adb, __LINE__, "tcadbsetskel");
       err = true;
       skel.del(skel.opq);
     }
     name++;
   }
   if(!tcadbopen(adb, name)){
-    eprint(adb, "tcadbopen");
+    eprint(adb, __LINE__, "tcadbopen");
     err = true;
   }
   iprintf("writing:\n");
@@ -590,7 +590,7 @@ static int procmisc(const char *name, int rnum){
     char buf[RECBUFSIZ];
     int len = sprintf(buf, "%08d", i);
     if(!tcadbputkeep(adb, buf, len, buf, len)){
-      eprint(adb, "tcadbputkeep");
+      eprint(adb, __LINE__, "tcadbputkeep");
       err = true;
       break;
     }
@@ -606,11 +606,11 @@ static int procmisc(const char *name, int rnum){
     int vsiz;
     char *vbuf = tcadbget(adb, kbuf, ksiz, &vsiz);
     if(!vbuf){
-      eprint(adb, "tcadbget");
+      eprint(adb, __LINE__, "tcadbget");
       err = true;
       break;
     } else if(vsiz != ksiz || memcmp(vbuf, kbuf, vsiz)){
-      eprint(adb, "(validation)");
+      eprint(adb, __LINE__, "(validation)");
       err = true;
       tcfree(vbuf);
       break;
@@ -622,7 +622,7 @@ static int procmisc(const char *name, int rnum){
     }
   }
   if(tcadbrnum(adb) != rnum){
-    eprint(adb, "(validation)");
+    eprint(adb, __LINE__, "(validation)");
     err = true;
   }
   iprintf("random writing:\n");
@@ -633,19 +633,19 @@ static int procmisc(const char *name, int rnum){
     int vsiz = myrand(RECBUFSIZ);
     memset(vbuf, '*', vsiz);
     if(!tcadbput(adb, kbuf, ksiz, vbuf, vsiz)){
-      eprint(adb, "tcadbput");
+      eprint(adb, __LINE__, "tcadbput");
       err = true;
       break;
     }
     int rsiz;
     char *rbuf = tcadbget(adb, kbuf, ksiz, &rsiz);
     if(!rbuf){
-      eprint(adb, "tcadbget");
+      eprint(adb, __LINE__, "tcadbget");
       err = true;
       break;
     }
     if(rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-      eprint(adb, "(validation)");
+      eprint(adb, __LINE__, "(validation)");
       err = true;
       tcfree(rbuf);
       break;
@@ -670,7 +670,7 @@ static int procmisc(const char *name, int rnum){
     const char *vbuf = words[i+1];
     int vsiz = strlen(vbuf);
     if(!tcadbputkeep(adb, kbuf, ksiz, vbuf, vsiz)){
-      eprint(adb, "tcadbputkeep");
+      eprint(adb, __LINE__, "tcadbputkeep");
       err = true;
       break;
     }
@@ -695,7 +695,7 @@ static int procmisc(const char *name, int rnum){
     int vsiz = i % RECBUFSIZ;
     memset(vbuf, '*', vsiz);
     if(!tcadbputkeep(adb, kbuf, ksiz, vbuf, vsiz)){
-      eprint(adb, "tcadbputkeep");
+      eprint(adb, __LINE__, "tcadbputkeep");
       err = true;
       break;
     }
@@ -705,7 +705,7 @@ static int procmisc(const char *name, int rnum){
         tbuf[j] = myrand(0x100);
       }
       if(!tcadbput(adb, kbuf, ksiz, tbuf, PATH_MAX)){
-        eprint(adb, "tcadbput");
+        eprint(adb, __LINE__, "tcadbput");
         err = true;
         break;
       }
@@ -721,7 +721,7 @@ static int procmisc(const char *name, int rnum){
       char kbuf[RECBUFSIZ];
       int ksiz = sprintf(kbuf, "[%d]", i);
       if(!tcadbout(adb, kbuf, ksiz)){
-        eprint(adb, "tcadbout");
+        eprint(adb, __LINE__, "tcadbout");
         err = true;
         break;
       }
@@ -734,7 +734,7 @@ static int procmisc(const char *name, int rnum){
   }
   iprintf("checking iterator:\n");
   if(!tcadbiterinit(adb)){
-    eprint(adb, "tcadbiterinit");
+    eprint(adb, __LINE__, "tcadbiterinit");
     err = true;
   }
   char *kbuf;
@@ -744,7 +744,7 @@ static int procmisc(const char *name, int rnum){
     int vsiz;
     char *vbuf = tcadbget(adb, kbuf, ksiz, &vsiz);
     if(!vbuf){
-      eprint(adb, "tcadbget");
+      eprint(adb, __LINE__, "tcadbget");
       err = true;
       tcfree(kbuf);
       break;
@@ -758,7 +758,7 @@ static int procmisc(const char *name, int rnum){
   }
   if(rnum > 250) iprintf(" (%08d)\n", inum);
   if(inum != tcadbrnum(adb)){
-    eprint(adb, "(validation)");
+    eprint(adb, __LINE__, "(validation)");
     err = true;
   }
   iprintf("checking versatile functions:\n");
@@ -781,7 +781,7 @@ static int procmisc(const char *name, int rnum){
       if(rv){
         tclistdel(rv);
       } else {
-        eprint(adb, "tcadbmisc");
+        eprint(adb, __LINE__, "tcadbmisc");
         err = true;
         break;
       }
@@ -802,7 +802,7 @@ static int procmisc(const char *name, int rnum){
     if(rv){
       tclistdel(rv);
     } else {
-      eprint(adb, "tcadbmisc");
+      eprint(adb, __LINE__, "tcadbmisc");
       err = true;
     }
   }
@@ -811,7 +811,7 @@ static int procmisc(const char *name, int rnum){
     if(rv){
       tclistdel(rv);
     } else {
-      eprint(adb, "tcadbmisc");
+      eprint(adb, __LINE__, "tcadbmisc");
       err = true;
     }
   }
@@ -820,21 +820,21 @@ static int procmisc(const char *name, int rnum){
     if(rv){
       tclistdel(rv);
     } else {
-      eprint(adb, "tcadbmisc");
+      eprint(adb, __LINE__, "tcadbmisc");
       err = true;
     }
   }
   tclistdel(args);
   if(myrand(10) == 0 && !tcadbsync(adb)){
-    eprint(adb, "tcadbsync");
+    eprint(adb, __LINE__, "tcadbsync");
     err = true;
   }
   if(myrand(10) == 0 && !tcadboptimize(adb, NULL)){
-    eprint(adb, "tcadboptimize");
+    eprint(adb, __LINE__, "tcadboptimize");
     err = true;
   }
   if(!tcadbvanish(adb)){
-    eprint(adb, "tcadbvanish");
+    eprint(adb, __LINE__, "tcadbvanish");
     err = true;
   }
   int omode = tcadbomode(adb);
@@ -849,7 +849,7 @@ static int procmisc(const char *name, int rnum){
       switch(myrand(4)){
       case 0:
         if(!tcadbput(adb, kbuf, ksiz, vbuf, vsiz)){
-          eprint(adb, "tcadbput");
+          eprint(adb, __LINE__, "tcadbput");
           err = true;
         }
         tcmapput(map, kbuf, ksiz, vbuf, vsiz);
@@ -874,7 +874,7 @@ static int procmisc(const char *name, int rnum){
     }
     iprintf("checking transaction commit:\n");
     if(!tcadbtranbegin(adb)){
-      eprint(adb, "tcadbtranbegin");
+      eprint(adb, __LINE__, "tcadbtranbegin");
       err = true;
     }
     for(int i = 1; i <= rnum; i++){
@@ -885,7 +885,7 @@ static int procmisc(const char *name, int rnum){
       switch(myrand(6)){
       case 0:
         if(!tcadbput(adb, kbuf, ksiz, vbuf, vsiz)){
-          eprint(adb, "tcadbput");
+          eprint(adb, __LINE__, "tcadbput");
           err = true;
         }
         tcmapput(map, kbuf, ksiz, vbuf, vsiz);
@@ -917,14 +917,14 @@ static int procmisc(const char *name, int rnum){
       }
     }
     if(!tcadbtrancommit(adb)){
-      eprint(adb, "tcadbtrancommit");
+      eprint(adb, __LINE__, "tcadbtrancommit");
       err = true;
     }
     iprintf("checking transaction abort:\n");
     uint64_t ornum = tcadbrnum(adb);
     uint64_t osize = tcadbsize(adb);
     if(!tcadbtranbegin(adb)){
-      eprint(adb, "tcadbtranbegin");
+      eprint(adb, __LINE__, "tcadbtranbegin");
       err = true;
     }
     for(int i = 1; i <= rnum; i++){
@@ -935,7 +935,7 @@ static int procmisc(const char *name, int rnum){
       switch(myrand(6)){
       case 0:
         if(!tcadbput(adb, kbuf, ksiz, vbuf, vsiz)){
-          eprint(adb, "tcadbput");
+          eprint(adb, __LINE__, "tcadbput");
           err = true;
         }
         break;
@@ -961,12 +961,12 @@ static int procmisc(const char *name, int rnum){
       }
     }
     if(!tcadbtranabort(adb)){
-      eprint(adb, "tcadbtranabort");
+      eprint(adb, __LINE__, "tcadbtranabort");
       err = true;
     }
     iprintf("checking consistency:\n");
     if(tcadbrnum(adb) != ornum || tcadbsize(adb) != osize || tcadbrnum(adb) != tcmaprnum(map)){
-      eprint(adb, "(validation)");
+      eprint(adb, __LINE__, "(validation)");
       err = true;
     }
     inum = 0;
@@ -979,7 +979,7 @@ static int procmisc(const char *name, int rnum){
       int rsiz;
       char *rbuf = tcadbget(adb, tkbuf, tksiz, &rsiz);
       if(!rbuf || rsiz != tvsiz || memcmp(rbuf, tvbuf, rsiz)){
-        eprint(adb, "(validation)");
+        eprint(adb, __LINE__, "(validation)");
         err = true;
         tcfree(rbuf);
         break;
@@ -993,7 +993,7 @@ static int procmisc(const char *name, int rnum){
     if(rnum > 250) iprintf(" (%08d)\n", inum);
     inum = 0;
     if(!tcadbiterinit(adb)){
-      eprint(adb, "tcadbiterinit");
+      eprint(adb, __LINE__, "tcadbiterinit");
       err = true;
     }
     for(int i = 1; (kbuf = tcadbiternext(adb, &ksiz)) != NULL; i++, inum++){
@@ -1002,7 +1002,7 @@ static int procmisc(const char *name, int rnum){
       int rsiz;
       const char *rbuf = tcmapget(map, kbuf, ksiz, &rsiz);
       if(!rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-        eprint(adb, "(validation)");
+        eprint(adb, __LINE__, "(validation)");
         err = true;
         tcfree(vbuf);
         tcfree(kbuf);
@@ -1018,19 +1018,19 @@ static int procmisc(const char *name, int rnum){
     if(rnum > 250) iprintf(" (%08d)\n", inum);
     tcmapdel(map);
     if(!tcadbvanish(adb)){
-      eprint(adb, "tcadbvanish");
+      eprint(adb, __LINE__, "tcadbvanish");
       err = true;
     }
   }
   if(!tcadbput2(adb, "mikio", "hirabayashi")){
-    eprint(adb, "tcadbput2");
+    eprint(adb, __LINE__, "tcadbput2");
     err = true;
   }
   for(int i = 0; i < 10; i++){
     char buf[RECBUFSIZ];
     int size = sprintf(buf, "%d", myrand(rnum));
     if(!tcadbput(adb, buf, size, buf, size)){
-      eprint(adb, "tcadbput");
+      eprint(adb, __LINE__, "tcadbput");
       err = true;
     }
   }
@@ -1039,19 +1039,19 @@ static int procmisc(const char *name, int rnum){
     memset(vbuf, '@', i - 1);
     vbuf[i-1] = '\0';
     if(!tcadbput2(adb, "mikio", vbuf)){
-      eprint(adb, "tcadbput2");
+      eprint(adb, __LINE__, "tcadbput2");
       err = true;
     }
   }
   if(!tcadbforeach(adb, iterfunc, NULL)){
-    eprint(adb, "tcadbforeach");
+    eprint(adb, __LINE__, "tcadbforeach");
     err = true;
   }
   iprintf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
   sysprint();
   if(!tcadbclose(adb)){
-    eprint(adb, "tcadbclose");
+    eprint(adb, __LINE__, "tcadbclose");
     err = true;
   }
   tcadbdel(adb);
@@ -1071,14 +1071,14 @@ static int procwicked(const char *name, int rnum){
   if(*name == '@'){
     setskel(&skel);
     if(!tcadbsetskel(adb, &skel)){
-      eprint(adb, "tcadbsetskel");
+      eprint(adb, __LINE__, "tcadbsetskel");
       err = true;
       skel.del(skel.opq);
     }
     name++;
   }
   if(!tcadbopen(adb, name)){
-    eprint(adb, "tcadbopen");
+    eprint(adb, __LINE__, "tcadbopen");
     err = true;
   }
   TCMAP *map = tcmapnew2(rnum / 5);
@@ -1094,7 +1094,7 @@ static int procwicked(const char *name, int rnum){
     case 0:
       iputchar('0');
       if(!tcadbput(adb, kbuf, ksiz, vbuf, vsiz)){
-        eprint(adb, "tcadbput");
+        eprint(adb, __LINE__, "tcadbput");
         err = true;
       }
       tcmapput(map, kbuf, ksiz, vbuf, vsiz);
@@ -1102,7 +1102,7 @@ static int procwicked(const char *name, int rnum){
     case 1:
       iputchar('1');
       if(!tcadbput2(adb, kbuf, vbuf)){
-        eprint(adb, "tcadbput2");
+        eprint(adb, __LINE__, "tcadbput2");
         err = true;
       }
       tcmapput2(map, kbuf, vbuf);
@@ -1120,7 +1120,7 @@ static int procwicked(const char *name, int rnum){
     case 4:
       iputchar('4');
       if(!tcadbputcat(adb, kbuf, ksiz, vbuf, vsiz)){
-        eprint(adb, "tcadbputcat");
+        eprint(adb, __LINE__, "tcadbputcat");
         err = true;
       }
       tcmapputcat(map, kbuf, ksiz, vbuf, vsiz);
@@ -1128,7 +1128,7 @@ static int procwicked(const char *name, int rnum){
     case 5:
       iputchar('5');
       if(!tcadbputcat2(adb, kbuf, vbuf)){
-        eprint(adb, "tcadbputcat2");
+        eprint(adb, __LINE__, "tcadbputcat2");
         err = true;
       }
       tcmapputcat2(map, kbuf, vbuf);
@@ -1167,7 +1167,7 @@ static int procwicked(const char *name, int rnum){
       iputchar('E');
       if(myrand(rnum / 50) == 0){
         if(!tcadbiterinit(adb)){
-          eprint(adb, "tcadbiterinit");
+          eprint(adb, __LINE__, "tcadbiterinit");
           err = true;
         }
       }
@@ -1187,7 +1187,7 @@ static int procwicked(const char *name, int rnum){
   if(rnum % 50 > 0) iprintf(" (%08d)\n", rnum);
   tcadbsync(adb);
   if(tcadbrnum(adb) != tcmaprnum(map)){
-    eprint(adb, "(validation)");
+    eprint(adb, __LINE__, "(validation)");
     err = true;
   }
   for(int i = 1; i <= rnum && !err; i++){
@@ -1200,16 +1200,16 @@ static int procwicked(const char *name, int rnum){
     if(vbuf){
       iputchar('.');
       if(!rbuf){
-        eprint(adb, "tcadbget");
+        eprint(adb, __LINE__, "tcadbget");
         err = true;
       } else if(rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-        eprint(adb, "(validation)");
+        eprint(adb, __LINE__, "(validation)");
         err = true;
       }
     } else {
       iputchar('*');
       if(rbuf){
-        eprint(adb, "(validation)");
+        eprint(adb, __LINE__, "(validation)");
         err = true;
       }
     }
@@ -1227,15 +1227,15 @@ static int procwicked(const char *name, int rnum){
     int rsiz;
     char *rbuf = tcadbget(adb, kbuf, ksiz, &rsiz);
     if(!rbuf){
-      eprint(adb, "tcadbget");
+      eprint(adb, __LINE__, "tcadbget");
       err = true;
     } else if(rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-      eprint(adb, "(validation)");
+      eprint(adb, __LINE__, "(validation)");
       err = true;
     }
     tcfree(rbuf);
     if(!tcadbout(adb, kbuf, ksiz)){
-      eprint(adb, "tcadbout");
+      eprint(adb, __LINE__, "tcadbout");
       err = true;
     }
     if(i % 50 == 0) iprintf(" (%08d)\n", i);
@@ -1243,7 +1243,7 @@ static int procwicked(const char *name, int rnum){
   int mrnum = tcmaprnum(map);
   if(mrnum % 50 > 0) iprintf(" (%08d)\n", mrnum);
   if(tcadbrnum(adb) != 0){
-    eprint(adb, "(validation)");
+    eprint(adb, __LINE__, "(validation)");
     err = true;
   }
   iprintf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
@@ -1251,7 +1251,7 @@ static int procwicked(const char *name, int rnum){
   sysprint();
   tcmapdel(map);
   if(!tcadbclose(adb)){
-    eprint(adb, "tcadbclose");
+    eprint(adb, __LINE__, "tcadbclose");
     err = true;
   }
   tcadbdel(adb);
@@ -1276,26 +1276,26 @@ static int proccompare(const char *name, int tnum, int rnum){
   if(myrand(2) == 1) hopts |= HDBTLARGE;
   if(myrand(2) == 1) hopts |= HDBTBZIP;
   if(!tchdbtune(hdb, rnum / 2, -1, -1, hopts)){
-    eprint(NULL, "tchdbtune");
+    eprint(NULL, __LINE__, "tchdbtune");
     err = true;
   }
   if(!tchdbsetcache(hdb, rnum / 10)){
-    eprint(NULL, "tchdbsetcache");
+    eprint(NULL, __LINE__, "tchdbsetcache");
     err = true;
   }
   if(!tchdbsetxmsiz(hdb, 4096)){
-    eprint(NULL, "tchdbsetxmsiz");
+    eprint(NULL, __LINE__, "tchdbsetxmsiz");
     err = true;
   }
   if(!tchdbsetdfunit(hdb, 8)){
-    eprint(NULL, "tchdbsetdfunit");
+    eprint(NULL, __LINE__, "tchdbsetdfunit");
     err = true;
   }
   sprintf(path, "%s.tch", name);
   int homode = HDBOWRITER | HDBOCREAT | HDBOTRUNC;
   if(myrand(100) == 1) homode |= HDBOTSYNC;
   if(!tchdbopen(hdb, path, homode)){
-    eprint(NULL, "tchdbopen");
+    eprint(NULL, __LINE__, "tchdbopen");
     err = true;
   }
   TCBDB *bdb = tcbdbnew();
@@ -1304,22 +1304,22 @@ static int proccompare(const char *name, int tnum, int rnum){
   if(myrand(2) == 1) bopts |= BDBTLARGE;
   if(myrand(2) == 1) bopts |= BDBTBZIP;
   if(!tcbdbtune(bdb, 5, 5, rnum / 10, -1, -1, bopts)){
-    eprint(NULL, "tcbdbtune");
+    eprint(NULL, __LINE__, "tcbdbtune");
     err = true;
   }
   if(!tcbdbsetxmsiz(bdb, 4096)){
-    eprint(NULL, "tcbdbsetxmsiz");
+    eprint(NULL, __LINE__, "tcbdbsetxmsiz");
     err = true;
   }
   if(!tcbdbsetdfunit(bdb, 8)){
-    eprint(NULL, "tcbdbsetdfunit");
+    eprint(NULL, __LINE__, "tcbdbsetdfunit");
     err = true;
   }
   sprintf(path, "%s.tcb", name);
   int bomode = BDBOWRITER | BDBOCREAT | BDBOTRUNC;
   if(myrand(100) == 1) bomode |= BDBOTSYNC;
   if(!tcbdbopen(bdb, path, bomode)){
-    eprint(NULL, "tcbdbopen");
+    eprint(NULL, __LINE__, "tcbdbopen");
     err = true;
   }
   BDBCUR *cur = tcbdbcurnew(bdb);
@@ -1339,18 +1339,18 @@ static int proccompare(const char *name, int tnum, int rnum){
     break;
   }
   if(!tcadbopen(adb, path)){
-    eprint(NULL, "tcbdbopen");
+    eprint(NULL, __LINE__, "tcbdbopen");
     err = true;
   }
   for(int t = 1; !err && t <= tnum; t++){
     bool commit = myrand(2) == 0;
     iprintf("transaction %d (%s):\n", t, commit ? "commit" : "abort");
     if(!tchdbtranbegin(hdb)){
-      eprint(NULL, "tchdbtranbegin");
+      eprint(NULL, __LINE__, "tchdbtranbegin");
       err = true;
     }
     if(!tcbdbtranbegin(bdb)){
-      eprint(NULL, "tcbdbtranbegin");
+      eprint(NULL, __LINE__, "tcbdbtranbegin");
       err = true;
     }
     if(myrand(tnum) == 0){
@@ -1359,24 +1359,24 @@ static int proccompare(const char *name, int tnum, int rnum){
         char kbuf[RECBUFSIZ];
         int ksiz = sprintf(kbuf, "%d", all ? i : myrand(i) + 1);
         if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
-          eprint(NULL, "tchdbout");
+          eprint(NULL, __LINE__, "tchdbout");
           err = true;
         }
         if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
-          eprint(NULL, "tcbdbout");
+          eprint(NULL, __LINE__, "tcbdbout");
           err = true;
         }
         tcadbout(adb, kbuf, ksiz);
         if(tchdbout(hdb, kbuf, ksiz) || tchdbecode(hdb) != TCENOREC){
-          eprint(NULL, "(validation)");
+          eprint(NULL, __LINE__, "(validation)");
           err = true;
         }
         if(tcbdbout(bdb, kbuf, ksiz) || tcbdbecode(bdb) != TCENOREC){
-          eprint(NULL, "(validation)");
+          eprint(NULL, __LINE__, "(validation)");
           err = true;
         }
         if(tcadbout(adb, kbuf, ksiz)){
-          eprint(NULL, "(validation)");
+          eprint(NULL, __LINE__, "(validation)");
           err = true;
         }
         if(commit){
@@ -1399,15 +1399,15 @@ static int proccompare(const char *name, int tnum, int rnum){
         switch(act){
         case 0:
           if(!tchdbput(hdb, kbuf, ksiz, vbuf, vsiz)){
-            eprint(NULL, "tchdbput");
+            eprint(NULL, __LINE__, "tchdbput");
             err = true;
           }
           if(!tcbdbput(bdb, kbuf, ksiz, vbuf, vsiz)){
-            eprint(NULL, "tcbdbput");
+            eprint(NULL, __LINE__, "tcbdbput");
             err = true;
           }
           if(!tcadbput(adb, kbuf, ksiz, vbuf, vsiz)){
-            eprint(NULL, "tcadbput");
+            eprint(NULL, __LINE__, "tcadbput");
             err = true;
           }
           if(commit){
@@ -1417,11 +1417,11 @@ static int proccompare(const char *name, int tnum, int rnum){
           break;
         case 1:
           if(!tchdbputkeep(hdb, kbuf, ksiz, vbuf, vsiz) && tchdbecode(hdb) != TCEKEEP){
-            eprint(NULL, "tchdbputkeep");
+            eprint(NULL, __LINE__, "tchdbputkeep");
             err = true;
           }
           if(!tcbdbputkeep(bdb, kbuf, ksiz, vbuf, vsiz) && tcbdbecode(bdb) != TCEKEEP){
-            eprint(NULL, "tcbdbputkeep");
+            eprint(NULL, __LINE__, "tcbdbputkeep");
             err = true;
           }
           tcadbputkeep(adb, kbuf, ksiz, vbuf, vsiz);
@@ -1432,15 +1432,15 @@ static int proccompare(const char *name, int tnum, int rnum){
           break;
         case 2:
           if(!tchdbputcat(hdb, kbuf, ksiz, vbuf, vsiz)){
-            eprint(NULL, "tchdbputcat");
+            eprint(NULL, __LINE__, "tchdbputcat");
             err = true;
           }
           if(!tcbdbputcat(bdb, kbuf, ksiz, vbuf, vsiz)){
-            eprint(NULL, "tcbdbputcat");
+            eprint(NULL, __LINE__, "tcbdbputcat");
             err = true;
           }
           if(!tcadbputcat(adb, kbuf, ksiz, vbuf, vsiz)){
-            eprint(NULL, "tcadbputcat");
+            eprint(NULL, __LINE__, "tcadbputcat");
             err = true;
           }
           if(commit){
@@ -1450,11 +1450,11 @@ static int proccompare(const char *name, int tnum, int rnum){
           break;
         case 3:
           if(tchdbaddint(hdb, kbuf, ksiz, 1) == INT_MIN && tchdbecode(hdb) != TCEKEEP){
-            eprint(NULL, "tchdbaddint");
+            eprint(NULL, __LINE__, "tchdbaddint");
             err = true;
           }
           if(tcbdbaddint(bdb, kbuf, ksiz, 1) == INT_MIN && tcbdbecode(bdb) != TCEKEEP){
-            eprint(NULL, "tchdbaddint");
+            eprint(NULL, __LINE__, "tchdbaddint");
             err = true;
           }
           tcadbaddint(adb, kbuf, ksiz, 1);
@@ -1465,11 +1465,11 @@ static int proccompare(const char *name, int tnum, int rnum){
           break;
         case 4:
           if(isnan(tchdbadddouble(hdb, kbuf, ksiz, 1.0)) && tchdbecode(hdb) != TCEKEEP){
-            eprint(NULL, "tchdbadddouble");
+            eprint(NULL, __LINE__, "tchdbadddouble");
             err = true;
           }
           if(isnan(tcbdbadddouble(bdb, kbuf, ksiz, 1.0)) && tcbdbecode(bdb) != TCEKEEP){
-            eprint(NULL, "tchdbadddouble");
+            eprint(NULL, __LINE__, "tchdbadddouble");
             err = true;
           }
           tcadbadddouble(adb, kbuf, ksiz, 1.0);
@@ -1482,12 +1482,12 @@ static int proccompare(const char *name, int tnum, int rnum){
           if(myrand(2) == 0){
             if(!tchdbputproc(hdb, kbuf, ksiz, vbuf, vsiz, pdprocfunccmp, &i) &&
                tchdbecode(hdb) != TCEKEEP){
-              eprint(NULL, "tchdbputproc");
+              eprint(NULL, __LINE__, "tchdbputproc");
               err = true;
             }
             if(!tcbdbputproc(bdb, kbuf, ksiz, vbuf, vsiz, pdprocfunccmp, &i) &&
                tcbdbecode(bdb) != TCEKEEP){
-              eprint(NULL, "tcbdbputproc");
+              eprint(NULL, __LINE__, "tcbdbputproc");
               err = true;
             }
             tcadbputproc(adb, kbuf, ksiz, vbuf, vsiz, pdprocfunccmp, &i);
@@ -1498,12 +1498,12 @@ static int proccompare(const char *name, int tnum, int rnum){
           } else {
             if(!tchdbputproc(hdb, kbuf, ksiz, NULL, 0, pdprocfunccmp, &i) &&
                tchdbecode(hdb) != TCEKEEP && tchdbecode(hdb) != TCENOREC){
-              eprint(NULL, "tchdbputproc");
+              eprint(NULL, __LINE__, "tchdbputproc");
               err = true;
             }
             if(!tcbdbputproc(bdb, kbuf, ksiz, NULL, 0, pdprocfunccmp, &i) &&
                tcbdbecode(bdb) != TCEKEEP && tchdbecode(hdb) != TCENOREC){
-              eprint(NULL, "tcbdbputproc");
+              eprint(NULL, __LINE__, "tcbdbputproc");
               err = true;
             }
             tcadbputproc(adb, kbuf, ksiz, NULL, 0, pdprocfunccmp, &i);
@@ -1516,18 +1516,18 @@ static int proccompare(const char *name, int tnum, int rnum){
         default:
           if(myrand(20) == 0){
             if(!tcbdbcurjump(cur, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
-              eprint(NULL, "tcbdbcurjump");
+              eprint(NULL, __LINE__, "tcbdbcurjump");
               err = true;
             }
             char *cbuf;
             int csiz;
             while((cbuf = tcbdbcurkey(cur, &csiz)) != NULL){
               if(!tchdbout(hdb, cbuf, csiz)){
-                eprint(NULL, "tchdbout");
+                eprint(NULL, __LINE__, "tchdbout");
                 err = true;
               }
               if(!tcbdbout(bdb, cbuf, csiz)){
-                eprint(NULL, "tcbdbout");
+                eprint(NULL, __LINE__, "tcbdbout");
                 err = true;
               }
               tcadbout(adb, cbuf, csiz);
@@ -1540,13 +1540,13 @@ static int proccompare(const char *name, int tnum, int rnum){
               switch(myrand(3)){
               case 1:
                 if(!tcbdbcurprev(cur) && tcbdbecode(bdb) != TCENOREC){
-                  eprint(NULL, "tcbdbcurprev");
+                  eprint(NULL, __LINE__, "tcbdbcurprev");
                   err = true;
                 }
                 break;
               case 2:
                 if(!tcbdbcurnext(cur) && tcbdbecode(bdb) != TCENOREC){
-                  eprint(NULL, "tcbdbcurprev");
+                  eprint(NULL, __LINE__, "tcbdbcurprev");
                   err = true;
                 }
                 break;
@@ -1554,11 +1554,11 @@ static int proccompare(const char *name, int tnum, int rnum){
             }
           } else {
             if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
-              eprint(NULL, "tchdbout");
+              eprint(NULL, __LINE__, "tchdbout");
               err = true;
             }
             if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
-              eprint(NULL, "tcbdbout");
+              eprint(NULL, __LINE__, "tcbdbout");
               err = true;
             }
             tcadbout(adb, kbuf, ksiz);
@@ -1577,40 +1577,40 @@ static int proccompare(const char *name, int tnum, int rnum){
     }
     if(commit){
       if(!tchdbtrancommit(hdb)){
-        eprint(NULL, "tchdbcommit");
+        eprint(NULL, __LINE__, "tchdbcommit");
         err = true;
       }
       if(!tcbdbtrancommit(bdb)){
-        eprint(NULL, "tcbdbcommit");
+        eprint(NULL, __LINE__, "tcbdbcommit");
         err = true;
       }
     } else {
       if(myrand(5) == 0){
         if(!tchdbclose(hdb)){
-          eprint(NULL, "tchdbclose");
+          eprint(NULL, __LINE__, "tchdbclose");
           err = true;
         }
         sprintf(path, "%s.tch", name);
         if(!tchdbopen(hdb, path, HDBOWRITER)){
-          eprint(NULL, "tchdbopen");
+          eprint(NULL, __LINE__, "tchdbopen");
           err = true;
         }
         if(!tcbdbclose(bdb)){
-          eprint(NULL, "tcbdbclose");
+          eprint(NULL, __LINE__, "tcbdbclose");
           err = true;
         }
         sprintf(path, "%s.tcb", name);
         if(!tcbdbopen(bdb, path, BDBOWRITER)){
-          eprint(NULL, "tcbdbopen");
+          eprint(NULL, __LINE__, "tcbdbopen");
           err = true;
         }
       } else {
         if(!tchdbtranabort(hdb)){
-          eprint(NULL, "tchdbtranabort");
+          eprint(NULL, __LINE__, "tchdbtranabort");
           err = true;
         }
         if(!tcbdbtranabort(bdb)){
-          eprint(NULL, "tcbdbtranabort");
+          eprint(NULL, __LINE__, "tcbdbtranabort");
           err = true;
         }
       }
@@ -1628,21 +1628,21 @@ static int proccompare(const char *name, int tnum, int rnum){
       if(rbuf){
         tcfree(rbuf);
       } else {
-        eprint(NULL, "tcndbget");
+        eprint(NULL, __LINE__, "tcndbget");
         err = true;
       }
       rbuf = tchdbget(hdb, kbuf, ksiz, &rsiz);
       if(rbuf){
         tcfree(rbuf);
       } else {
-        eprint(NULL, "tchdbget");
+        eprint(NULL, __LINE__, "tchdbget");
         err = true;
       }
       rbuf = tcbdbget(bdb, kbuf, ksiz, &rsiz);
       if(rbuf){
         tcfree(rbuf);
       } else {
-        eprint(NULL, "tcbdbget");
+        eprint(NULL, __LINE__, "tcbdbget");
         err = true;
       }
       tcfree(vbuf);
@@ -1650,19 +1650,19 @@ static int proccompare(const char *name, int tnum, int rnum){
       int rsiz;
       char *rbuf = tcndbget(ndb, kbuf, ksiz, &rsiz);
       if(rbuf){
-        eprint(NULL, "tcndbget");
+        eprint(NULL, __LINE__, "tcndbget");
         tcfree(rbuf);
         err = true;
       }
       rbuf = tchdbget(hdb, kbuf, ksiz, &rsiz);
       if(rbuf){
-        eprint(NULL, "tchdbget");
+        eprint(NULL, __LINE__, "tchdbget");
         err = true;
         tcfree(rbuf);
       }
       rbuf = tcbdbget(bdb, kbuf, ksiz, &rsiz);
       if(rbuf){
-        eprint(NULL, "tcbdbget");
+        eprint(NULL, __LINE__, "tcbdbget");
         err = true;
         tcfree(rbuf);
       }
@@ -1674,7 +1674,7 @@ static int proccompare(const char *name, int tnum, int rnum){
   }
   iprintf("checking consistency on memory:\n");
   if(tchdbrnum(hdb) != tcbdbrnum(bdb)){
-    eprint(NULL, "(validation)");
+    eprint(NULL, __LINE__, "(validation)");
     err = true;
   }
   int inum = 0;
@@ -1687,19 +1687,19 @@ static int proccompare(const char *name, int tnum, int rnum){
     int rsiz;
     char *rbuf = tcndbget(ndb, kbuf, ksiz, &rsiz);
     if(!vbuf || !rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-      eprint(NULL, "tcndbget");
+      eprint(NULL, __LINE__, "tcndbget");
       err = true;
     }
     tcfree(rbuf);
     rbuf = tchdbget(hdb, kbuf, ksiz, &rsiz);
     if(!rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-      eprint(NULL, "tchdbget");
+      eprint(NULL, __LINE__, "tchdbget");
       err = true;
     }
     tcfree(rbuf);
     rbuf = tcbdbget(bdb, kbuf, ksiz, &rsiz);
     if(!rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-      eprint(NULL, "tcbdbget");
+      eprint(NULL, __LINE__, "tcbdbget");
       err = true;
     }
     tcfree(rbuf);
@@ -1714,7 +1714,7 @@ static int proccompare(const char *name, int tnum, int rnum){
   iprintf("checking consistency of hash:\n");
   inum = 0;
   if(!tchdbiterinit(hdb)){
-    eprint(NULL, "tchdbiterinit");
+    eprint(NULL, __LINE__, "tchdbiterinit");
     err = true;
   }
   for(int i = 1; (kbuf = tchdbiternext(hdb, &ksiz)) != NULL; i++, inum++){
@@ -1723,7 +1723,7 @@ static int proccompare(const char *name, int tnum, int rnum){
     int rsiz;
     char *rbuf = tcmdbget(mdb, kbuf, ksiz, &rsiz);
     if(!vbuf || !rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-      eprint(NULL, "(validation)");
+      eprint(NULL, __LINE__, "(validation)");
       err = true;
     }
     tcfree(rbuf);
@@ -1737,7 +1737,7 @@ static int proccompare(const char *name, int tnum, int rnum){
   if(rnum > 250) iprintf(" (%08d)\n", inum);
   iprintf("checking consistency of tree:\n");
   if(!tcbdbcurfirst(cur) && tcbdbecode(bdb) != TCENOREC){
-    eprint(NULL, "tcbdbcurfirst");
+    eprint(NULL, __LINE__, "tcbdbcurfirst");
     err = true;
   }
   for(int i = 1; (kbuf = tcbdbcurkey(cur, &ksiz)) != NULL; i++, inum++){
@@ -1746,7 +1746,7 @@ static int proccompare(const char *name, int tnum, int rnum){
     int rsiz;
     char *rbuf = tcndbget(ndb, kbuf, ksiz, &rsiz);
     if(!vbuf || !rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-      eprint(NULL, "(validation)");
+      eprint(NULL, __LINE__, "(validation)");
       err = true;
     }
     tcfree(rbuf);
@@ -1760,16 +1760,16 @@ static int proccompare(const char *name, int tnum, int rnum){
   }
   if(rnum > 250) iprintf(" (%08d)\n", inum);
   if(!tcadbclose(adb)){
-    eprint(NULL, "tcadbclose");
+    eprint(NULL, __LINE__, "tcadbclose");
     err = true;
   }
   tcbdbcurdel(cur);
   if(!tcbdbclose(bdb)){
-    eprint(NULL, "tcbdbclose");
+    eprint(NULL, __LINE__, "tcbdbclose");
     err = true;
   }
   if(!tchdbclose(hdb)){
-    eprint(NULL, "tcbdbclose");
+    eprint(NULL, __LINE__, "tcbdbclose");
     err = true;
   }
   tcadbdel(adb);

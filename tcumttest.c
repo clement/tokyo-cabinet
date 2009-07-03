@@ -47,7 +47,7 @@ int main(int argc, char **argv);
 static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
-static void eprint(const char *func);
+static void eprint(int line, const char *func);
 static int myrand(int range);
 static int myrandnd(int range);
 static int runcombo(int argc, char **argv);
@@ -116,8 +116,8 @@ static void iputchar(int c){
 
 
 /* print error message of on-memory database */
-static void eprint(const char *func){
-  fprintf(stderr, "%s: %s: error\n", g_progname, func);
+static void eprint(int line, const char *func){
+  fprintf(stderr, "%s: %d: %s: error\n", g_progname, line, func);
 }
 
 
@@ -239,7 +239,7 @@ static int proccombo(int tnum, int rnum, int bnum, bool tr, bool rnd){
       targs[i].rnd = rnd;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadwrite, targs + i) != 0){
-        eprint("pthread_create");
+        eprint(__LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -248,7 +248,7 @@ static int proccombo(int tnum, int rnum, int bnum, bool tr, bool rnd){
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint("pthread_join");
+        eprint(__LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -270,7 +270,7 @@ static int proccombo(int tnum, int rnum, int bnum, bool tr, bool rnd){
       targs[i].rnd = rnd;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadread, targs + i) != 0){
-        eprint("pthread_create");
+        eprint(__LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -279,7 +279,7 @@ static int proccombo(int tnum, int rnum, int bnum, bool tr, bool rnd){
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint("pthread_join");
+        eprint(__LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -301,7 +301,7 @@ static int proccombo(int tnum, int rnum, int bnum, bool tr, bool rnd){
       targs[i].rnd = rnd;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadremove, targs + i) != 0){
-        eprint("pthread_create");
+        eprint(__LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -310,7 +310,7 @@ static int proccombo(int tnum, int rnum, int bnum, bool tr, bool rnd){
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint("pthread_join");
+        eprint(__LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -359,7 +359,7 @@ static int proctypical(int tnum, int rnum, int bnum, bool tr, bool nc, int rrati
       targs[i].rratio= rratio;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadtypical, targs + i) != 0){
-        eprint("pthread_create");
+        eprint(__LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -368,7 +368,7 @@ static int proctypical(int tnum, int rnum, int bnum, bool tr, bool nc, int rrati
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint("pthread_join");
+        eprint(__LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -531,14 +531,14 @@ static void *threadtypical(void *targ){
           int msiz;
           const char *mbuf = tcmapget(map, buf, len, &msiz);
           if(msiz != vsiz || memcmp(mbuf, vbuf, vsiz)){
-            eprint("(validation)");
+            eprint(__LINE__, "(validation)");
             err = true;
           }
         }
         tcfree(vbuf);
       } else {
         if(map && tcmapget(map, buf, len, &vsiz)){
-          eprint("(validation)");
+          eprint(__LINE__, "(validation)");
           err = true;
         }
       }
@@ -559,12 +559,12 @@ static void *threadtypical(void *targ){
         int msiz;
         const char *mbuf = tcmapget(map, kbuf, ksiz, &msiz);
         if(!mbuf || msiz != vsiz || memcmp(mbuf, vbuf, vsiz)){
-          eprint("(validation)");
+          eprint(__LINE__, "(validation)");
           err = true;
         }
         tcfree(vbuf);
       } else {
-        eprint("(validation)");
+        eprint(__LINE__, "(validation)");
         err = true;
       }
     }

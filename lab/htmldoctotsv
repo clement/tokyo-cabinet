@@ -1,0 +1,73 @@
+#! /usr/bin/perl
+
+#================================================================
+# htmldoctotsv
+# Generate TSV data from HTML documents
+#================================================================
+
+use strict;
+use warnings;
+use Encode;
+
+my $path = '.';
+my $mode_table = 0;
+
+for(my $i = 0; $i < scalar(@ARGV); $i++){
+    my $arg = $ARGV[$i];
+    if($arg =~ /^-/){
+        if($arg eq '-t'){
+            $mode_table = 1;
+        }
+    } else {
+        $path = $arg;
+    }
+}
+
+open(my $lfh, "find $path -type f -iregex '.*\.html?' -print |") || die("could not open");
+my $id = 0;
+while(defined($path = <$lfh>)){
+    chomp($path);
+    open(my $ifh, "<$path") || next;
+    my $name = $path;
+    $name =~ s/.*\///;
+    $name =~ s/\.html?//i;
+    my $encname = "UTF-8";
+    my @lines;
+    while(defined(my $line = <$ifh>)){
+        push(@lines, $line);
+        if($line =~ /<meta.*content-type.*charset=/i){
+            $line =~ s/.*charset=?//i;
+            $line =~ s/[^-_a-zA-Z0-9].*//;
+            chomp($line);
+            $encname = $line if(length($line) > 0);
+        }
+    }
+    my $text = join('', @lines);
+    $text = encode("UTF-8", decode($encname, $text)) if($encname ne "UTF-8");
+    $text =~ s/<[^>]*>/ /g;
+    $text =~ s/&lt;/</g;
+    $text =~ s/&gt;/>/g;
+    $text =~ s/&quot;/"/g;
+    $text =~ s/&nbsp;/ /g;
+    $text =~ s/&amp;/\&/g;
+    $text =~ s/\s+/ /g;
+    $text =~ s/^ *//;
+    $text =~ s/ *$//;
+    next if(length($text) < 1);
+    $id++;
+    if($mode_table){
+        printf("%d\t", $id);
+        printf("path\t%s\t", $path);
+        printf("name\t%s\t", $name);
+        printf("len\t%s\t", length($text));
+        printf("text\t%s\n", $text);
+    } else {
+        printf("%d\t%s\n", $id, $text);
+    }
+    close($ifh);
+}
+close($lfh);
+
+
+
+# END OF FILE

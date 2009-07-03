@@ -1,4 +1,4 @@
-.TH "TOKYOCABINET" 3 "2009-05-04" "Man Page" "Tokyo Cabinet"
+.TH "TOKYOCABINET" 3 "2009-06-21" "Man Page" "Tokyo Cabinet"
 
 .SH NAME
 tokyocabinet \- a modern implementation of DBM
@@ -76,7 +76,7 @@ Table database does not express simple key/value structure but expresses a struc
 .PP
 Table database supports query functions with not only the primary key but also with conditions about arbitrary columns.  Each column condition is composed of the name of a column and a condition expression.  Operators of full matching, forward matching, regular expression matching, and so on are provided for the string type.  Operators of full matching, range matching and so on are provided for the number type.  A query can contain multiple conditions.  The order of the result set can be specified as the ascending or descending order of strings or numbers.
 .PP
-You can create indices for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indices have types for strings or numbers.  The query optimizer uses indices in suitable way according to each query.  Indices are implemented as different files of B+ tree database.
+You can create indices for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indices have types for strings or numbers.  Inverted indices for space separated tokens and character N-gram tokens are also supported.  The query optimizer uses indices in suitable way according to each query.  Indices are implemented as different files of B+ tree database.
 
 .SH PRACTICAL FUNCTIONALITY
 .PP

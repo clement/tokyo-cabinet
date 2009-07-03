@@ -91,6 +91,7 @@ enum {                                   /* enumeration for index types */
   TDBITLEXICAL,                          /* lexical string */
   TDBITDECIMAL,                          /* decimal string */
   TDBITTOKEN,                            /* token inverted index */
+  TDBITQGRAM,                            /* q-gram inverted index */
   TDBITOPT = 9998,                       /* optimize */
   TDBITVOID = 9999,                      /* void */
   TDBITKEEP = 1 << 24                    /* keep existing index */
@@ -104,6 +105,9 @@ typedef struct {                         /* type of structure for a condition */
   bool noidx;                            /* no index flag */
   char *expr;                            /* operand expression */
   int esiz;                              /* size of the operand expression */
+  void *regex;                           /* regular expression object */
+  void *ftsunits;                        /* full-text search units */
+  int ftsnum;                            /* number of full-text search units */
   bool alive;                            /* alive flag */
 } TDBCOND;
 
@@ -135,6 +139,10 @@ enum {                                   /* enumeration for query conditions */
   TDBQCNUMLE,                            /* number is less than or equal to */
   TDBQCNUMBT,                            /* number is between two tokens of */
   TDBQCNUMOREQ,                          /* number is equal to at least one token in */
+  TDBQCFTSPH,                            /* full-text search with the phrase of */
+  TDBQCFTSAND,                           /* full-text search with all tokens in */
+  TDBQCFTSOR,                            /* full-text search with at least one token in */
+  TDBQCFTSEX,                            /* full-text search with the compound expression of */
   TDBQCNEGATE = 1 << 24,                 /* negation flag */
   TDBQCNOIDX = 1 << 25                   /* no index flag */
 };
@@ -637,9 +645,9 @@ uint64_t tctdbfsiz(TCTDB *tdb);
    `name' specifies the name of a column.  If the name of an existing index is specified, the
    index is rebuilt.  An empty string means the primary key.
    `type' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal
-   string, `TDBITTOKEN' for token inverted index.  If it is `TDBITOPT', the index is optimized.
-   If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the
-   index exists, this function merely returns failure.
+   string, `TDBITTOKEN' for token inverted index, `TDBITQGRAM' for q-gram inverted index.  If it
+   is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If
+   `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.
    If successful, the return value is true, else, it is false.
    Note that the setting indices should be set after the database is opened. */
 bool tctdbsetindex(TCTDB *tdb, const char *name, int type);
@@ -676,7 +684,10 @@ void tctdbqrydel(TDBQRY *qry);
    greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the
    expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT'
    for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is
-   equal to at least one token in the expression.  All operations can be flagged by bitwise-or:
+   equal to at least one token in the expression, `TDBQCFTSPH' for full-text search with the
+   phrase of the expression, `TDBQCFTSAND' for full-text search with all tokens in the expression,
+   `TDBQCFTSOR' for full-text search with at least one token in the expression, `TDBQCFTSEX' for
+   full-text search with the compound expression.  All operations can be flagged by bitwise-or:
    `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.
    `expr' specifies an operand exression. */
 void tctdbqryaddcond(TDBQRY *qry, const char *name, int op, const char *expr);

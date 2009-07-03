@@ -880,6 +880,7 @@ static int procmisc(int rnum){
           if(dary[j] != dary[j]) err = true;
         }
       }
+      if(tcstrucsnorm(dary, danum, TCUNLOWER | TCUNNOACC | TCUNSPACE) > danum) err = true;
       list = tclistnew3("hop", "step", "jump", "touchdown", NULL);
       if(tclistnum(list) != 4) err = true;
       tclistprintf(list, "%s:%010d:%7.3f", "game set", 123456789, 12345.6789);
@@ -1269,7 +1270,7 @@ static int procmisc(int rnum){
           if(num != nnum || step != nstep) err = true;
         }
       }
-      char *bitmap = TCBITMAPNEW(100);
+      TCBITMAP *bitmap = TCBITMAPNEW(100);
       for(int j = 0; j < 100; j++){
         if(j % 3 == 0) TCBITMAPON(bitmap, j);
         if(j % 5 == 0) TCBITMAPOFF(bitmap, j);

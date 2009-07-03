@@ -1,4 +1,4 @@
-.TH "TCTDB" 3 "2009-05-04" "Man Page" "Tokyo Cabinet"
+.TH "TCTDB" 3 "2009-06-21" "Man Page" "Tokyo Cabinet"
 
 .SH NAME
 tctdb \- the table database API
@@ -922,7 +922,7 @@ The function `tctdbsetindex' is used in order to set a column index to a table d
 `\fIname\fR' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.
 .RE
 .RS
-`\fItype\fR' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise\-or and the index exists, this function merely returns failure.
+`\fItype\fR' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index, `TDBITQGRAM' for q\-gram inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise\-or and the index exists, this function merely returns failure.
 .RE
 .RS
 If successful, the return value is true, else, it is false.
@@ -980,7 +980,7 @@ The function `tctdbqryaddcond' is used in order to add a narrowing condition to 
 `\fIname\fR' specifies the name of a column.  An empty string means the primary key.
 .RE
 .RS
-`\fIop\fR' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression.  All operations can be flagged by bitwise-or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.
+`\fIop\fR' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression, `TDBQCFTSPH' for full\-text search with the phrase of the expression, `TDBQCFTSAND' for full\-text search with all tokens in the expression, `TDBQCFTSOR' for full\-text search with at least one token in the expression, `TDBQCFTSEX' for full\-text search with the compound expression.  All operations can be flagged by bitwise\-or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.
 .RE
 .RS
 `\fIexpr\fR' specifies an operand exression.

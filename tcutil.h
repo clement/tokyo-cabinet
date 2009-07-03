@@ -2575,6 +2575,12 @@ int tcdayofweek(int year, int mon, int day);
  *************************************************************************************************/
 
 
+enum {                                   /* enumeration for UCS normalization */
+  TCUNLOWER = 1 << 0,                    /* lower case normalization */
+  TCUNNOACC = 1 << 1,                    /* strip accent marks */
+  TCUNSPACE = 1 << 2                     /* white space normalization */
+};
+
 typedef struct {                         /* type of structure for a consistent hashing node */
   uint32_t seq;                          /* sequential number */
   uint32_t hash;                         /* hash value */
@@ -2597,6 +2603,23 @@ bool tcstrisnum(const char *str);
    The return value is the integer.  If the string does not contain numeric expression, 0 is
    returned. */
 int64_t tcatoih(const char *str);
+
+
+/* Skip space characters at head of a string.
+   `str' specifies the string.
+   The return value is the pointer to the first non-space character. */
+const char *tcstrskipspc(const char *str);
+
+
+/* Normalize a UCS-2 array.
+   `ary' specifies the array of UCS-2 code codes.
+   `num' specifies the number of elements of the array.
+   `opts' specifies options by bitwise-or: `TCUNLOWER' specifies that alphabetical characters are
+   normalized into lower cases, `TCUNNOACC' specifies that alphabetical characters with accent
+   marks are normalized without accent marks, `TCUNSPACE' specifies that white space characters
+   are normalized into the ASCII space and they are squeezed into one.
+   The return value is the number of elements of the result array. */
+int tcstrucsnorm(uint16_t *ary, int num, int opts);
 
 
 /* Create a list object by splitting a region by zero code.
@@ -3455,6 +3478,8 @@ typedef struct {                         /* type of structure for a bit stream o
   int size;                              /* size of used region */
 } TCBITSTRM;
 
+typedef unsigned char TCBITMAP;          /* type of a bit map object */
+
 
 /* Create a bitmap object. */
 #define TCBITMAPNEW(TC_num) \
@@ -3563,8 +3588,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.26"
-#define _TC_LIBVER     817
+#define _TC_VERSION    "1.4.27"
+#define _TC_LIBVER     818
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

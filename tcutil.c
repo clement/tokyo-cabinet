@@ -5701,6 +5701,438 @@ int64_t tcatoih(const char *str){
 }
 
 
+/* Skip space characters at head of a string. */
+const char *tcstrskipspc(const char *str){
+  assert(str);
+  while(*str > '\0' && *str <= ' '){
+    str++;
+  }
+  return str;
+}
+
+
+/* Normalize a UCS-2 array. */
+int tcstrucsnorm(uint16_t *ary, int num, int opts){
+  assert(ary && num >= 0);
+  bool lowmode = opts & TCUNLOWER;
+  bool nacmode = opts & TCUNNOACC;
+  bool spcmode = opts & TCUNSPACE;
+  int wi = 0;
+  for(int i = 0; i < num; i++){
+    int c = ary[i];
+    int high = c >> 8;
+    if(high == 0x00){
+      if(c <= 0x0020 || c == 0x007f){
+        // control characters
+        if(spcmode){
+          ary[wi++] = 0x0020;
+          if(wi < 2 || ary[wi-2] == 0x0020) wi--;
+        } else if(c == 0x0009 || c == 0x000a || c == 0x000d){
+          ary[wi++] = c;
+        } else {
+          ary[wi++] = 0x0020;
+        }
+      } else if(c == 0x00a0){
+        // no-break space
+        if(spcmode){
+          ary[wi++] = 0x0020;
+          if(wi < 2 || ary[wi-2] == 0x0020) wi--;
+        } else {
+          ary[wi++] = c;
+        }
+      } else {
+        // otherwise
+        if(lowmode){
+          if(c < 0x007f){
+            if(c >= 0x0041 && c <= 0x005a) c += 0x20;
+          } else if(c >= 0x00c0 && c <= 0x00de && c != 0x00d7){
+            c += 0x20;
+          }
+        }
+        if(nacmode){
+          if(c >= 0x00c0 && c <= 0x00c5){
+            c = 'A';
+          } else if(c == 0x00c7){
+            c = 'C';
+          } if(c >= 0x00c7 && c <= 0x00cb){
+            c = 'E';
+          } if(c >= 0x00cc && c <= 0x00cf){
+            c = 'I';
+          } else if(c == 0x00d0){
+            c = 'D';
+          } else if(c == 0x00d1){
+            c = 'N';
+          } if((c >= 0x00d2 && c <= 0x00d6) || c == 0x00d8){
+            c = 'O';
+          } if(c >= 0x00d9 && c <= 0x00dc){
+            c = 'U';
+          } if(c == 0x00dd || c == 0x00de){
+            c = 'Y';
+          } else if(c == 0x00df){
+            c = 's';
+          } else if(c >= 0x00e0 && c <= 0x00e5){
+            c = 'a';
+          } else if(c == 0x00e7){
+            c = 'c';
+          } if(c >= 0x00e7 && c <= 0x00eb){
+            c = 'e';
+          } if(c >= 0x00ec && c <= 0x00ef){
+            c = 'i';
+          } else if(c == 0x00f0){
+            c = 'd';
+          } else if(c == 0x00f1){
+            c = 'n';
+          } if((c >= 0x00f2 && c <= 0x00f6) || c == 0x00f8){
+            c = 'o';
+          } if(c >= 0x00f9 && c <= 0x00fc){
+            c = 'u';
+          } if(c >= 0x00fd && c <= 0x00ff){
+            c = 'y';
+          }
+        }
+        ary[wi++] = c;
+      }
+    } else if(high == 0x01){
+      // latin-1 extended
+      if(lowmode){
+        if(c <= 0x0137){
+          if((c & 1) == 0) c++;
+        } else if(c == 0x0138){
+          c += 0;
+        } else if(c <= 0x0148){
+          if((c & 1) == 1) c++;
+        } else if(c == 0x0149){
+          c += 0;
+        } else if(c <= 0x0177){
+          if((c & 1) == 0) c++;
+        } else if(c == 0x0178){
+          c = 0x00ff;
+        } else if(c <= 0x017e){
+          if((c & 1) == 1) c++;
+        } else if(c == 0x017f){
+          c += 0;
+        }
+      }
+      if(nacmode){
+        if(c == 0x00ff){
+          c = 'y';
+        } else if(c <= 0x0105){
+          c = ((c & 1) == 0) ? 'A' : 'a';
+        } else if(c <= 0x010d){
+          c = ((c & 1) == 0) ? 'C' : 'c';
+        } else if(c <= 0x0111){
+          c = ((c & 1) == 0) ? 'D' : 'd';
+        } else if(c <= 0x011b){
+          c = ((c & 1) == 0) ? 'E' : 'e';
+        } else if(c <= 0x0123){
+          c = ((c & 1) == 0) ? 'G' : 'g';
+        } else if(c <= 0x0127){
+          c = ((c & 1) == 0) ? 'H' : 'h';
+        } else if(c <= 0x0131){
+          c = ((c & 1) == 0) ? 'I' : 'i';
+        } else if(c == 0x0134){
+          c = 'J';
+        } else if(c == 0x0135){
+          c = 'j';
+        } else if(c == 0x0136){
+          c = 'K';
+        } else if(c == 0x0137){
+          c = 'k';
+        } else if(c == 0x0138){
+          c = 'k';
+        } else if(c >= 0x0139 && c <= 0x0142){
+          c = ((c & 1) == 1) ? 'L' : 'l';
+        } else if(c >= 0x0143 && c <= 0x0148){
+          c = ((c & 1) == 1) ? 'N' : 'n';
+        } else if(c >= 0x0149 && c <= 0x014b){
+          c = ((c & 1) == 0) ? 'N' : 'n';
+        } else if(c >= 0x014c && c <= 0x0151){
+          c = ((c & 1) == 0) ? 'O' : 'o';
+        } else if(c >= 0x0154 && c <= 0x0159){
+          c = ((c & 1) == 0) ? 'R' : 'r';
+        } else if(c >= 0x015a && c <= 0x0161){
+          c = ((c & 1) == 0) ? 'S' : 's';
+        } else if(c >= 0x0162 && c <= 0x0167){
+          c = ((c & 1) == 0) ? 'T' : 't';
+        } else if(c >= 0x0168 && c <= 0x0173){
+          c = ((c & 1) == 0) ? 'U' : 'u';
+        } else if(c == 0x0174){
+          c = 'W';
+        } else if(c == 0x0175){
+          c = 'w';
+        } else if(c == 0x0176){
+          c = 'Y';
+        } else if(c == 0x0177){
+          c = 'y';
+        } else if(c == 0x0178){
+          c = 'Y';
+        } else if(c >= 0x0179 && c <= 0x017e){
+          c = ((c & 1) == 1) ? 'Z' : 'z';
+        } else if(c == 0x017f){
+          c = 's';
+        }
+      }
+      ary[wi++] = c;
+    } else if(high == 0x03){
+      // greek
+      if(lowmode){
+        if(c >= 0x0391 && c <= 0x03a9){
+          c += 0x20;
+        } else if(c >= 0x03d8 && c <= 0x03ef){
+          if((c & 1) == 0) c++;
+        } else if(c == 0x0374 || c == 0x03f7 || c == 0x03fa){
+          c++;
+        }
+      }
+      ary[wi++] = c;
+    } else if(high == 0x04){
+      // cyrillic
+      if(lowmode){
+        if(c <= 0x040f){
+          c += 0x50;
+        } else if(c <= 0x042f){
+          c += 0x20;
+        } else if(c >= 0x0460 && c <= 0x0481){
+          if((c & 1) == 0) c++;
+        } else if(c >= 0x048a && c <= 0x04bf){
+          if((c & 1) == 0) c++;
+        } else if(c == 0x04c0){
+          c = 0x04cf;
+        } else if(c >= 0x04c1 && c <= 0x04ce){
+          if((c & 1) == 1) c++;
+        } else if(c >= 0x04d0){
+          if((c & 1) == 0) c++;
+        }
+      }
+      ary[wi++] = c;
+    } else if(high == 0x20){
+      if(c == 0x2002 || c == 0x2003 || c == 0x2009){
+        // en space, em space, thin space
+        if(spcmode){
+          ary[wi++] = 0x0020;
+          if(wi < 2 || ary[wi-2] == 0x0020) wi--;
+        } else {
+          ary[wi++] = c;
+        }
+      } else if(c == 0x2010){
+        // hyphen
+        ary[wi++] = 0x002d;
+      } else if(c == 0x2015){
+        // fullwidth horizontal line
+        ary[wi++] = 0x002d;
+      } else if(c == 0x2019){
+        // apostrophe
+        ary[wi++] = 0x0027;
+      } else if(c == 0x2033){
+        // double quotes
+        ary[wi++] = 0x0022;
+      } else {
+        // (otherwise)
+        ary[wi++] = c;
+      }
+    } else if(high == 0x22){
+      if(c == 0x2212){
+        // minus sign
+        ary[wi++] = 0x002d;
+      } else {
+        // (otherwise)
+        ary[wi++] = c;
+      }
+    } else if(high == 0x30){
+      if(c == 0x3000){
+        // fullwidth space
+        if(spcmode){
+          ary[wi++] = 0x0020;
+          if(wi < 2 || ary[wi-2] == 0x0020) wi--;
+        } else {
+          ary[wi++] = c;
+        }
+      } else {
+        // (otherwise)
+        ary[wi++] = c;
+      }
+    } else if(high == 0xff){
+      if(c == 0xff01){
+        // fullwidth exclamation
+        ary[wi++] = 0x0021;
+      } else if(c == 0xff03){
+        // fullwidth igeta
+        ary[wi++] = 0x0023;
+      } else if(c == 0xff04){
+        // fullwidth dollar
+        ary[wi++] = 0x0024;
+      } else if(c == 0xff05){
+        // fullwidth parcent
+        ary[wi++] = 0x0025;
+      } else if(c == 0xff06){
+        // fullwidth ampersand
+        ary[wi++] = 0x0026;
+      } else if(c == 0xff0a){
+        // fullwidth asterisk
+        ary[wi++] = 0x002a;
+      } else if(c == 0xff0b){
+        // fullwidth plus
+        ary[wi++] = 0x002b;
+      } else if(c == 0xff0c){
+        // fullwidth comma
+        ary[wi++] = 0x002c;
+      } else if(c == 0xff0e){
+        // fullwidth period
+        ary[wi++] = 0x002e;
+      } else if(c == 0xff0f){
+        // fullwidth slash
+        ary[wi++] = 0x002f;
+      } else if(c == 0xff1a){
+        // fullwidth colon
+        ary[wi++] = 0x003a;
+      } else if(c == 0xff1b){
+        // fullwidth semicolon
+        ary[wi++] = 0x003b;
+      } else if(c == 0xff1d){
+        // fullwidth equal
+        ary[wi++] = 0x003d;
+      } else if(c == 0xff1f){
+        // fullwidth question
+        ary[wi++] = 0x003f;
+      } else if(c == 0xff20){
+        // fullwidth atmark
+        ary[wi++] = 0x0040;
+      } else if(c == 0xff3c){
+        // fullwidth backslash
+        ary[wi++] = 0x005c;
+      } else if(c == 0xff3e){
+        // fullwidth circumflex
+        ary[wi++] = 0x005e;
+      } else if(c == 0xff3f){
+        // fullwidth underscore
+        ary[wi++] = 0x005f;
+      } else if(c == 0xff5c){
+        // fullwidth vertical line
+        ary[wi++] = 0x007c;
+      } else if(c >= 0xff21 && c <= 0xff3a){
+        // fullwidth alphabets
+        if(lowmode){
+          c -= 0xfee0;
+          if(c >= 0x0041 && c <= 0x005a) c += 0x20;
+          ary[wi++] = c;
+        } else {
+          ary[wi++] = c - 0xfee0;
+        }
+      } else if(c >= 0xff41 && c <= 0xff5a){
+        // fullwidth small alphabets
+        ary[wi++] = c - 0xfee0;
+      } else if(c >= 0xff10 && c <= 0xff19){
+        // fullwidth numbers
+        ary[wi++] = c - 0xfee0;
+      } else if(c == 0xff61){
+        // halfwidth full stop
+        ary[wi++] = 0x3002;
+      } else if(c == 0xff62){
+        // halfwidth left corner
+        ary[wi++] = 0x300c;
+      } else if(c == 0xff63){
+        // halfwidth right corner
+        ary[wi++] = 0x300d;
+      } else if(c == 0xff64){
+        // halfwidth comma
+        ary[wi++] = 0x3001;
+      } else if(c == 0xff65){
+        // halfwidth middle dot
+        ary[wi++] = 0x30fb;
+      } else if(c == 0xff66){
+        // halfwidth wo
+        ary[wi++] = 0x30f2;
+      } else if(c >= 0xff67 && c <= 0xff6b){
+        // halfwidth small a-o
+        ary[wi++] = (c - 0xff67) * 2 + 0x30a1;
+      } else if(c >= 0xff6c && c <= 0xff6e){
+        // halfwidth small ya-yo
+        ary[wi++] = (c - 0xff6c) * 2 + 0x30e3;
+      } else if(c == 0xff6f){
+        // halfwidth small tu
+        ary[wi++] = 0x30c3;
+      } else if(c == 0xff70){
+        // halfwidth prolonged mark
+        ary[wi++] = 0x30fc;
+      } else if(c >= 0xff71 && c <= 0xff75){
+        // halfwidth a-o
+        ary[wi] = (c - 0xff71) * 2 + 0x30a2;
+        if(c == 0xff73 && i < num - 1 && ary[i+1] == 0xff9e){
+          ary[wi] = 0x30f4;
+          i++;
+        }
+        wi++;
+      } else if(c >= 0xff76 && c <= 0xff7a){
+        // halfwidth ka-ko
+        ary[wi] = (c - 0xff76) * 2 + 0x30ab;
+        if(i < num - 1 && ary[i+1] == 0xff9e){
+          ary[wi]++;
+          i++;
+        }
+        wi++;
+      } else if(c >= 0xff7b && c <= 0xff7f){
+        // halfwidth sa-so
+        ary[wi] = (c - 0xff7b) * 2 + 0x30b5;
+        if(i < num - 1 && ary[i+1] == 0xff9e){
+          ary[wi]++;
+          i++;
+        }
+        wi++;
+      } else if(c >= 0xff80 && c <= 0xff84){
+        // halfwidth ta-to
+        ary[wi] = (c - 0xff80) * 2 + 0x30bf + (c >= 0xff82 ? 1 : 0);
+        if(i < num - 1 && ary[i+1] == 0xff9e){
+          ary[wi]++;
+          i++;
+        }
+        wi++;
+      } else if(c >= 0xff85 && c <= 0xff89){
+        // halfwidth na-no
+        ary[wi++] = c - 0xcebb;
+      } else if(c >= 0xff8a && c <= 0xff8e){
+        // halfwidth ha-ho
+        ary[wi] = (c - 0xff8a) * 3 + 0x30cf;
+        if(i < num - 1 && ary[i+1] == 0xff9e){
+          ary[wi]++;
+          i++;
+        } else if(i < num - 1 && ary[i+1] == 0xff9f){
+          ary[wi] += 2;
+          i++;
+        }
+        wi++;
+      } else if(c >= 0xff8f && c <= 0xff93){
+        // halfwidth ma-mo
+        ary[wi++] = c - 0xceb1;
+      } else if(c >= 0xff94 && c <= 0xff96){
+        // halfwidth ya-yo
+        ary[wi++] = (c - 0xff94) * 2 + 0x30e4;
+      } else if(c >= 0xff97 && c <= 0xff9b){
+        // halfwidth ra-ro
+        ary[wi++] = c - 0xceae;
+      } else if(c == 0xff9c){
+        // halfwidth wa
+        ary[wi++] = 0x30ef;
+      } else if(c == 0xff9d){
+        // halfwidth nn
+        ary[wi++] = 0x30f3;
+      } else {
+        // otherwise
+        ary[wi++] = c;
+      }
+    } else {
+      // otherwise
+      ary[wi++] = c;
+    }
+  }
+  if(spcmode){
+    while(wi > 0 && ary[wi-1] == 0x0020){
+      wi--;
+    }
+  }
+  return wi;
+}
+
+
 /* Create a list object by splitting a region by zero code. */
 TCLIST *tcstrsplit2(const void *ptr, int size){
   assert(ptr && size >= 0);

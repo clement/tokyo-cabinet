@@ -16,17 +16,22 @@
 <style type="text/css">
 html { margin: 0em; padding: 0em; background: #eeeeee; color: #222222; }
 body { margin :0em; padding: 0.5em 1em; }
-h1 { margin: 3px; padding: 0px; font-size: 125%; }
+h1 { margin: 8px 5px; padding: 0px; font-size: 125%; }
 h1 a { color: #000000; }
 hr { margin: 0px 0px; height: 1px; border: none; background: #aaaaaa; color: #aaaaaa; }
 form { margin: 5px; padding: 0px; }
 p { margin: 5px; padding: 0px; }
 a { color: #2288ff; text-decoration: none; }
 a:hover { color: #2288ff; text-decoration: underline; }
-div.page { margin: 2px 10px; font-size: 80%; color: #888888; float: right; }
+div.searchform { font-size: 80%; float: right; }
+div.page { margin: 10px 10px 3px 10px ; text-align: right; font-size: 80%; color: #999999; }
+a.move,span.move { margin: 1px 1px; padding: 1px 8px;
+  background: #ffffff; border: 1pt solid #dddddd; -moz-border-radius: 5px; }
 div.msg { margin: 5px; padding: 5px 10px; background: #ddeeff; }
-div.chatlogs { margin: 8px; padding: 5px; background: #ffffff; }
-div.chatlog { margin: 3px 1px; padding: 5px; border-bottom: 1pt dashed #ddeeee; overflow: hidden; }
+div.chatlogs { margin: 5px 8px 8px 8px; padding: 5px;
+  background: #ffffff; border: 1pt solid #dddddd; -moz-border-radius: 8px; }
+div.chatlog { margin: 3px 1px; padding: 5px;
+  border-bottom: 1pt dashed #ddeeee; overflow: hidden; }
 span.date { font-size: 80%; color: #889999; float: right; }
 span.author { color: #555555; }
 span.author:after { content: " : "; color: #888888; }
@@ -44,12 +49,12 @@ span.c11 { color: #00aaaa; }
 span.c12 { color: #aa00aa; }
 span.text { color: #111111; }
 div.writeform { margin: 5px; padding: 5px; }
+#writesubmit { padding-left: 20px; padding-right: 20px; }
 </style>
 <script type="text/javascript">
 var interval = 1000;
 function refresh(){
   if(!XMLHttpRequest) return;
-  if("[%prev%]".length != 0) return;
   var req = new XMLHttpRequest();
   req.open("GET", "[%url%]?type=xml", true);
   req.onreadystatechange = function(){
@@ -83,6 +88,7 @@ function autoupdate(){
       }
     }
   }
+  if("[%search ENC URL%]".length != 0 || "[%prev%]".length != 0) return;
   var inputnode = document.getElementById("textinput");
   if(inputnode) inputnode.focus();
   setTimeout(refresh, interval);
@@ -91,15 +97,26 @@ function autoupdate(){
 </head>
 
 <body onload="autoupdate();">
-<div class="page">
-[% IF prev %]<a href="[%url%]?page=[%prev%]">[PREV]</a>[% ELSE %]<span class="void">[PREV]</span>[% END %]
-[% IF next %]<a href="[%url%]?page=[%next%]">[NEXT]</a>[% ELSE %]<span class="void">[NEXT]</span>[% END %]
+
+<form method="get" action="[%url%]">
+<div class="searchform">
+<input type="text" name="search" value="[%search ENC XML%]" size="16" title="search" tabindex="4" accesskey="4" id="searchinput" />
+<input type="submit" value="search" size="16" title="go" tabindex="5" accesskey="5" id="searchsubmit" />
 </div>
+</form>
+
 <h1><a href="[%url%]">[%title ENC XML%]</a></h1>
 [% FOREACH msgs msg \%]
 <div class="msg">[%msg ENC XML%]</div>
 [% END \%]
+
 <hr />
+
+<div class="page">
+[% IF prev %]<a href="[%url%]?page=[%prev%]&amp;search=[%search ENC URL%]" class="move">PREV</a>[% ELSE %]<span class="move void">PREV</span>[% END %]
+[% IF next %]<a href="[%url%]?page=[%next%]&amp;search=[%search ENC URL%]" class="move">NEXT</a>[% ELSE %]<span class="move void">NEXT</span>[% END %]
+</div>
+
 <div class="chatlogs" id="chatlogs">
 [% FOREACH logs log \%]
 <div class="chatlog" id="CL[%log.pk%]">
@@ -109,15 +126,19 @@ function autoupdate(){
 </div>
 [% END \%]
 </div>
+
 <hr />
+
 <form method="post" action="[%url%]">
 <div class="writeform" id="writeform">
-<input type="text" name="author" value="[%author ENC XML%]" size="16" title="author" tabindex="1" accesskey="1" id="authorinput" />
+<input type="text" name="author" value="[%author ENC XML%]" size="12" title="author" tabindex="1" accesskey="1" id="authorinput" />
 <input type="text" name="text" value="" size="64" title="text" tabindex="2" accesskey="2" id="textinput" />
-<input type="submit" value="post" title="post" tabindex="3" accesskey="3" />
+<input type="submit" value="post" title="post" tabindex="3" accesskey="3" id="writesubmit" />
 </div>
 </form>
+
 <hr />
+
 </body>
 
 </html>

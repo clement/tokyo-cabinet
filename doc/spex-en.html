@@ -24,7 +24,7 @@
 <h1 id="headline">Fundamental Specifications of Tokyo Cabinet Version 1</h1>
 
 <div class="note">Copyright (C) 2006-2009 Mikio Hirabayashi</div>
-<div class="note">Last Update: Mon, 04 May 2009 11:18:57 +0900</div>
+<div class="note">Last Update: Sun, 21 Jun 2009 22:14:52 +0900</div>
 <div class="navi">[<span class="void">English</span>/<a href="spex-ja.html" hreflang="ja">Japanese</a>] [<a href="index.html">HOME</a>]</div>
 
 <hr />
@@ -120,7 +120,7 @@
 
 <p>Table database supports query functions with not only the primary key but also with conditions about arbitrary columns.  Each column condition is composed of the name of a column and a condition expression.  Operators of full matching, forward matching, regular expression matching, and so on are provided for the string type.  Operators of full matching, range matching and so on are provided for the number type.  A query can contain multiple conditions.  The order of the result set can be specified as the ascending or descending order of strings or numbers.</p>
 
-<p>You can create indices for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indices have types for strings or numbers.  The query optimizer uses indices in suitable way according to each query.  Indices are implemented as different files of B+ tree database.</p>
+<p>You can create indices for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indices have types for strings or numbers.  Inverted indices for space separated tokens and character N-gram tokens are also supported.  The query optimizer uses indices in suitable way according to each query.  Indices are implemented as different files of B+ tree database.</p>
 
 <h3 id="features_practical">Practical Functionality</h3>
 
@@ -2842,7 +2842,7 @@ int main(int argc, char **argv){
 <dd>Process XML.  By default, escape meta characters.</dd>
 <dt><code>tcucodec cstr [-d] [-js] [<var>file</var>]</code></dt>
 <dd>Perform C-string escaping and its unescaping.</dd>
-<dt><code>tcucodec ucs [-d] [<var>file</var>]</code></dt>
+<dt><code>tcucodec ucs [-d] [-un] [<var>file</var>]</code></dt>
 <dd>Convert UTF-8 string into UCS-2 array.</dd>
 <dt><code>tcucodec hash [-crc] [-ch <var>num</var>] [<var>file</var>]</code></dt>
 <dd>Calculate the hash value.  By default, use MD5 function.</dd>
@@ -2870,6 +2870,7 @@ int main(int argc, char **argv){
 <li><code>-gz</code> : use GZIP format.</li>
 <li><code>-crc</code> : use CRC32 function.</li>
 <li><code>-js</code> : use JSON compatible format.</li>
+<li><code>-un</code> : perform UCS normalization.</li>
 <li><code>-ch <var>num</var></code> : use consistent hashing function.</li>
 <li><code>-ds <var>str</var></code> : specify the time.</li>
 <li><code>-jl <var>num</var></code> : specify the jet lag.</li>
@@ -5659,11 +5660,10 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetindex(TCTDB *<var>tdb</var>, const char *<var>name</var>, int <var>type</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
 <dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
-<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
+<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index, `TDBITQGRAM' for q-gram inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the setting indices should be set after the database is opened.</dd>
 </dl>
-
 
 <p>The function `tctdbgenuid' is used in order to generate a unique ID number of a table database object.</p>
 
@@ -5694,7 +5694,7 @@ int main(int argc, char **argv){
 <dt><code>void tctdbqryaddcond(TDBQRY *<var>qry</var>, const char *<var>name</var>, int <var>op</var>, const char *<var>expr</var>);</code></dt>
 <dd>`<var>qry</var>' specifies the query object.</dd>
 <dd>`<var>name</var>' specifies the name of a column.  An empty string means the primary key.</dd>
-<dd>`<var>op</var>' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression.  All operations can be flagged by bitwise-or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.</dd>
+<dd>`<var>op</var>' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression, `TDBQCFTSPH' for full-text search with the phrase of the expression, `TDBQCFTSAND' for full-text search with all tokens in the expression, `TDBQCFTSOR' for full-text search with at least one token in the expression, `TDBQCFTSEX' for full-text search with the compound expression.  All operations can be flagged by bitwise-or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.</dd>
 <dd>`<var>expr</var>' specifies an operand exression.</dd>
 </dl>
 
@@ -5848,13 +5848,13 @@ int main(int argc, char **argv){
 <p>The command `<code>tcttest</code>' is a utility for facility test and performance test.  This command is used in the following format.  `<var>path</var>' specifies the path of a database file.  `<var>rnum</var>' specifies the number of iterations.  `<var>bnum</var>' specifies the number of buckets.  `<var>apow</var>' specifies the power of the alignment.  `<var>fpow</var>' specifies the power of the free block pool.</p>
 
 <dl class="api">
-<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-ix] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Store records with columns "str", "num", "type", and "flag".</dd>
 <dt><code>tcttest read [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>Retrieve all records of the database above.</dd>
 <dt><code>tcttest remove [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>Remove all records of the database above.</dd>
-<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-ix] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Store records with partway duplicated keys using concatenate mode.</dd>
 <dt><code>tcttest misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
 <dd>Perform miscellaneous test of various operations.</dd>
@@ -5881,6 +5881,7 @@ int main(int argc, char **argv){
 <li><code>-in</code> : create the number index for the column "num".</li>
 <li><code>-it</code> : create the string index for the column "type".</li>
 <li><code>-if</code> : create the token inverted index for the column "flag".</li>
+<li><code>-ix</code> : create the q-gram inverted index for the column "text".</li>
 <li><code>-nl</code> : enable the option `TDBNOLCK'.</li>
 <li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
 <li><code>-rnd</code> : select keys at random.</li>
@@ -5896,7 +5897,7 @@ int main(int argc, char **argv){
 <p>The command `<code>tctmttest</code>' is a utility for facility test under multi-thread situation.  This command is used in the following format.  `<var>path</var>' specifies the path of a database file.  `<var>tnum</var>' specifies the number of running threads.  `<var>rnum</var>' specifies the number of iterations.  `<var>bnum</var>' specifies the number of buckets.  `<var>apow</var>' specifies the power of the alignment.  `<var>fpow</var>' specifies the power of the free block pool.</p>
 
 <dl class="api">
-<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-ix] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Store records with columns "str", "num", "type", and "flag".</dd>
 <dt><code>tctmttest read [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>Retrieve all records of the database above.</dd>
@@ -5926,6 +5927,7 @@ int main(int argc, char **argv){
 <li><code>-in</code> : create the number index for the column "num".</li>
 <li><code>-it</code> : create the string index for the column "type".</li>
 <li><code>-if</code> : create the token inverted index for the column "flag".</li>
+<li><code>-ix</code> : create the q-gram inverted index for the column "text".</li>
 <li><code>-nl</code> : enable the option `TDBNOLCK'.</li>
 <li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
 <li><code>-rnd</code> : select keys at random.</li>
@@ -5989,13 +5991,13 @@ int main(int argc, char **argv){
 <li><code>-rm</code> : remove every record in the result.</li>
 <li><code>-tz</code> : enable the option `UINT8_MAX'.</li>
 <li><code>-df</code> : perform defragmentation only.</li>
-<li><code>-it <var>type</var></code> : specify the index type among "lexical", "decimal", "token", and "void".</li>
+<li><code>-it <var>type</var></code> : specify the index type among "lexical", "decimal", "token", "qgram", and "void".</li>
 <li><code>-cd</code> : create the number index instead of the string index.</li>
 <li><code>-cv</code> : remove the existing index.</li>
 <li><code>-sc</code> : normalize keys as lower cases.</li>
 </ul>
 
-<p>The operator of the `search' subcommand is one of "STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", and "NUMOREQ".  If "~" preposes each operator, the logical meaning is reversed.  If "+" preposes each operator, no index is used for the operator.  The type of the `-ord' option is one of "STRASC", "STRDESC", "NUMASC", and "NUMDESC".  This command returns 0 on success, another on failure.</p>
+<p>The operator of the `search' subcommand is one of "STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ", "FTSPH", "FTSAND", "FTSOR", and "FTSEX".  If "~" preposes each operator, the logical meaning is reversed.  If "+" preposes each operator, no index is used for the operator.  The type of the `-ord' option is one of "STRASC", "STRDESC", "NUMASC", and "NUMDESC".  This command returns 0 on success, another on failure.</p>
 
 <hr />
 

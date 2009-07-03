@@ -24,7 +24,7 @@
 <h1 id="headline">Tokyo Cabinet第1版基本仕様書</h1>
 
 <div class="note">Copyright (C) 2006-2009 Mikio Hirabayashi</div>
-<div class="note">Last Update: Mon, 04 May 2009 11:18:57 +0900</div>
+<div class="note">Last Update: Sun, 21 Jun 2009 22:14:52 +0900</div>
 <div class="navi">[<a href="spex-en.html" hreflang="en">English</a>/<span class="void">Japanese</span>] [<a href="index.ja.html">HOME</a>]</div>
 
 <hr />
@@ -122,7 +122,7 @@
 
 <p>テーブルデータベースに対しては、主キー以外の条件でも問い合わせを行うことができます。条件はコラムの名前と条件式で構成されます。条件式の演算子としては、文字列型に関しては完全一致や前方一致や正規表現などが提供され、数値型に関しては完全一致や範囲一致が提供されます。複数の条件式を組み合わせることもできます。検索結果の順序は文字列または数値の昇順または降順を指定することができます。</p>
 
-<p>コラムを使った検索やソートを高速化するために、コラム毎のインデックスを作成することができます。コラムには型の概念はありませんが、インデックスには文字列型もしくは数値型の区別があります。クエリオプティマイザは検索条件やソート条件に応じた最適な順序でインデックスを利用します。インデックスはB+木データベースの外部ファイルとして実装されます。</p>
+<p>コラムを使った検索やソートを高速化するために、コラム毎のインデックスを作成することができます。コラムには型の概念はありませんが、インデックスには文字列型もしくは数値型の区別があります。空白区切りトークンと文字N-gramトークンの転置インデックスもサポートされます。クエリオプティマイザは検索条件やソート条件に応じた最適な順序でインデックスを利用します。インデックスはB+木データベースの外部ファイルとして実装されます。</p>
 
 <h3 id="features_practical">実用的な機能性</h3>
 
@@ -2844,7 +2844,7 @@ int main(int argc, char **argv){
 <dd>XMLの処理を行う。デフォルトではメタ文字のエスケープを行う。</dd>
 <dt><code>tcucodec cstr [-d] [-js] [<var>file</var>]</code></dt>
 <dd>C文字列のエスケープとそのアンエスケープを行う。</dd>
-<dt><code>tcucodec ucs [-d] [<var>file</var>]</code></dt>
+<dt><code>tcucodec ucs [-d] [-un] [<var>file</var>]</code></dt>
 <dd>UTF-8の文字列をUCS-2の配列に変換する。</dd>
 <dt><code>tcucodec hash [-crc] [-ch <var>num</var>] [<var>file</var>]</code></dt>
 <dd>ハッシュ値を算出する。デフォルトではMD5関数を用いる。</dd>
@@ -2872,6 +2872,7 @@ int main(int argc, char **argv){
 <li><code>-gz</code> : GZIP形式を用いる。</li>
 <li><code>-crc</code> : CRC32関数を用いる。</li>
 <li><code>-js</code> : JSON互換形式を用いる。</li>
+<li><code>-un</code> : UCSの正規化を行う。</li>
 <li><code>-ch <var>num</var></code> : コンシステントハッシュ関数を用いる。</li>
 <li><code>-ds <var>str</var></code> : 時刻を指定する。</li>
 <li><code>-jl <var>num</var></code> : 時差を指定する。</li>
@@ -5661,11 +5662,10 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetindex(TCTDB *<var>tdb</var>, const char *<var>name</var>, int <var>type</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
 <dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
-<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
+<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index, `TDBITQGRAM' for q-gram inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the setting indices should be set after the database is opened.</dd>
 </dl>
-
 
 <p>The function `tctdbgenuid' is used in order to generate a unique ID number of a table database object.</p>
 
@@ -5696,7 +5696,7 @@ int main(int argc, char **argv){
 <dt><code>void tctdbqryaddcond(TDBQRY *<var>qry</var>, const char *<var>name</var>, int <var>op</var>, const char *<var>expr</var>);</code></dt>
 <dd>`<var>qry</var>' specifies the query object.</dd>
 <dd>`<var>name</var>' specifies the name of a column.  An empty string means the primary key.</dd>
-<dd>`<var>op</var>' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression.  All operations can be flagged by bitwise-or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.</dd>
+<dd>`<var>op</var>' specifies an operation type: `TDBQCSTREQ' for string which is equal to the expression, `TDBQCSTRINC' for string which is included in the expression, `TDBQCSTRBW' for string which begins with the expression, `TDBQCSTREW' for string which ends with the expression, `TDBQCSTRAND' for string which includes all tokens in the expression, `TDBQCSTROR' for string which includes at least one token in the expression, `TDBQCSTROREQ' for string which is equal to at least one token in the expression, `TDBQCSTRRX' for string which matches regular expressions of the expression, `TDBQCNUMEQ' for number which is equal to the expression, `TDBQCNUMGT' for number which is greater than the expression, `TDBQCNUMGE' for number which is greater than or equal to the expression, `TDBQCNUMLT' for number which is less than the expression, `TDBQCNUMLE' for number which is less than or equal to the expression, `TDBQCNUMBT' for number which is between two tokens of the expression, `TDBQCNUMOREQ' for number which is equal to at least one token in the expression, `TDBQCFTSPH' for full-text search with the phrase of the expression, `TDBQCFTSAND' for full-text search with all tokens in the expression, `TDBQCFTSOR' for full-text search with at least one token in the expression, `TDBQCFTSEX' for full-text search with the compound expression.  All operations can be flagged by bitwise-or: `TDBQCNEGATE' for negation, `TDBQCNOIDX' for using no index.</dd>
 <dd>`<var>expr</var>' specifies an operand exression.</dd>
 </dl>
 
@@ -5850,13 +5850,13 @@ int main(int argc, char **argv){
 <p>コマンド `<code>tcttest</code>' は、テーブルデータベースAPIの機能テストや性能テストに用いるツールです。以下の書式で用います。`<var>path</var>' はデータベースファイルのパスを指定し、`<var>rnum</var>' は試行回数を指定し、`<var>bnum</var>' はバケット数を指定し、`<var>apow</var>' はアラインメント力を指定し、`<var>fpow</var>' はフリーブロックプール力を指定します。</p>
 
 <dl class="api">
-<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-ix] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>"str" と "num" と "type" と "flag" をコラムに持つレコード群を連続してデータベースに追加する。</dd>
 <dt><code>tcttest read [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを検索する。</dd>
 <dt><code>tcttest remove [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを削除する。</dd>
-<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-ix] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>キーがある程度重複するようにレコードの追加を行い、連結モードで処理する。</dd>
 <dt><code>tcttest misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
 <dd>各種操作の組み合わせテストを行う。</dd>
@@ -5882,7 +5882,8 @@ int main(int argc, char **argv){
 <li><code>-is</code> : "str" コラムに文字列型のインデックスを張る。</li>
 <li><code>-in</code> : "num" コラムに数値型のインデックスを張る。</li>
 <li><code>-it</code> : "type" コラムに文字列型のインデックスを張る。</li>
-<li><code>-if</code> : "flag" コラムにトークン転置型のインデックスを張る。</li>
+<li><code>-if</code> : "flag" コラムにトークン転置インデックスを張る。</li>
+<li><code>-ix</code> : "text" コラムにq-gram転置インデックスを張る。</li>
 <li><code>-nl</code> : オプション `TDBNOLCK' を有効にする。</li>
 <li><code>-nb</code> : オプション `TDBLCKNB' を有効にする。</li>
 <li><code>-rnd</code> : キーを無作為に選択する。</li>
@@ -5898,7 +5899,7 @@ int main(int argc, char **argv){
 <p>コマンド `<code>tctmttest</code>' は、テーブルデータベースAPIの機能テストをマルチスレッドで行うツールです。以下の書式で用います。`<var>path</var>' はデータベースファイルのパスを指定し、`<var>tnum</var>' はスレッド数を指定し、`<var>rnum</var>' は試行回数を指定し、`<var>bnum</var>' はバケット数を指定し、`<var>apow</var>' はアラインメント力を指定し、`<var>fpow</var>' はフリーブロックプール力を指定します。</p>
 
 <dl class="api">
-<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-ix] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>"str" と "num" と "type" と "flag" をコラムに持つレコード群を連続してデータベースに追加する。</dd>
 <dt><code>tctmttest read [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを検索する。</dd>
@@ -5927,7 +5928,8 @@ int main(int argc, char **argv){
 <li><code>-is</code> : "str" コラムに文字列型のインデックスを張る。</li>
 <li><code>-in</code> : "num" コラムに数値型のインデックスを張る。</li>
 <li><code>-it</code> : "type" コラムに文字列型のインデックスを張る。</li>
-<li><code>-if</code> : "flag" コラムにトークン転置型のインデックスを張る。</li>
+<li><code>-if</code> : "flag" コラムにトークン転置インデックスを張る。</li>
+<li><code>-ix</code> : "text" コラムにq-gram転置インデックスを張る。</li>
 <li><code>-nl</code> : オプション `TDBNOLCK' を有効にする。</li>
 <li><code>-nb</code> : オプション `TDBLCKNB' を有効にする。</li>
 <li><code>-rnd</code> : キーを無作為に選択する。</li>
@@ -5990,12 +5992,12 @@ int main(int argc, char **argv){
 <li><code>-rm</code> : 結果のレコードを全て削除する。</li>
 <li><code>-tz</code> : オプション `UINT8_MAX' を有効にする。</li>
 <li><code>-df</code> : デフラグのみを行う。</li>
-<li><code>-it</code> : インデックスの型を "lexical" か "decimal" か "token" か "void" で指定する。</li>
+<li><code>-it</code> : インデックスの型を "lexical" か "decimal" か "token" か "qgram" か "void" で指定する。</li>
 <li><code>-cv</code> : 既存のインデックスを削除する。</li>
 <li><code>-sc</code> : キーを小文字に正規化する。</li>
 </ul>
 
-<p>`search' サブコマンドの演算子には、"STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ" のいずれかを用いることができます。各演算子に "~" を接頭させると論理的な意味が反転されます。"+" を接頭させるとその演算子にはインデックスが適用されません。`-ord' オプションの型指定には、"STRASC", "STRDESC", "NUMASC", "NUMDESC" のいずれかを用いることができます。このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
+<p>`search' サブコマンドの演算子には、"STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ", "FTSPH", "FTSAND", "FTSOR", "FTSEX" のいずれかを用いることができます。各演算子に "~" を接頭させると論理的な意味が反転されます。"+" を接頭させるとその演算子にはインデックスが適用されません。`-ord' オプションの型指定には、"STRASC", "STRDESC", "NUMASC", "NUMDESC" のいずれかを用いることができます。このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
 
 <hr />
 
@@ -6678,17 +6680,21 @@ cp -f "$srcpath" "$destpath"
 <li>TDBQCSTRINC : 右辺の文字列を含む</li>
 <li>TDBQCSTRBW : 右辺の文字列で始まる</li>
 <li>TDBQCSTREW : 右辺の文字列で終わる</li>
-<li>TDBQCSTRAND : 右辺の文字列内のカンマ区切りの文字列の全てを含む</li>
-<li>TDBQCSTROR : 右辺の文字列内のカンマ区切りの文字列のいずれかを含む</li>
-<li>TDBQCSTROREQ : 右辺の文字列内のカンマ区切りの文字列のいずれかと完全一致する</li>
+<li>TDBQCSTRAND : 右辺の文字列内の空白またはコンマ区切りの文字列の全てを含む</li>
+<li>TDBQCSTROR : 右辺の文字列内の空白またはコンマ区切りの文字列のいずれかを含む</li>
+<li>TDBQCSTROREQ : 右辺の文字列内の空白またはコンマ区切りの文字列のいずれかと完全一致する</li>
 <li>TDBQCSTRRX : 右辺の文字列の正規表現と一致する</li>
 <li>TDBQCNUMEQ : 右辺の数値と一致する</li>
 <li>TDBQCNUMGT : 右辺の数値より大きい</li>
 <li>TDBQCNUMGE : 右辺の数値と同じかより大きい</li>
 <li>TDBQCNUMLT : 右辺の数値より小さい</li>
 <li>TDBQCNUMLE : 右辺の数値と同じかより小さい</li>
-<li>TDBQCNUMBT : 右辺のカンマ区切りの2つの数値の間である</li>
-<li>TDBQCNUMOREQ : 右辺のカンマ区切りの数値のいずれかと一致する</li>
+<li>TDBQCNUMBT : 右辺の空白またはコンマ区切りの2つの数値の間である</li>
+<li>TDBQCNUMOREQ : 右辺の空白またはコンマ区切りの数値のいずれかと一致する</li>
+<li>TDBQCFTSPH : 右辺の文字列を用いてフレーズ検索の全文検索を行う</li>
+<li>TDBQCFTSAND : 右辺の空白またはコンマ区切りの文字列を用いてAND検索の全文検索を行う</li>
+<li>TDBQCFTSOR : 右辺の空白またはコンマ区切りの文字列を用いてOR検索の全文検索を行う</li>
+<li>TDBQCFTSEX : 右辺の文字列を用いて複合検索式の全文検索を行う</li>
 </ul>
 
 <p>順序指定の演算子には以下のものがあります。デフォルトは順序不定です。</p>
@@ -6702,7 +6708,7 @@ cp -f "$srcpath" "$destpath"
 
 <h3 id="tips_tctdbindex">テーブルデータベースのインデックス</h3>
 
-<p>テーブルデータベースを検索する際に、合致条件の判定や順序指定によるソートを高速化するために、任意のコラムを対象としてインデックスを張ることができます。コラムには型がありませんが、インデックスには型があります。文字列型の演算を高速化させたい場合は文字列型のインデックスを、数値型の演算子を高速化させたい場合は数値型のインデックスを、トークン型の演算子を高速化させたい場合はトークン転置型のインデックスを張ることになります。ただし、型が異なる場合でもインデックスを張っておくと、メインのハッシュデータベースの全表スキャンの代わりに、それよりは小さいインデックスの全表スキャンを用いるので、計算量は同じですが処理時間は短くなります。</p>
+<p>テーブルデータベースを検索する際に、合致条件の判定や順序指定によるソートを高速化するために、任意のコラムを対象としてインデックスを張ることができます。コラムには型がありませんが、インデックスには型があります。文字列型の演算を高速化させたい場合は文字列型のインデックスを、数値型の演算子を高速化させたい場合は数値型のインデックスを、トークン型の演算子を高速化させたい場合はトークン転置インデックスを張ることになります。ただし、型が異なる場合でもインデックスを張っておくと、メインのハッシュデータベースの全表スキャンの代わりに、それよりは小さいインデックスの全表スキャンを用いるので、計算量は同じですが処理時間は短くなります。</p>
 
 <ul>
 <li>文字列型インデックス（TDBITLEXICAL）:<ul>
@@ -6715,12 +6721,17 @@ cp -f "$srcpath" "$destpath"
 <li>計算量は同じだが高速化する演算子：TDBQCSTREQ、TDBQCSTRBW、TDBQCSTROREQ、TDBQCSTRINC、TDBQCSTREW、TDBQCSTRAND、TDBQCSTROR、TDBQCSTRRX</li>
 <li>計算量が小さくなる順序指定：TDBQONUMASC、TDBQONUMDESC</li>
 </ul></li>
-<li>トークン転置型インデックス（TDBITTOKEN）:<ul>
+<li>トークン転置インデックス（TDBITTOKEN）:<ul>
 <li>計算量が小さくなる演算子：TDBQCSTRAND、TDBQCSTROR</li>
+</ul></li>
+<li>q-gram転置インデックス（TDBITQGRAM）:<ul>
+<li>計算量が小さくなる演算子：TDBQCFTSPH、TDBQCFTSAND、TDBQCFTSOR、TDBQCFTSEX</li>
 </ul></li>
 </ul>
 
 <p>合致条件に利用できるインデックスが複数ある場合、型が一致する最初に指定された演算子に対して適用されます。したがって、カーディナリティが高い条件を先に指定する方が効率的になります。合致条件の演算子を `<code>TDBQCNOIDX</code>' とのビット和にすると、その条件の判定にインデックスを適用しないようになります（コマンドラインでは "+" を接頭させます）。否定の合致条件にはインデックスは適用されません。インデックスのデータは、レコード本体を格納したデータベースファイルとは別個に、B+木データベースのファイルとして記録されます。</p>
+
+<p>転置インデックスとは、検索対象の文字列がどのレコードに含まれているかを記録して効率的に探し出すためのインデックスです。トークン転置インデックスとq-gram転置インデックスの二種類の方式をサポートしています。トークン転置インデックスは、空白もしくはコンマで区切られた単語をキーにしてレコードを探すための構造で、`<code>TDBQCSTRAND</code>' などの演算子を高速化するので、いわゆるタグ検索などに重宝するでしょう。q-gram転置インデックスは、3文字毎の部分文字列（tri-gram）をキーにしてレコードを探すための構造で、`<code>TDBQCFTSPH</code>' などの演算子を高速化するので、いわゆる全文検索などに重宝するでしょう。全文検索系の演算子は大文字小文字の違いやアクセント記号の有無などを無視して検索してくれるので便利です。転置インデックス（特にq-gram転置インデックス）はサイズがかなり大きくなり、更新処理にかかるオーバーヘッドも大きくなってしまうので、ご利用は計画的にお願いします。</p>
 
 <h3 id="tips_tcadb">抽象データベース</h3>
 

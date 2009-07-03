@@ -224,6 +224,8 @@ module TokyoCabinet {
     const long OTSYNC = 1 << 6;
     const long ITLEXICAL = 0;
     const long ITDECIMAL = 1;
+    const long ITTOKEN = 2;
+    const long ITQGRAM = 3;
     const long ITOPT = 9998;
     const long ITVOID = 9999;
     const long ITKEEP = 1 << 24;
@@ -261,21 +263,25 @@ module TokyoCabinet {
   // the table query API
   //----------------------------------------------------------------
   interface TDBQRY {
-    const long QCSTREQ = 1;
-    const long QCSTRINC = 2;
-    const long QCSTRBW = 3;
-    const long QCSTREW = 4;
-    const long QCSTRAND = 5;
-    const long QCSTROR = 6;
-    const long QCSTROREQ = 7;
-    const long QCSTRRX = 8;
-    const long QCNUMEQ = 9;
-    const long QCNUMGT = 10;
-    const long QCNUMGE = 11;
-    const long QCNUMLT = 12;
-    const long QCNUMLE = 13;
-    const long QCNUMBT = 14;
-    const long QCNUMOREQ = 15;
+    const long QCSTREQ = 0;
+    const long QCSTRINC = 1;
+    const long QCSTRBW = 2;
+    const long QCSTREW = 3;
+    const long QCSTRAND = 4;
+    const long QCSTROR = 5;
+    const long QCSTROREQ = 6;
+    const long QCSTRRX = 7;
+    const long QCNUMEQ = 8;
+    const long QCNUMGT = 9;
+    const long QCNUMGE = 10;
+    const long QCNUMLT = 11;
+    const long QCNUMLE = 12;
+    const long QCNUMBT = 13;
+    const long QCNUMOREQ = 14;
+    const long QCFTSPH = 15;
+    const long QCFTSAND = 16;
+    const long QCFTSOR = 17;
+    const long QCFTSEX = 18;
     const long QCNEGATE = 1 << 24;
     const long QCNOIDX = 1 << 25;
     const long QOSTRASC = 0;

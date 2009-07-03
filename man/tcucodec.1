@@ -1,4 +1,4 @@
-.TH "TCUCODEC" 1 "2009-05-04" "Man Page" "Tokyo Cabinet"
+.TH "TCUCODEC" 1 "2009-06-21" "Man Page" "Tokyo Cabinet"
 
 .SH NAME
 tcucodec \- popular encoders and decoders
@@ -64,7 +64,7 @@ Process XML.  By default, escape meta characters.
 Perform C\-string escaping and its unescaping.
 .RE
 .br
-\fBtcucodec ucs \fR[\fB\-d\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
+\fBtcucodec ucs \fR[\fB\-d\fR]\fB \fR[\fB\-un\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
 .RS
 Convert UTF\-8 string into UCS\-2 array.
 .RE
@@ -118,6 +118,8 @@ Options feature the following.
 \fB\-crc\fR : use CRC32 function.
 .br
 \fB\-js\fR : use JSON compatible format.
+.br
+\fB\-un\fR : perform UCS normalization.
 .br
 \fB\-ch \fInum\fR\fR : use consistent hashing function.
 .br

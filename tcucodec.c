@@ -54,7 +54,7 @@ static int proczlib(const char *ibuf, int isiz, bool dec, bool gz);
 static int procbzip(const char *ibuf, int isiz, bool dec);
 static int procxml(const char *ibuf, int isiz, bool dec, bool br);
 static int proccstr(const char *ibuf, int isiz, bool dec, bool js);
-static int procucs(const char *ibuf, int isiz, bool dec);
+static int procucs(const char *ibuf, int isiz, bool dec, bool un);
 static int prochash(const char *ibuf, int isiz, bool crc, int ch);
 static int procdate(const char *str, int jl, bool wf, bool rf);
 static int proctmpl(const char *ibuf, int isiz, TCMAP *vars);
@@ -121,8 +121,8 @@ static void usage(void){
   fprintf(stderr, "  %s zlib [-d] [-gz] [file]\n", g_progname);
   fprintf(stderr, "  %s bzip [-d] [file]\n", g_progname);
   fprintf(stderr, "  %s xml [-d] [-br] [file]\n", g_progname);
-  fprintf(stderr, "  %s cstr [-d] [file]\n", g_progname);
-  fprintf(stderr, "  %s ucs [-d] [-js] [file]\n", g_progname);
+  fprintf(stderr, "  %s cstr [-d] [-js] [file]\n", g_progname);
+  fprintf(stderr, "  %s ucs [-d] [-un] [file]\n", g_progname);
   fprintf(stderr, "  %s hash [-crc] [-ch num] [file]\n", g_progname);
   fprintf(stderr, "  %s date [-ds str] [-jl num] [-wf] [-rf]\n", g_progname);
   fprintf(stderr, "  %s tmpl [-var name val] [file]\n", g_progname);
@@ -583,10 +583,13 @@ static int runcstr(int argc, char **argv){
 static int runucs(int argc, char **argv){
   char *path = NULL;
   bool dec = false;
+  bool un = false;
   for(int i = 2; i < argc; i++){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-d")){
         dec = true;
+      } else if(!strcmp(argv[i], "-un")){
+        un = true;
       } else {
         usage();
       }
@@ -608,7 +611,7 @@ static int runucs(int argc, char **argv){
     eprintf("%s: cannot open", path ? path : "(stdin)");
     return 1;
   }
-  int rv = procucs(ibuf, isiz, dec);
+  int rv = procucs(ibuf, isiz, dec, un);
   if(path && path[0] == '@') printf("\n");
   tcfree(ibuf);
   return rv;
@@ -1084,8 +1087,18 @@ static int proccstr(const char *ibuf, int isiz, bool dec, bool js){
 
 
 /* perform ucs command */
-static int procucs(const char *ibuf, int isiz, bool dec){
-  if(dec){
+static int procucs(const char *ibuf, int isiz, bool dec, bool un){
+  if(un){
+    uint16_t *ary = tcmalloc(isiz * sizeof(uint16_t) + 1);
+    int anum;
+    tcstrutftoucs(ibuf, ary, &anum);
+    anum = tcstrucsnorm(ary, anum, TCUNLOWER | TCUNNOACC | TCUNSPACE);
+    char *str = tcmalloc(anum * 3 + 1);
+    tcstrucstoutf(ary, anum, str);
+    printf("%s", str);
+    tcfree(str);
+    tcfree(ary);
+  } else if(dec){
     uint16_t *ary = tcmalloc(isiz + 1);
     int anum = 0;
     for(int i = 0; i < isiz; i += 2){

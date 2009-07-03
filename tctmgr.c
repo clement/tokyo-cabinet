@@ -689,6 +689,10 @@ static int procinform(const char *path, int omode){
       printf("  name=%s, type=token, rnum=%lld, fsiz=%lld\n",
              idxp->name, (long long)tcbdbrnum(idxp->db), (long long)tcbdbfsiz(idxp->db));
       break;
+    case TDBITQGRAM:
+      printf("  name=%s, type=qgram, rnum=%lld, fsiz=%lld\n",
+             idxp->name, (long long)tcbdbrnum(idxp->db), (long long)tcbdbfsiz(idxp->db));
+      break;
     }
   }
   printf("unique ID seed: %lld\n", (long long)tctdbuidseed(tdb));

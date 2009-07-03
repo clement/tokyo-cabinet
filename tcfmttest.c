@@ -71,7 +71,7 @@ int main(int argc, char **argv);
 static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
-static void eprint(TCFDB *fdb, const char *func);
+static void eprint(TCFDB *fdb, int line, const char *func);
 static void mprint(TCFDB *fdb);
 static void sysprint(void);
 static int myrand(int range);
@@ -165,11 +165,11 @@ static void iputchar(int c){
 
 
 /* print error message of fixed-length database */
-static void eprint(TCFDB *fdb, const char *func){
+static void eprint(TCFDB *fdb, int line, const char *func){
   const char *path = tcfdbpath(fdb);
   int ecode = tcfdbecode(fdb);
-  fprintf(stderr, "%s: %s: %s: error: %d: %s\n",
-          g_progname, path ? path : "-", func, ecode, tcfdberrmsg(ecode));
+  fprintf(stderr, "%s: %s: %d: %s: error: %d: %s\n",
+          g_progname, path ? path : "-", line, func, ecode, tcfdberrmsg(ecode));
 }
 
 
@@ -442,15 +442,15 @@ static int procwrite(const char *path, int tnum, int rnum, int width, int64_t li
   TCFDB *fdb = tcfdbnew();
   if(g_dbgfd >= 0) tcfdbsetdbgfd(fdb, g_dbgfd);
   if(!tcfdbsetmutex(fdb)){
-    eprint(fdb, "tcfdbsetmutex");
+    eprint(fdb, __LINE__, "tcfdbsetmutex");
     err = true;
   }
   if(!tcfdbtune(fdb, width, limsiz)){
-    eprint(fdb, "tcfdbtune");
+    eprint(fdb, __LINE__, "tcfdbtune");
     err = true;
   }
   if(!tcfdbopen(fdb, path, FDBOWRITER | FDBOCREAT | FDBOTRUNC | omode)){
-    eprint(fdb, "tcfdbopen");
+    eprint(fdb, __LINE__, "tcfdbopen");
     err = true;
   }
   TARGWRITE targs[tnum];
@@ -468,7 +468,7 @@ static int procwrite(const char *path, int tnum, int rnum, int width, int64_t li
       targs[i].rnd = rnd;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadwrite, targs + i) != 0){
-        eprint(fdb, "pthread_create");
+        eprint(fdb, __LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -477,7 +477,7 @@ static int procwrite(const char *path, int tnum, int rnum, int width, int64_t li
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint(fdb, "pthread_join");
+        eprint(fdb, __LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -489,7 +489,7 @@ static int procwrite(const char *path, int tnum, int rnum, int width, int64_t li
   mprint(fdb);
   sysprint();
   if(!tcfdbclose(fdb)){
-    eprint(fdb, "tcfdbclose");
+    eprint(fdb, __LINE__, "tcfdbclose");
     err = true;
   }
   tcfdbdel(fdb);
@@ -508,11 +508,11 @@ static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
   TCFDB *fdb = tcfdbnew();
   if(g_dbgfd >= 0) tcfdbsetdbgfd(fdb, g_dbgfd);
   if(!tcfdbsetmutex(fdb)){
-    eprint(fdb, "tcfdbsetmutex");
+    eprint(fdb, __LINE__, "tcfdbsetmutex");
     err = true;
   }
   if(!tcfdbopen(fdb, path, FDBOREADER | omode)){
-    eprint(fdb, "tcfdbopen");
+    eprint(fdb, __LINE__, "tcfdbopen");
     err = true;
   }
   int rnum = tcfdbrnum(fdb) / tnum;
@@ -533,7 +533,7 @@ static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
       targs[i].rnd = rnd;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadread, targs + i) != 0){
-        eprint(fdb, "pthread_create");
+        eprint(fdb, __LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -542,7 +542,7 @@ static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint(fdb, "pthread_join");
+        eprint(fdb, __LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -554,7 +554,7 @@ static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
   mprint(fdb);
   sysprint();
   if(!tcfdbclose(fdb)){
-    eprint(fdb, "tcfdbclose");
+    eprint(fdb, __LINE__, "tcfdbclose");
     err = true;
   }
   tcfdbdel(fdb);
@@ -573,11 +573,11 @@ static int procremove(const char *path, int tnum, int omode, bool rnd){
   TCFDB *fdb = tcfdbnew();
   if(g_dbgfd >= 0) tcfdbsetdbgfd(fdb, g_dbgfd);
   if(!tcfdbsetmutex(fdb)){
-    eprint(fdb, "tcfdbsetmutex");
+    eprint(fdb, __LINE__, "tcfdbsetmutex");
     err = true;
   }
   if(!tcfdbopen(fdb, path, FDBOWRITER | omode)){
-    eprint(fdb, "tcfdbopen");
+    eprint(fdb, __LINE__, "tcfdbopen");
     err = true;
   }
   int rnum = tcfdbrnum(fdb) / tnum;
@@ -596,7 +596,7 @@ static int procremove(const char *path, int tnum, int omode, bool rnd){
       targs[i].rnd = rnd;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadremove, targs + i) != 0){
-        eprint(fdb, "pthread_create");
+        eprint(fdb, __LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -605,7 +605,7 @@ static int procremove(const char *path, int tnum, int omode, bool rnd){
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint(fdb, "pthread_join");
+        eprint(fdb, __LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -617,7 +617,7 @@ static int procremove(const char *path, int tnum, int omode, bool rnd){
   mprint(fdb);
   sysprint();
   if(!tcfdbclose(fdb)){
-    eprint(fdb, "tcfdbclose");
+    eprint(fdb, __LINE__, "tcfdbclose");
     err = true;
   }
   tcfdbdel(fdb);
@@ -636,19 +636,19 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
   TCFDB *fdb = tcfdbnew();
   if(g_dbgfd >= 0) tcfdbsetdbgfd(fdb, g_dbgfd);
   if(!tcfdbsetmutex(fdb)){
-    eprint(fdb, "tcfdbsetmutex");
+    eprint(fdb, __LINE__, "tcfdbsetmutex");
     err = true;
   }
   if(!tcfdbtune(fdb, RECBUFSIZ * 2, EXHEADSIZ + (RECBUFSIZ * 2 + sizeof(int)) * rnum * tnum)){
-    eprint(fdb, "tcfdbtune");
+    eprint(fdb, __LINE__, "tcfdbtune");
     err = true;
   }
   if(!tcfdbopen(fdb, path, FDBOWRITER | FDBOCREAT | FDBOTRUNC | omode)){
-    eprint(fdb, "tcfdbopen");
+    eprint(fdb, __LINE__, "tcfdbopen");
     err = true;
   }
   if(!tcfdbiterinit(fdb)){
-    eprint(fdb, "tcfdbiterinit");
+    eprint(fdb, __LINE__, "tcfdbiterinit");
     err = true;
   }
   TARGWICKED targs[tnum];
@@ -669,7 +669,7 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
       targs[i].id = i;
       targs[i].map = map;
       if(pthread_create(threads + i, NULL, threadwicked, targs + i) != 0){
-        eprint(fdb, "pthread_create");
+        eprint(fdb, __LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -678,7 +678,7 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint(fdb, "pthread_join");
+        eprint(fdb, __LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -687,11 +687,11 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
   }
   if(!nc){
     if(!tcfdbsync(fdb)){
-      eprint(fdb, "tcfdbsync");
+      eprint(fdb, __LINE__, "tcfdbsync");
       err = true;
     }
     if(tcfdbrnum(fdb) != tcmaprnum(map)){
-      eprint(fdb, "(validation)");
+      eprint(fdb, __LINE__, "(validation)");
       err = true;
     }
     int end = rnum * tnum;
@@ -706,16 +706,16 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
         iputchar('.');
         if(vsiz > tcfdbwidth(fdb)) vsiz = tcfdbwidth(fdb);
         if(!rbuf){
-          eprint(fdb, "tcfdbget");
+          eprint(fdb, __LINE__, "tcfdbget");
           err = true;
         } else if(rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
-          eprint(fdb, "(validation)");
+          eprint(fdb, __LINE__, "(validation)");
           err = true;
         }
       } else {
         iputchar('*');
         if(rbuf || tcfdbecode(fdb) != TCENOREC){
-          eprint(fdb, "(validation)");
+          eprint(fdb, __LINE__, "(validation)");
           err = true;
         }
       }
@@ -730,7 +730,7 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
   mprint(fdb);
   sysprint();
   if(!tcfdbclose(fdb)){
-    eprint(fdb, "tcfdbclose");
+    eprint(fdb, __LINE__, "tcfdbclose");
     err = true;
   }
   tcfdbdel(fdb);
@@ -751,15 +751,15 @@ static int proctypical(const char *path, int tnum, int rnum, int width, int64_t 
   TCFDB *fdb = tcfdbnew();
   if(g_dbgfd >= 0) tcfdbsetdbgfd(fdb, g_dbgfd);
   if(!tcfdbsetmutex(fdb)){
-    eprint(fdb, "tcfdbsetmutex");
+    eprint(fdb, __LINE__, "tcfdbsetmutex");
     err = true;
   }
   if(!tcfdbtune(fdb, width, limsiz)){
-    eprint(fdb, "tcfdbtune");
+    eprint(fdb, __LINE__, "tcfdbtune");
     err = true;
   }
   if(!tcfdbopen(fdb, path, FDBOWRITER | FDBOCREAT | FDBOTRUNC | omode)){
-    eprint(fdb, "tcfdbopen");
+    eprint(fdb, __LINE__, "tcfdbopen");
     err = true;
   }
   TARGTYPICAL targs[tnum];
@@ -779,7 +779,7 @@ static int proctypical(const char *path, int tnum, int rnum, int width, int64_t 
       targs[i].rratio= rratio;
       targs[i].id = i;
       if(pthread_create(threads + i, NULL, threadtypical, targs + i) != 0){
-        eprint(fdb, "pthread_create");
+        eprint(fdb, __LINE__, "pthread_create");
         targs[i].id = -1;
         err = true;
       }
@@ -788,7 +788,7 @@ static int proctypical(const char *path, int tnum, int rnum, int width, int64_t 
       if(targs[i].id == -1) continue;
       void *rv;
       if(pthread_join(threads[i], &rv) != 0){
-        eprint(fdb, "pthread_join");
+        eprint(fdb, __LINE__, "pthread_join");
         err = true;
       } else if(rv){
         err = true;
@@ -800,7 +800,7 @@ static int proctypical(const char *path, int tnum, int rnum, int width, int64_t 
   mprint(fdb);
   sysprint();
   if(!tcfdbclose(fdb)){
-    eprint(fdb, "tcfdbclose");
+    eprint(fdb, __LINE__, "tcfdbclose");
     err = true;
   }
   tcfdbdel(fdb);
@@ -822,7 +822,7 @@ static void *threadwrite(void *targ){
     char buf[RECBUFSIZ];
     int len = sprintf(buf, "%08d", base + (rnd ? myrand(i) + 1 : i));
     if(!tcfdbput2(fdb, buf, len, buf, len)){
-      eprint(fdb, "tcfdbput2");
+      eprint(fdb, __LINE__, "tcfdbput2");
       err = true;
       break;
     }
@@ -851,13 +851,13 @@ static void *threadread(void *targ){
       char vbuf[RECBUFSIZ];
       int vsiz = tcfdbget4(fdb, kid, vbuf, RECBUFSIZ);
       if(vsiz < 0 && (!rnd || tcfdbecode(fdb) != TCENOREC)){
-        eprint(fdb, "tcfdbget4");
+        eprint(fdb, __LINE__, "tcfdbget4");
         err = true;
       }
     } else {
       char *vbuf = tcfdbget(fdb, kid, &vsiz);
       if(!vbuf && (!rnd || tcfdbecode(fdb) != TCENOREC)){
-        eprint(fdb, "tcfdbget");
+        eprint(fdb, __LINE__, "tcfdbget");
         err = true;
       }
       tcfree(vbuf);
@@ -883,7 +883,7 @@ static void *threadremove(void *targ){
     char kbuf[RECBUFSIZ];
     int ksiz = sprintf(kbuf, "%08d", base + (rnd ? myrand(i + 1) + 1 : i));
     if(!tcfdbout2(fdb, kbuf, ksiz) && (!rnd || tcfdbecode(fdb) != TCENOREC)){
-      eprint(fdb, "tcfdbout2");
+      eprint(fdb, __LINE__, "tcfdbout2");
       err = true;
       break;
     }
@@ -918,7 +918,7 @@ static void *threadwicked(void *targ){
     case 0:
       if(id == 0) iputchar('0');
       if(!tcfdbput2(fdb, kbuf, ksiz, vbuf, vsiz)){
-        eprint(fdb, "tcfdbput2");
+        eprint(fdb, __LINE__, "tcfdbput2");
         err = true;
       }
       if(!nc) tcmapput(map, kbuf, ksiz, vbuf, vsiz);
@@ -926,7 +926,7 @@ static void *threadwicked(void *targ){
     case 1:
       if(id == 0) iputchar('1');
       if(!tcfdbput3(fdb, kbuf, vbuf)){
-        eprint(fdb, "tcfdbput3");
+        eprint(fdb, __LINE__, "tcfdbput3");
         err = true;
       }
       if(!nc) tcmapput2(map, kbuf, vbuf);
@@ -934,7 +934,7 @@ static void *threadwicked(void *targ){
     case 2:
       if(id == 0) iputchar('2');
       if(!tcfdbputkeep2(fdb, kbuf, ksiz, vbuf, vsiz) && tcfdbecode(fdb) != TCEKEEP){
-        eprint(fdb, "tcfdbputkeep2");
+        eprint(fdb, __LINE__, "tcfdbputkeep2");
         err = true;
       }
       if(!nc) tcmapputkeep(map, kbuf, ksiz, vbuf, vsiz);
@@ -942,7 +942,7 @@ static void *threadwicked(void *targ){
     case 3:
       if(id == 0) iputchar('3');
       if(!tcfdbputkeep3(fdb, kbuf, vbuf) && tcfdbecode(fdb) != TCEKEEP){
-        eprint(fdb, "tcfdbputkeep3");
+        eprint(fdb, __LINE__, "tcfdbputkeep3");
         err = true;
       }
       if(!nc) tcmapputkeep2(map, kbuf, vbuf);
@@ -950,7 +950,7 @@ static void *threadwicked(void *targ){
     case 4:
       if(id == 0) iputchar('4');
       if(!tcfdbputcat2(fdb, kbuf, ksiz, vbuf, vsiz)){
-        eprint(fdb, "tcfdbputcat2");
+        eprint(fdb, __LINE__, "tcfdbputcat2");
         err = true;
       }
       if(!nc) tcmapputcat(map, kbuf, ksiz, vbuf, vsiz);
@@ -958,7 +958,7 @@ static void *threadwicked(void *targ){
     case 5:
       if(id == 0) iputchar('5');
       if(!tcfdbputcat3(fdb, kbuf, vbuf)){
-        eprint(fdb, "tcfdbputcat3");
+        eprint(fdb, __LINE__, "tcfdbputcat3");
         err = true;
       }
       if(!nc) tcmapputcat2(map, kbuf, vbuf);
@@ -967,7 +967,7 @@ static void *threadwicked(void *targ){
       if(id == 0) iputchar('6');
       if(myrand(2) == 0){
         if(!tcfdbout2(fdb, kbuf, ksiz) && tcfdbecode(fdb) != TCENOREC){
-          eprint(fdb, "tcfdbout2");
+          eprint(fdb, __LINE__, "tcfdbout2");
           err = true;
         }
         if(!nc) tcmapout(map, kbuf, ksiz);
@@ -977,7 +977,7 @@ static void *threadwicked(void *targ){
       if(id == 0) iputchar('7');
       if(myrand(2) == 0){
         if(!tcfdbout3(fdb, kbuf) && tcfdbecode(fdb) != TCENOREC){
-          eprint(fdb, "tcfdbout3");
+          eprint(fdb, __LINE__, "tcfdbout3");
           err = true;
         }
         if(!nc) tcmapout2(map, kbuf);
@@ -987,7 +987,7 @@ static void *threadwicked(void *targ){
       if(id == 0) iputchar('8');
       if(!(rbuf = tcfdbget2(fdb, kbuf, ksiz, &vsiz))){
         if(tcfdbecode(fdb) != TCENOREC){
-          eprint(fdb, "tcfdbget2");
+          eprint(fdb, __LINE__, "tcfdbget2");
           err = true;
         }
         rbuf = tcsprintf("[%d]", myrand(i + 1));
@@ -1000,7 +1000,7 @@ static void *threadwicked(void *targ){
         rbuf[j] = myrand(0x100);
       }
       if(!tcfdbput2(fdb, kbuf, ksiz, rbuf, vsiz)){
-        eprint(fdb, "tcfdbput2");
+        eprint(fdb, __LINE__, "tcfdbput2");
         err = true;
       }
       if(!nc) tcmapput(map, kbuf, ksiz, rbuf, vsiz);
@@ -1009,7 +1009,7 @@ static void *threadwicked(void *targ){
     case 9:
       if(id == 0) iputchar('9');
       if(!(rbuf = tcfdbget2(fdb, kbuf, ksiz, &vsiz)) && tcfdbecode(fdb) != TCENOREC){
-        eprint(fdb, "tcfdbget2");
+        eprint(fdb, __LINE__, "tcfdbget2");
         err = true;
       }
       tcfree(rbuf);
@@ -1017,7 +1017,7 @@ static void *threadwicked(void *targ){
     case 10:
       if(id == 0) iputchar('A');
       if(!(rbuf = tcfdbget3(fdb, kbuf)) && tcfdbecode(fdb) != TCENOREC){
-        eprint(fdb, "tcfdbge3");
+        eprint(fdb, __LINE__, "tcfdbge3");
         err = true;
       }
       tcfree(rbuf);
@@ -1026,7 +1026,7 @@ static void *threadwicked(void *targ){
       if(id == 0) iputchar('B');
       if(myrand(1) == 0) vsiz = 1;
       if((vsiz = tcfdbget4(fdb, kid, vbuf, vsiz)) < 0 && tcfdbecode(fdb) != TCENOREC){
-        eprint(fdb, "tcfdbget4");
+        eprint(fdb, __LINE__, "tcfdbget4");
         err = true;
       }
       break;
@@ -1034,7 +1034,7 @@ static void *threadwicked(void *targ){
       if(id == 0) iputchar('E');
       if(myrand(rnum / 50) == 0){
         if(!tcfdbiterinit(fdb)){
-          eprint(fdb, "tcfdbiterinit");
+          eprint(fdb, __LINE__, "tcfdbiterinit");
           err = true;
         }
       }
@@ -1042,7 +1042,7 @@ static void *threadwicked(void *targ){
         if(tcfdbiternext(fdb) < 1){
           int ecode = tcfdbecode(fdb);
           if(ecode != TCEINVALID && ecode != TCENOREC){
-            eprint(fdb, "tcfdbiternext");
+            eprint(fdb, __LINE__, "tcfdbiternext");
             err = true;
           }
         }
@@ -1053,35 +1053,35 @@ static void *threadwicked(void *targ){
       if(tcfdbtranbegin(fdb)){
         if(myrand(2) == 0){
           if(!tcfdbput2(fdb, kbuf, ksiz, vbuf, vsiz)){
-            eprint(fdb, "tcfdbput");
+            eprint(fdb, __LINE__, "tcfdbput");
             err = true;
           }
           if(!nc) tcmapput(map, kbuf, ksiz, vbuf, vsiz);
         } else {
           if(!tcfdbout2(fdb, kbuf, ksiz) && tcfdbecode(fdb) != TCENOREC){
-            eprint(fdb, "tcfdbout");
+            eprint(fdb, __LINE__, "tcfdbout");
             err = true;
           }
           if(!nc) tcmapout(map, kbuf, ksiz);
         }
         if(nc && myrand(2) == 0){
           if(!tcfdbtranabort(fdb)){
-            eprint(fdb, "tcfdbtranabort");
+            eprint(fdb, __LINE__, "tcfdbtranabort");
             err = true;
           }
         } else {
           if(!tcfdbtrancommit(fdb)){
-            eprint(fdb, "tcfdbtrancommit");
+            eprint(fdb, __LINE__, "tcfdbtrancommit");
             err = true;
           }
         }
       } else {
-        eprint(fdb, "tcfdbtranbegin");
+        eprint(fdb, __LINE__, "tcfdbtranbegin");
         err = true;
       }
       if(myrand(1000) == 0){
         if(!tcfdbforeach(fdb, iterfunc, NULL)){
-          eprint(fdb, "tcfdbforeach");
+          eprint(fdb, __LINE__, "tcfdbforeach");
           err = true;
         }
       }
@@ -1093,11 +1093,11 @@ static void *threadwicked(void *targ){
       if(i % 50 == 0) iprintf(" (%08d)\n", i);
       if(id == 0 && i == rnum / 4){
         if(!tcfdboptimize(fdb, RECBUFSIZ, -1) && tcfdbecode(fdb) != TCEINVALID){
-          eprint(fdb, "tcfdboptimize");
+          eprint(fdb, __LINE__, "tcfdboptimize");
           err = true;
         }
         if(!tcfdbiterinit(fdb)){
-          eprint(fdb, "tcfdbiterinit");
+          eprint(fdb, __LINE__, "tcfdbiterinit");
           err = true;
         }
       }
@@ -1125,37 +1125,37 @@ static void *threadtypical(void *targ){
     int rnd = myrand(mrange);
     if(rnd < 10){
       if(!tcfdbput2(fdb, buf, len, buf, len)){
-        eprint(fdb, "tcfdbput2");
+        eprint(fdb, __LINE__, "tcfdbput2");
         err = true;
       }
       if(map) tcmapput(map, buf, len, buf, len);
     } else if(rnd < 15){
       if(!tcfdbputkeep2(fdb, buf, len, buf, len) && tcfdbecode(fdb) != TCEKEEP){
-        eprint(fdb, "tcfdbputkeep2");
+        eprint(fdb, __LINE__, "tcfdbputkeep2");
         err = true;
       }
       if(map) tcmapputkeep(map, buf, len, buf, len);
     } else if(rnd < 20){
       if(!tcfdbputcat2(fdb, buf, len, buf, len)){
-        eprint(fdb, "tcfdbputcat2");
+        eprint(fdb, __LINE__, "tcfdbputcat2");
         err = true;
       }
       if(map) tcmapputcat(map, buf, len, buf, len);
     } else if(rnd < 25){
       if(!tcfdbout2(fdb, buf, len) && tcfdbecode(fdb) && tcfdbecode(fdb) != TCENOREC){
-        eprint(fdb, "tcfdbout");
+        eprint(fdb, __LINE__, "tcfdbout");
         err = true;
       }
       if(map) tcmapout(map, buf, len);
     } else if(rnd < 26){
       if(myrand(10) == 0 && !tcfdbiterinit(fdb) && tcfdbecode(fdb) != TCENOREC){
-        eprint(fdb, "tcfdbiterinit");
+        eprint(fdb, __LINE__, "tcfdbiterinit");
         err = true;
       }
       for(int j = 0; !err && j < 10; j++){
         if(tcfdbiternext(fdb) < 1 &&
            tcfdbecode(fdb) != TCEINVALID && tcfdbecode(fdb) != TCENOREC){
-          eprint(fdb, "tcfdbiternext");
+          eprint(fdb, __LINE__, "tcfdbiternext");
           err = true;
         }
       }
@@ -1168,18 +1168,18 @@ static void *threadtypical(void *targ){
           const char *mbuf = tcmapget(map, buf, len, &msiz);
           if(msiz > width) msiz = width;
           if(!mbuf || msiz != vsiz || memcmp(mbuf, vbuf, vsiz)){
-            eprint(fdb, "(validation)");
+            eprint(fdb, __LINE__, "(validation)");
             err = true;
           }
         }
         tcfree(vbuf);
       } else {
         if(tcfdbecode(fdb) != TCENOREC){
-          eprint(fdb, "tcfdbget");
+          eprint(fdb, __LINE__, "tcfdbget");
           err = true;
         }
         if(map && tcmapget(map, buf, len, &vsiz)){
-          eprint(fdb, "(validation)");
+          eprint(fdb, __LINE__, "(validation)");
           err = true;
         }
       }
@@ -1201,12 +1201,12 @@ static void *threadtypical(void *targ){
         const char *mbuf = tcmapget(map, kbuf, ksiz, &msiz);
         if(msiz > width) msiz = width;
         if(!mbuf || msiz != vsiz || memcmp(mbuf, vbuf, vsiz)){
-          eprint(fdb, "(validation)");
+          eprint(fdb, __LINE__, "(validation)");
           err = true;
         }
         tcfree(vbuf);
       } else {
-        eprint(fdb, "(validation)");
+        eprint(fdb, __LINE__, "(validation)");
         err = true;
       }
     }
