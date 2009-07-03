@@ -894,7 +894,7 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
-bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op);
 
 
@@ -1093,7 +1093,7 @@ void tctreeputcat2(TCTREE *tree, const char *kstr, const char *vstr);
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
-bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                    TCPDPROC proc, void *op);
 
 
@@ -1676,7 +1676,7 @@ void tcmdbputcat3(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int 
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
-bool tcmdbputproc(TCMDB *mdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcmdbputproc(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op);
 
 
@@ -2033,7 +2033,7 @@ void tcndbputcat3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int 
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
-bool tcndbputproc(TCNDB *ndb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcndbputproc(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op);
 
 
@@ -3311,8 +3311,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.18"
-#define _TC_LIBVER     809
+#define _TC_VERSION    "1.4.19"
+#define _TC_LIBVER     810
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

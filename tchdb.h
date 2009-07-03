@@ -752,7 +752,7 @@ void tchdbcodecfunc(TCHDB *hdb, TCCODEC *ep, void **eop, TCCODEC *dp, void **dop
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
-bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op);
 
 

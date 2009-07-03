@@ -35,6 +35,7 @@ static void iputchar(int c);
 static void eprint(TCTDB *tdb, const char *func);
 static void sysprint(void);
 static int myrand(int range);
+static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
 static int runwrite(int argc, char **argv);
 static int runread(int argc, char **argv);
@@ -162,6 +163,19 @@ static int myrand(int range){
   int low = range * (rand() / (RAND_MAX + 1.0));
   low &= (unsigned int)INT_MAX >> 4;
   return (high + low) % range;
+}
+
+
+/* duplication callback function */
+static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op){
+  if(myrand(4) == 0) return (void *)-1;
+  if(myrand(2) == 0) return NULL;
+  int len = myrand(RECBUFSIZ - 5);
+  char buf[RECBUFSIZ];
+  memcpy(buf, "proc", 5);
+  memset(buf + 5, '*', len);
+  *sp = len + 5;
+  return tcmemdup(buf, len + 5);
 }
 
 
@@ -854,7 +868,7 @@ static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
     vsiz = sprintf(vbuf, "%d", myrand(rnum) + 1);
     tcmapput(cols, nbuf, nsiz, vbuf, vsiz);
     if(ru){
-      switch(myrand(7)){
+      switch(myrand(8)){
       case 0:
         if(!tctdbput(tdb, pkbuf, pksiz, cols)){
           eprint(tdb, "tctdbput");
@@ -883,6 +897,21 @@ static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
         if(isnan(tctdbadddouble(tdb, pkbuf, pksiz, 1.0)) && tctdbecode(tdb) != TCEKEEP){
           eprint(tdb, "tctdbadddouble");
           err = true;
+        }
+        break;
+      case 5:
+        if(myrand(2) == 0){
+          if(!tctdbputproc(tdb, pkbuf, pksiz, pkbuf, pksiz, pdprocfunc, NULL) &&
+             tctdbecode(tdb) != TCEKEEP){
+            eprint(tdb, "tctdbputproc");
+            err = true;
+          }
+        } else {
+          if(!tctdbputproc(tdb, pkbuf, pksiz, NULL, 0, pdprocfunc, NULL) &&
+             tctdbecode(tdb) != TCEKEEP && tctdbecode(tdb) != TCENOREC){
+            eprint(tdb, "tctdbputproc");
+            err = true;
+          }
         }
         break;
       default:
@@ -1250,6 +1279,81 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(tdb, "(validation)");
     err = true;
   }
+  iprintf("checking search consistency:\n");
+  for(int i = 1; i <= rnum; i++){
+    TDBQRY *myqry = tctdbqrynew(tdb);
+    qry = tctdbqrynew(tdb);
+    int cnum = myrand(4);
+    if(cnum < 1) cnum = 1;
+    for(int j = 0; j < cnum; j++){
+      const char *name = names[myrand(sizeof(names) / sizeof(*names))];
+      int op = ops[myrand(sizeof(ops) / sizeof(*ops))];
+      char expr[RECBUFSIZ*3];
+      char *wp = expr;
+      wp += sprintf(expr, "%d", myrand(i));
+      if(myrand(10) == 0) wp += sprintf(wp, ",%d", myrand(i));
+      if(myrand(10) == 0) wp += sprintf(wp, ",%d", myrand(i));
+      tctdbqryaddcond(myqry, name, op | (myrand(2) == 0 ? TDBQCNOIDX : 0), expr);
+      tctdbqryaddcond(qry, name, op | (myrand(2) == 0 ? TDBQCNOIDX : 0), expr);
+    }
+    int max = (myrand(10) == 0) ? 0 : myrand(10) + 1;
+    if(max > 0){
+      tctdbqrysetlimit(myqry, max, 0);
+      tctdbqrysetlimit(qry, max, 0);
+      TCLIST *myres = tctdbqrysearch(myqry);
+      res = tctdbqrysearch(qry);
+      if(tclistnum(myres) != tclistnum(res)){
+        eprint(tdb, "(validation)");
+        err = true;
+      }
+      tclistdel(res);
+      tclistdel(myres);
+    } else {
+      TCLIST *myres = tctdbqrysearch(myqry);
+      res = tctdbqrysearch(qry);
+      if(tclistnum(myres) == tclistnum(res)){
+        tclistsort(myres);
+        tclistsort(res);
+        int rnum = tclistnum(myres);
+        for(int j = 0; j < rnum; j++){
+          int myrsiz;
+          const char *myrbuf = tclistval(myres, j, &myrsiz);
+          int rsiz;
+          const char *rbuf = tclistval(res, j, &rsiz);
+          if(myrsiz != rsiz || memcmp(myrbuf, rbuf, myrsiz)){
+            eprint(tdb, "(validation)");
+            err = true;
+            break;
+          }
+        }
+      } else {
+        eprint(tdb, "(validation)");
+        err = true;
+      }
+      tclistdel(res);
+      tclistdel(myres);
+    }
+    tctdbqrydel(qry);
+    tctdbqrydel(myqry);
+    if(rnum > 250 && i % (rnum / 250) == 0){
+      iputchar('.');
+      if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+    }
+  }
+  qry = tctdbqrynew(tdb);
+  tctdbqryaddcond(qry, "", TDBQCSTRBW, "1");
+  if(!tctdbqrysearchout(qry)){
+    eprint(tdb, "tctdbqrysearchout");
+    err = true;
+  }
+  tctdbqrydel(qry);
+  qry = tctdbqrynew(tdb);
+  tctdbqryaddcond(qry, "", TDBQCSTRBW, "2");
+  if(!tctdbqrysearchout2(qry)){
+    eprint(tdb, "tctdbqrysearchout2");
+    err = true;
+  }
+  tctdbqrydel(qry);
   iprintf("checking transaction commit:\n");
   if(!tctdbtranbegin(tdb)){
     eprint(tdb, "tctdbtranbegin");

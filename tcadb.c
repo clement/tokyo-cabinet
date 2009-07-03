@@ -92,6 +92,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     tclistdel(elems);
     return false;
   }
+  int dbgfd = -1;
   int64_t bnum = -1;
   int64_t capnum = -1;
   int64_t capsiz = -1;
@@ -121,7 +122,9 @@ bool tcadbopen(TCADB *adb, const char *name){
     char *pv = strchr(elem, '=');
     if(!pv) continue;
     *(pv++) = '\0';
-    if(!tcstricmp(elem, "bnum")){
+    if(!tcstricmp(elem, "dbgfd")){
+      dbgfd = tcatoi(pv);
+    } else if(!tcstricmp(elem, "bnum")){
       bnum = tcatoix(pv);
     } else if(!tcstricmp(elem, "capnum")){
       capnum = tcatoix(pv);
@@ -188,6 +191,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     adb->omode = ADBONDB;
   } else if(tcstribwm(path, ".tch") || tcstribwm(path, ".hdb")){
     TCHDB *hdb = tchdbnew();
+    if(dbgfd >= 0) tchdbsetdbgfd(hdb, dbgfd);
     tchdbsetmutex(hdb);
     int opts = 0;
     if(tlmode) opts |= HDBTLARGE;
@@ -212,6 +216,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     adb->omode = ADBOHDB;
   } else if(tcstribwm(path, ".tcb") || tcstribwm(path, ".bdb")){
     TCBDB *bdb = tcbdbnew();
+    if(dbgfd >= 0) tcbdbsetdbgfd(bdb, dbgfd);
     tcbdbsetmutex(bdb);
     int opts = 0;
     if(tlmode) opts |= BDBTLARGE;
@@ -238,6 +243,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     adb->omode = ADBOBDB;
   } else if(tcstribwm(path, ".tcf") || tcstribwm(path, ".fdb")){
     TCFDB *fdb = tcfdbnew();
+    if(dbgfd >= 0) tcfdbsetdbgfd(fdb, dbgfd);
     tcfdbsetmutex(fdb);
     tcfdbtune(fdb, width, limsiz);
     int omode = owmode ? FDBOWRITER : FDBOREADER;
@@ -255,6 +261,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     adb->omode = ADBOFDB;
   } else if(tcstribwm(path, ".tct") || tcstribwm(path, ".tdb")){
     TCTDB *tdb = tctdbnew();
+    if(dbgfd >= 0) tctdbsetdbgfd(tdb, dbgfd);
     tctdbsetmutex(tdb);
     int opts = 0;
     if(tlmode) opts |= TDBTLARGE;
@@ -2254,12 +2261,12 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
           void *opq[2];
           opq[0] = rv;
           opq[1] = cnames;
-          if(!tctdbqryproc(qry, tcadbtdbqrygetout, opq)){
+          if(!tctdbqryproc2(qry, tcadbtdbqrygetout, opq)){
             tclistdel(rv);
             rv = NULL;
           }
         } else {
-          if(tctdbqrysearchout(qry)){
+          if(tctdbqrysearchout2(qry)){
             rv = tclistnew2(1);
           } else {
             rv = NULL;
@@ -2393,7 +2400,7 @@ void *tcadbreveal(TCADB *adb){
 
 
 /* Store a record into an abstract database object with a duplication handler. */
-bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
   assert(adb && kbuf && ksiz >= 0 && proc);
   bool err = false;
@@ -2439,7 +2446,7 @@ bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int 
     if(!tcfdbputproc(adb->fdb, tcfdbkeytoid(kbuf, ksiz), vbuf, vsiz, proc, op)) err = true;
     break;
   case ADBOTDB:
-    err = true;
+    if(!tctdbputproc(adb->tdb, kbuf, ksiz, vbuf, vsiz, proc, op)) err = true;
     break;
   case ADBOSKEL:
     skel = adb->skel;

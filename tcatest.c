@@ -185,7 +185,7 @@ static void setskel(ADBSKEL *skel){
   skel->size = (uint64_t (*)(void *))tcadbsize;
   skel->misc = (TCLIST *(*)(void *, const char *, const TCLIST *))tcadbmisc;
   skel->putproc =
-    (bool (*)(void *, const void *, int, const char *, int, TCPDPROC, void *))tcadbputproc;
+    (bool (*)(void *, const void *, int, const void *, int, TCPDPROC, void *))tcadbputproc;
   skel->foreach = (bool (*)(void *, TCITER, void *))tcadbforeach;
 }
 

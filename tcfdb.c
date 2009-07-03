@@ -2314,6 +2314,7 @@ static bool tcfdboptimizeimpl(TCFDB *fdb, int32_t width, int64_t limsiz){
   assert(fdb);
   char *tpath = tcsprintf("%s%ctmp%c%llu", fdb->path, MYEXTCHR, MYEXTCHR, fdb->inode);
   TCFDB *tfdb = tcfdbnew();
+  tfdb->dbgfd = fdb->dbgfd;
   if(width < 1) width = fdb->width;
   if(limsiz < 1) limsiz = fdb->limsiz;
   tcfdbtune(tfdb, width, limsiz);

@@ -2012,7 +2012,7 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
 
 
 /* Store a record into a map object with a duplication handler. */
-bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
   assert(map && kbuf && ksiz >= 0 && proc);
   if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
@@ -2570,7 +2570,7 @@ void tctreeputcat2(TCTREE *tree, const char *kstr, const char *vstr){
 
 
 /* Store a record into a tree object with a duplication handler. */
-bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tctreeputproc(TCTREE *tree, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                    TCPDPROC proc, void *op){
   assert(tree && kbuf && ksiz >= 0 && proc);
   TCTREEREC *top = tctreesplay(tree, kbuf, ksiz);
@@ -3937,7 +3937,7 @@ void tcmdbputcat3(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int 
 
 
 /* Store a record into a on-memory hash database object with a duplication handler. */
-bool tcmdbputproc(TCMDB *mdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcmdbputproc(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
   assert(mdb && kbuf && ksiz >= 0 && proc);
   unsigned int mi;
@@ -4319,7 +4319,7 @@ void tcndbputcat3(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int 
 
 
 /* Store a record into a on-memory tree database object with a duplication handler. */
-bool tcndbputproc(TCNDB *ndb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcndbputproc(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
   assert(ndb && kbuf && ksiz >= 0 && proc);
   if(pthread_mutex_lock((pthread_mutex_t *)ndb->mmtx) != 0) return false;

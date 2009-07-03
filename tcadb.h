@@ -424,7 +424,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args);
  *************************************************************************************************/
 
 
-typedef struct _ADBSKEL {                /* type of structure for a extra database skeleton */
+typedef struct {                         /* type of structure for a extra database skeleton */
   void *opq;                             /* opaque pointer */
   void (*del)(void *);                   /* destructor */
   bool (*open)(void *, const char *);
@@ -451,7 +451,7 @@ typedef struct _ADBSKEL {                /* type of structure for a extra databa
   uint64_t (*rnum)(void *);
   uint64_t (*size)(void *);
   TCLIST *(*misc)(void *, const char *, const TCLIST *);
-  bool (*putproc)(void *, const void *, int, const char *, int, TCPDPROC, void *);
+  bool (*putproc)(void *, const void *, int, const void *, int, TCPDPROC, void *);
   bool (*foreach)(void *, TCITER, void *);
 } ADBSKEL;
 
@@ -500,7 +500,7 @@ void *tcadbreveal(TCADB *adb);
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false.
    This function does not work for the table database. */
-bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op);
 
 

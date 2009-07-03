@@ -1590,7 +1590,7 @@ bool tcbdbputdupback(TCBDB *bdb, const void *kbuf, int ksiz, const void *vbuf, i
 
 
 /* Store a record into a B+ tree database object with a duplication handler. */
-bool tcbdbputproc(TCBDB *bdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tcbdbputproc(TCBDB *bdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
   assert(bdb && kbuf && ksiz >= 0 && proc);
   if(!BDBLOCKMETHOD(bdb, true)) return false;
@@ -3391,6 +3391,8 @@ static bool tcbdboptimizeimpl(TCBDB *bdb, int32_t lmemb, int32_t nmemb,
   const char *path = tchdbpath(bdb->hdb);
   char *tpath = tcsprintf("%s%ctmp%c%llu", path, MYEXTCHR, MYEXTCHR, tchdbinode(bdb->hdb));
   TCBDB *tbdb = tcbdbnew();
+  int dbgfd = tchdbdbgfd(bdb->hdb);
+  if(dbgfd >= 0) tcbdbsetdbgfd(tbdb, dbgfd);
   tcbdbsetcmpfunc(tbdb, bdb->cmp, bdb->cmpop);
   TCCODEC enc, dec;
   void *encop, *decop;

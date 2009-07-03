@@ -849,6 +849,28 @@ bool tctdbsetuidseed(TCTDB *tdb, int64_t seed);
 bool tctdbsetcodecfunc(TCTDB *tdb, TCCODEC enc, void *encop, TCCODEC dec, void *decop);
 
 
+/* Store a record into a table database object with a duplication handler.
+   `tdb' specifies the table database object connected as a writer.
+   `pkbuf' specifies the pointer to the region of the primary key.
+   `pksiz' specifies the size of the region of the primary key.
+   `cbuf' specifies the pointer to the region of the zero separated column string where the name
+   and the value of each column are situated one after the other.  `NULL' means that record
+   addition is ommited if there is no corresponding record.
+   `csiz' specifies the size of the region of the column string.
+   `proc' specifies the pointer to the callback function to process duplication.  It receives
+   four parameters.  The first parameter is the pointer to the region of the value.  The second
+   parameter is the size of the region of the value.  The third parameter is the pointer to the
+   variable into which the size of the region of the return value is assigned.  The fourth
+   parameter is the pointer to the optional opaque object.  It returns the pointer to the result
+   object allocated with `malloc'.  It is released by the caller.  If it is `NULL', the record is
+   not modified.  If it is `(void *)-1', the record is removed.
+   `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tctdbputproc(TCTDB *tdb, const void *pkbuf, int pksiz, const void *cbuf, int csiz,
+                  TCPDPROC proc, void *op);
+
+
 /* Process each record atomically of a table database object.
    `tdb' specifies the table database object.
    `iter' specifies the pointer to the iterator function called for each record.  It receives
@@ -861,6 +883,26 @@ bool tctdbsetcodecfunc(TCTDB *tdb, TCCODEC enc, void *encop, TCCODEC dec, void *
    it is not needed, `NULL' can be specified.
    If successful, the return value is true, else, it is false. */
 bool tctdbforeach(TCTDB *tdb, TCITER iter, void *op);
+
+
+/* Process each record corresponding to a query object with non-atomic fashion.
+   `qry' specifies the query object of the database connected as a writer.
+   `proc' specifies the pointer to the iterator function called for each record.  It receives
+   four parameters.  The first parameter is the pointer to the region of the primary key.  The
+   second parameter is the size of the region of the primary key.  The third parameter is a map
+   object containing columns.  The fourth parameter is the pointer to the optional opaque object.
+   It returns flags of the post treatment by bitwise-or: `TDBQPPUT' to modify the record,
+   `TDBQPOUT' to remove the record, `TDBQPSTOP' to stop the iteration.
+   `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
+   it is not needed, `NULL' can be specified.
+   If successful, the return value is true, else, it is false. */
+bool tctdbqryproc2(TDBQRY *qry, TDBQRYPROC proc, void *op);
+
+
+/* Remove each record corresponding to a query object with non-atomic fashion.
+   `qry' specifies the query object of the database connected as a writer.
+   If successful, the return value is true, else, it is false. */
+bool tctdbqrysearchout2(TDBQRY *qry);
 
 
 /* Convert a string into the index type number.

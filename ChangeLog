@@ -1,3 +1,13 @@
+2009-04-30  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tctdb.c (tctdbidxhash, tctdbqryproc2, tctdbqrysearchout2): new functions.
+
+	* tctdb.c (tctdbsearchimpl, tctdbidxput, tctdbidxout): the index format was modified.
+
+	* tcadb.c (tcadbmisc): the "out" option of the "search" command became non-atomic.
+
+	- Release: 1.4.19
+
 2009-04-25  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tcatoih): new function.

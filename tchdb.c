@@ -1206,7 +1206,7 @@ void tchdbsetecode(TCHDB *hdb, int ecode, const char *filename, int line, const 
       hdb->ecode = ecode;
     }
   }
-  if(ecode != TCEINVALID && ecode != TCEKEEP && ecode != TCENOREC){
+  if(ecode != TCESUCCESS && ecode != TCEINVALID && ecode != TCEKEEP && ecode != TCENOREC){
     hdb->fatal = true;
     if(hdb->fd >= 0 && (hdb->omode & HDBOWRITER)) tchdbsetflag(hdb, HDBFFATAL, true);
   }
@@ -1453,7 +1453,7 @@ bool tchdbsetcodecfunc(TCHDB *hdb, TCCODEC enc, void *encop, TCCODEC dec, void *
 
 
 /* Store a record into a hash database object with a duplication handler. */
-bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
+bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
   assert(hdb && kbuf && ksiz >= 0 && proc);
   if(!HDBLOCKMETHOD(hdb, false)) return false;
@@ -4188,6 +4188,7 @@ static bool tchdboptimizeimpl(TCHDB *hdb, int64_t bnum, int8_t apow, int8_t fpow
   assert(hdb);
   char *tpath = tcsprintf("%s%ctmp%c%llu", hdb->path, MYEXTCHR, MYEXTCHR, hdb->inode);
   TCHDB *thdb = tchdbnew();
+  thdb->dbgfd = hdb->dbgfd;
   thdb->enc = hdb->enc;
   thdb->encop = hdb->encop;
   thdb->dec = hdb->dec;
