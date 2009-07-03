@@ -2180,43 +2180,6 @@
 <dd>`<var>buf</var>' specifies the pointer to the region into which the result string is written.  The size of the buffer should be equal to or more than 48 bytes.</dd>
 </dl>
 
-<p>The function `tctopsort' is used in order to sort top records of an array.</p>
-
-<dl class="api">
-<dt><code>void tctopsort(void *<var>base</var>, size_t <var>nmemb</var>, size_t <var>size</var>, size_t <var>top</var>, int(*<var>compar</var>)(const void *, const void *));</code></dt>
-<dd>`<var>base</var>' spacifies the pointer to an array.</dd>
-<dd>`<var>nmemb</var>' specifies the number of elements of the array.</dd>
-<dd>`<var>size</var>' specifies the size of each element.</dd>
-<dd>`<var>top</var>' specifies the number of top records.</dd>
-<dd>`<var>compar</var>' specifies the pointer to comparing function.  The two arguments specify the pointers of elements.  The comparing function should returns positive if the former is big, negative if the latter is big, 0 if both are equal.</dd>
-</dl>
-
-<p>The function `tcchidxnew' is used in order to create a consistent hashing object.</p>
-
-<dl class="api">
-<dt><code>TCCHIDX *tcchidxnew(int <var>range</var>);</code></dt>
-<dd>`<var>range</var>' specifies the number of nodes.  It should be more than 0.  The range of hash values is from 0 to less than the specified number.</dd>
-<dd>The return value is the new consistent hashing object.</dd>
-<dd>Consistent hashing is useful because the addition or removal of one node does not significantly change the mapping of keys to nodes.</dd>
-</dl>
-
-<p>The function `tcchidxdel' is used in order to delete a consistent hashing object.</p>
-
-<dl class="api">
-<dt><code>void tcchidxdel(TCCHIDX *<var>chidx</var>);</code></dt>
-<dd>`<var>chidx</var>' specifies the consistent hashing object.</dd>
-</dl>
-
-<p>The function `tcchidxhash' is used in order to get the consistent hashing value of a record.</p>
-
-<dl class="api">
-<dt><code>int tcchidxhash(TCCHIDX *<var>chidx</var>, const void *<var>ptr</var>, int <var>size</var>);</code></dt>
-<dd>`<var>chidx</var>' specifies the consistent hashing object.</dd>
-<dd>`<var>ptr</var>' specifies the pointer to the region of the record.</dd>
-<dd>`<var>size</var>' specifies the size of the region.</dd>
-<dd>The return value is the hash value of the record.</dd>
-</dl>
-
 <p>The function `tctime' is used in order to get the time of day in seconds.</p>
 
 <dl class="api">
@@ -5698,7 +5661,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetindex(TCTDB *<var>tdb</var>, const char *<var>name</var>, int <var>type</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
 <dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
-<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
+<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the setting indices should be set after the database is opened.</dd>
 </dl>
@@ -5919,7 +5882,7 @@ int main(int argc, char **argv){
 <li><code>-is</code> : "str" コラムに文字列型のインデックスを張る。</li>
 <li><code>-in</code> : "num" コラムに数値型のインデックスを張る。</li>
 <li><code>-it</code> : "type" コラムに文字列型のインデックスを張る。</li>
-<li><code>-if</code> : "flag" コラムに文字列型のインデックスを張る。</li>
+<li><code>-if</code> : "flag" コラムにトークン転置型のインデックスを張る。</li>
 <li><code>-nl</code> : オプション `TDBNOLCK' を有効にする。</li>
 <li><code>-nb</code> : オプション `TDBLCKNB' を有効にする。</li>
 <li><code>-rnd</code> : キーを無作為に選択する。</li>
@@ -5964,7 +5927,7 @@ int main(int argc, char **argv){
 <li><code>-is</code> : "str" コラムに文字列型のインデックスを張る。</li>
 <li><code>-in</code> : "num" コラムに数値型のインデックスを張る。</li>
 <li><code>-it</code> : "type" コラムに文字列型のインデックスを張る。</li>
-<li><code>-if</code> : "flag" コラムに文字列型のインデックスを張る。</li>
+<li><code>-if</code> : "flag" コラムにトークン転置型のインデックスを張る。</li>
 <li><code>-nl</code> : オプション `TDBNOLCK' を有効にする。</li>
 <li><code>-nb</code> : オプション `TDBLCKNB' を有効にする。</li>
 <li><code>-rnd</code> : キーを無作為に選択する。</li>
@@ -6027,7 +5990,7 @@ int main(int argc, char **argv){
 <li><code>-rm</code> : 結果のレコードを全て削除する。</li>
 <li><code>-tz</code> : オプション `UINT8_MAX' を有効にする。</li>
 <li><code>-df</code> : デフラグのみを行う。</li>
-<li><code>-it</code> : インデックスの型を "lexical" か "decimal" か "void" で指定する。</li>
+<li><code>-it</code> : インデックスの型を "lexical" か "decimal" か "token" か "void" で指定する。</li>
 <li><code>-cv</code> : 既存のインデックスを削除する。</li>
 <li><code>-sc</code> : キーを小文字に正規化する。</li>
 </ul>
@@ -6739,18 +6702,21 @@ cp -f "$srcpath" "$destpath"
 
 <h3 id="tips_tctdbindex">テーブルデータベースのインデックス</h3>
 
-<p>テーブルデータベースを検索する際に、合致条件の判定や順序指定によるソートを高速化するために、任意のコラムを対象としてインデックスを張ることができます。コラムには型がありませんが、インデックスには型があります。文字列型の演算を高速化させたい場合は文字列型のインデックスを、数値型の演算子を高速化させたい場合は数値型のインデックスを張ることになります。ただし、型が異なる場合でもインデックスを張っておくと、メインのハッシュデータベースの全表スキャンの代わりに、それよりは小さいインデックスの全表スキャンを用いるので、計算量は同じですが処理時間は短くなります。</p>
+<p>テーブルデータベースを検索する際に、合致条件の判定や順序指定によるソートを高速化するために、任意のコラムを対象としてインデックスを張ることができます。コラムには型がありませんが、インデックスには型があります。文字列型の演算を高速化させたい場合は文字列型のインデックスを、数値型の演算子を高速化させたい場合は数値型のインデックスを、トークン型の演算子を高速化させたい場合はトークン転置型のインデックスを張ることになります。ただし、型が異なる場合でもインデックスを張っておくと、メインのハッシュデータベースの全表スキャンの代わりに、それよりは小さいインデックスの全表スキャンを用いるので、計算量は同じですが処理時間は短くなります。</p>
 
 <ul>
-<li>文字列型インデックス:<ul>
+<li>文字列型インデックス（TDBITLEXICAL）:<ul>
 <li>計算量が小さくなる演算子：TDBQCSTREQ、TDBQCSTRBW、TDBQCSTROREQ</li>
 <li>計算量は同じだが高速化する演算子：TDBQCSTRINC、TDBQCSTREW、TDBQCSTRAND、TDBQCSTROR、TDBQCSTRRX、TDBQCNUMEQ、TDBQCNUMGT、TDBQCNUMGE、TDBQCNUMLT、TDBQCNUMLE、TDBQCNUMBT、TDBQCNUMOREQ</li>
 <li>計算量が小さくなる順序指定：TDBQOSTRASC、TDBQOSTRDESC</li>
 </ul></li>
-<li>数値型インデックス:<ul>
+<li>数値型インデックス（TDBITDECIMAL）:<ul>
 <li>計算量が小さくなる演算子：TDBQCNUMEQ、TDBQCNUMGT、TDBQCNUMGE、TDBQCNUMLT、TDBQCNUMLE、TDBQCNUMBT、TDBQCNUMOREQ</li>
 <li>計算量は同じだが高速化する演算子：TDBQCSTREQ、TDBQCSTRBW、TDBQCSTROREQ、TDBQCSTRINC、TDBQCSTREW、TDBQCSTRAND、TDBQCSTROR、TDBQCSTRRX</li>
 <li>計算量が小さくなる順序指定：TDBQONUMASC、TDBQONUMDESC</li>
+</ul></li>
+<li>トークン転置型インデックス（TDBITTOKEN）:<ul>
+<li>計算量が小さくなる演算子：TDBQCSTRAND、TDBQCSTROR</li>
 </ul></li>
 </ul>
 

@@ -2178,43 +2178,6 @@
 <dd>`<var>buf</var>' specifies the pointer to the region into which the result string is written.  The size of the buffer should be equal to or more than 48 bytes.</dd>
 </dl>
 
-<p>The function `tctopsort' is used in order to sort top records of an array.</p>
-
-<dl class="api">
-<dt><code>void tctopsort(void *<var>base</var>, size_t <var>nmemb</var>, size_t <var>size</var>, size_t <var>top</var>, int(*<var>compar</var>)(const void *, const void *));</code></dt>
-<dd>`<var>base</var>' spacifies the pointer to an array.</dd>
-<dd>`<var>nmemb</var>' specifies the number of elements of the array.</dd>
-<dd>`<var>size</var>' specifies the size of each element.</dd>
-<dd>`<var>top</var>' specifies the number of top records.</dd>
-<dd>`<var>compar</var>' specifies the pointer to comparing function.  The two arguments specify the pointers of elements.  The comparing function should returns positive if the former is big, negative if the latter is big, 0 if both are equal.</dd>
-</dl>
-
-<p>The function `tcchidxnew' is used in order to create a consistent hashing object.</p>
-
-<dl class="api">
-<dt><code>TCCHIDX *tcchidxnew(int <var>range</var>);</code></dt>
-<dd>`<var>range</var>' specifies the number of nodes.  It should be more than 0.  The range of hash values is from 0 to less than the specified number.</dd>
-<dd>The return value is the new consistent hashing object.</dd>
-<dd>Consistent hashing is useful because the addition or removal of one node does not significantly change the mapping of keys to nodes.</dd>
-</dl>
-
-<p>The function `tcchidxdel' is used in order to delete a consistent hashing object.</p>
-
-<dl class="api">
-<dt><code>void tcchidxdel(TCCHIDX *<var>chidx</var>);</code></dt>
-<dd>`<var>chidx</var>' specifies the consistent hashing object.</dd>
-</dl>
-
-<p>The function `tcchidxhash' is used in order to get the consistent hashing value of a record.</p>
-
-<dl class="api">
-<dt><code>int tcchidxhash(TCCHIDX *<var>chidx</var>, const void *<var>ptr</var>, int <var>size</var>);</code></dt>
-<dd>`<var>chidx</var>' specifies the consistent hashing object.</dd>
-<dd>`<var>ptr</var>' specifies the pointer to the region of the record.</dd>
-<dd>`<var>size</var>' specifies the size of the region.</dd>
-<dd>The return value is the hash value of the record.</dd>
-</dl>
-
 <p>The function `tctime' is used in order to get the time of day in seconds.</p>
 
 <dl class="api">
@@ -5696,7 +5659,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetindex(TCTDB *<var>tdb</var>, const char *<var>name</var>, int <var>type</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object connected as a writer.</dd>
 <dd>`<var>name</var>' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.</dd>
-<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
+<dd>`<var>type</var>' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely returns failure.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the setting indices should be set after the database is opened.</dd>
 </dl>
@@ -5917,7 +5880,7 @@ int main(int argc, char **argv){
 <li><code>-is</code> : create the string index for the column "str".</li>
 <li><code>-in</code> : create the number index for the column "num".</li>
 <li><code>-it</code> : create the string index for the column "type".</li>
-<li><code>-if</code> : create the string index for the column "flag".</li>
+<li><code>-if</code> : create the token inverted index for the column "flag".</li>
 <li><code>-nl</code> : enable the option `TDBNOLCK'.</li>
 <li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
 <li><code>-rnd</code> : select keys at random.</li>
@@ -5962,7 +5925,7 @@ int main(int argc, char **argv){
 <li><code>-is</code> : create the string index for the column "str".</li>
 <li><code>-in</code> : create the number index for the column "num".</li>
 <li><code>-it</code> : create the string index for the column "type".</li>
-<li><code>-if</code> : create the string index for the column "flag".</li>
+<li><code>-if</code> : create the token inverted index for the column "flag".</li>
 <li><code>-nl</code> : enable the option `TDBNOLCK'.</li>
 <li><code>-nb</code> : enable the option `TDBLCKNB'.</li>
 <li><code>-rnd</code> : select keys at random.</li>
@@ -6026,7 +5989,7 @@ int main(int argc, char **argv){
 <li><code>-rm</code> : remove every record in the result.</li>
 <li><code>-tz</code> : enable the option `UINT8_MAX'.</li>
 <li><code>-df</code> : perform defragmentation only.</li>
-<li><code>-it <var>type</var></code> : specify the index type among "lexical", "decimal", and "void".</li>
+<li><code>-it <var>type</var></code> : specify the index type among "lexical", "decimal", "token", and "void".</li>
 <li><code>-cd</code> : create the number index instead of the string index.</li>
 <li><code>-cv</code> : remove the existing index.</li>
 <li><code>-sc</code> : normalize keys as lower cases.</li>

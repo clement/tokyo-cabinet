@@ -375,7 +375,7 @@ bool tcadbput(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int vsiz
       tcmdbput3(adb->mdb, kbuf, ksiz, vbuf, vsiz);
       adb->capcnt++;
       if((adb->capcnt & 0xff) == 0){
-        if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum)
+        if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum + 0x100)
           tcmdbcutfront(adb->mdb, 0x100);
         if(adb->capsiz > 0 && tcmdbmsiz(adb->mdb) > adb->capsiz)
           tcmdbcutfront(adb->mdb, 0x200);
@@ -389,7 +389,7 @@ bool tcadbput(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int vsiz
     if(adb->capnum > 0 || adb->capsiz > 0){
       adb->capcnt++;
       if((adb->capcnt & 0xff) == 0){
-        if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum)
+        if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum + 0x100)
           tcndbcutfringe(adb->ndb, 0x100);
         if(adb->capsiz > 0 && tcndbmsiz(adb->ndb) > adb->capsiz)
           tcndbcutfringe(adb->ndb, 0x200);
@@ -447,7 +447,7 @@ bool tcadbputkeep(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int 
       if(adb->capnum > 0 || adb->capsiz > 0){
         adb->capcnt++;
         if((adb->capcnt & 0xff) == 0){
-          if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum)
+          if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum + 0x100)
             tcmdbcutfront(adb->mdb, 0x100);
           if(adb->capsiz > 0 && tcmdbmsiz(adb->mdb) > adb->capsiz)
             tcmdbcutfront(adb->mdb, 0x200);
@@ -462,7 +462,7 @@ bool tcadbputkeep(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int 
       if(adb->capnum > 0 || adb->capsiz > 0){
         adb->capcnt++;
         if((adb->capcnt & 0xff) == 0){
-          if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum)
+          if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum + 0x100)
             tcndbcutfringe(adb->ndb, 0x100);
           if(adb->capsiz > 0 && tcndbmsiz(adb->ndb) > adb->capsiz)
             tcndbcutfringe(adb->ndb, 0x200);
@@ -523,7 +523,7 @@ bool tcadbputcat(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int v
       tcmdbputcat3(adb->mdb, kbuf, ksiz, vbuf, vsiz);
       adb->capcnt++;
       if((adb->capcnt & 0xff) == 0){
-        if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum)
+        if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum + 0x100)
           tcmdbcutfront(adb->mdb, 0x100);
         if(adb->capsiz > 0 && tcmdbmsiz(adb->mdb) > adb->capsiz)
           tcmdbcutfront(adb->mdb, 0x200);
@@ -537,7 +537,7 @@ bool tcadbputcat(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int v
     if(adb->capnum > 0 || adb->capsiz > 0){
       adb->capcnt++;
       if((adb->capcnt & 0xff) == 0){
-        if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum)
+        if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum + 0x100)
           tcndbcutfringe(adb->ndb, 0x100);
         if(adb->capsiz > 0 && tcndbmsiz(adb->ndb) > adb->capsiz)
           tcndbcutfringe(adb->ndb, 0x200);
@@ -877,7 +877,7 @@ int tcadbaddint(TCADB *adb, const void *kbuf, int ksiz, int num){
     if(adb->capnum > 0 || adb->capsiz > 0){
       adb->capcnt++;
       if((adb->capcnt & 0xff) == 0){
-        if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum)
+        if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum + 0x100)
           tcmdbcutfront(adb->mdb, 0x100);
         if(adb->capsiz > 0 && tcmdbmsiz(adb->mdb) > adb->capsiz)
           tcmdbcutfront(adb->mdb, 0x200);
@@ -889,7 +889,7 @@ int tcadbaddint(TCADB *adb, const void *kbuf, int ksiz, int num){
     if(adb->capnum > 0 || adb->capsiz > 0){
       adb->capcnt++;
       if((adb->capcnt & 0xff) == 0){
-        if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum)
+        if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum + 0x100)
           tcndbcutfringe(adb->ndb, 0x100);
         if(adb->capsiz > 0 && tcndbmsiz(adb->ndb) > adb->capsiz)
           tcndbcutfringe(adb->ndb, 0x200);
@@ -940,7 +940,7 @@ double tcadbadddouble(TCADB *adb, const void *kbuf, int ksiz, double num){
     if(adb->capnum > 0 || adb->capsiz > 0){
       adb->capcnt++;
       if((adb->capcnt & 0xff) == 0){
-        if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum)
+        if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum + 0x100)
           tcmdbcutfront(adb->mdb, 0x100);
         if(adb->capsiz > 0 && tcmdbmsiz(adb->mdb) > adb->capsiz)
           tcmdbcutfront(adb->mdb, 0x200);
@@ -952,7 +952,7 @@ double tcadbadddouble(TCADB *adb, const void *kbuf, int ksiz, double num){
     if(adb->capnum > 0 || adb->capsiz > 0){
       adb->capcnt++;
       if((adb->capcnt & 0xff) == 0){
-        if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum)
+        if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum + 0x100)
           tcndbcutfringe(adb->ndb, 0x100);
         if(adb->capsiz > 0 && tcndbmsiz(adb->ndb) > adb->capsiz)
           tcndbcutfringe(adb->ndb, 0x200);
@@ -2731,7 +2731,7 @@ bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int 
       if(adb->capnum > 0 || adb->capsiz > 0){
         adb->capcnt++;
         if((adb->capcnt & 0xff) == 0){
-          if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum)
+          if(adb->capnum > 0 && tcmdbrnum(adb->mdb) > adb->capnum + 0x100)
             tcmdbcutfront(adb->mdb, 0x100);
           if(adb->capsiz > 0 && tcmdbmsiz(adb->mdb) > adb->capsiz)
             tcmdbcutfront(adb->mdb, 0x200);
@@ -2746,7 +2746,7 @@ bool tcadbputproc(TCADB *adb, const void *kbuf, int ksiz, const void *vbuf, int 
       if(adb->capnum > 0 || adb->capsiz > 0){
         adb->capcnt++;
         if((adb->capcnt & 0xff) == 0){
-          if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum)
+          if(adb->capnum > 0 && tcndbrnum(adb->ndb) > adb->capnum + 0x100)
             tcndbcutfringe(adb->ndb, 0x100);
           if(adb->capsiz > 0 && tcndbmsiz(adb->ndb) > adb->capsiz)
             tcndbcutfringe(adb->ndb, 0x200);

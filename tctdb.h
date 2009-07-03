@@ -48,6 +48,7 @@ typedef struct {                         /* type of structure for a column index
   char *name;                            /* column name */
   int type;                              /* data type */
   void *db;                              /* internal database object */
+  void *cc;                              /* internal cache object */
 } TDBIDX;
 
 typedef struct {                         /* type of structure for a table database */
@@ -89,6 +90,7 @@ enum {                                   /* enumeration for open modes */
 enum {                                   /* enumeration for index types */
   TDBITLEXICAL,                          /* lexical string */
   TDBITDECIMAL,                          /* decimal string */
+  TDBITTOKEN,                            /* token inverted index */
   TDBITOPT = 9998,                       /* optimize */
   TDBITVOID = 9999,                      /* void */
   TDBITKEEP = 1 << 24                    /* keep existing index */
@@ -635,9 +637,9 @@ uint64_t tctdbfsiz(TCTDB *tdb);
    `name' specifies the name of a column.  If the name of an existing index is specified, the
    index is rebuilt.  An empty string means the primary key.
    `type' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal
-   string.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is
-   removed.  If `TDBITKEEP' is added by bitwise-or and the index exists, this function merely
-   returns failure.
+   string, `TDBITTOKEN' for token inverted index.  If it is `TDBITOPT', the index is optimized.
+   If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise-or and the
+   index exists, this function merely returns failure.
    If successful, the return value is true, else, it is false.
    Note that the setting indices should be set after the database is opened. */
 bool tctdbsetindex(TCTDB *tdb, const char *name, int type);

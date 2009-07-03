@@ -587,7 +587,7 @@ static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, i
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
-  if((iflags & (1 << 4)) && !tctdbsetindex(tdb, "flag", TDBITLEXICAL)){
+  if((iflags & (1 << 4)) && !tctdbsetindex(tdb, "flag", TDBITTOKEN)){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
@@ -848,7 +848,7 @@ static int procwicked(const char *path, int tnum, int rnum, int opts, int omode)
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
-  if(!tctdbsetindex(tdb, "flag", TDBITLEXICAL)){
+  if(!tctdbsetindex(tdb, "flag", TDBITTOKEN)){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
@@ -956,7 +956,7 @@ static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow,
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
-  if(!tctdbsetindex(tdb, "flag", TDBITLEXICAL)){
+  if(!tctdbsetindex(tdb, "flag", TDBITTOKEN)){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }

@@ -2273,17 +2273,6 @@ TCMPOOL *tcmpoolglobal(void);
  *************************************************************************************************/
 
 
-typedef struct {                         /* type of structure for a consistent hashing node */
-  uint32_t seq;                          /* sequential number */
-  uint32_t hash;                         /* hash value */
-} TCCHIDXNODE;
-
-typedef struct {                         /* type of structure for a consistent hashing object */
-  TCCHIDXNODE *nodes;                    /* node array */
-  int nnum;                              /* number of the node array */
-} TCCHIDX;
-
-
 /* Get the larger value of two integers.
    `a' specifies an integer.
    `b' specifies the other integer.
@@ -2511,40 +2500,6 @@ char *tcregexreplace(const char *str, const char *regex, const char *alt);
 void tcmd5hash(const void *ptr, int size, char *buf);
 
 
-/* Sort top records of an array.
-   `base' spacifies the pointer to an array.
-   `nmemb' specifies the number of elements of the array.
-   `size' specifies the size of each element.
-   `top' specifies the number of top records.
-   `compar' specifies the pointer to comparing function.  The two arguments specify the pointers
-   of elements.  The comparing function should returns positive if the former is big, negative
-   if the latter is big, 0 if both are equal. */
-void tctopsort(void *base, size_t nmemb, size_t size, size_t top,
-               int(*compar)(const void *, const void *));
-
-
-/* Create a consistent hashing object.
-   `range' specifies the number of nodes.  It should be more than 0.  The range of hash values is
-   from 0 to less than the specified number.
-   The return value is the new consistent hashing object.
-   Consistent hashing is useful because the addition or removal of one node does not
-   significantly change the mapping of keys to nodes. */
-TCCHIDX *tcchidxnew(int range);
-
-
-/* Delete a consistent hashing object.
-   `chidx' specifies the consistent hashing object. */
-void tcchidxdel(TCCHIDX *chidx);
-
-
-/* Get the consistent hashing value of a record.
-   `chidx' specifies the consistent hashing object.
-   `ptr' specifies the pointer to the region of the record.
-   `size' specifies the size of the region.
-   The return value is the hash value of the record. */
-int tcchidxhash(TCCHIDX *chidx, const void *ptr, int size);
-
-
 /* Get the time of day in seconds.
    The return value is the time of day in seconds.  The accuracy is in microseconds. */
 double tctime(void);
@@ -2618,6 +2573,17 @@ int tcdayofweek(int year, int mon, int day);
 /*************************************************************************************************
  * miscellaneous utilities (for experts)
  *************************************************************************************************/
+
+
+typedef struct {                         /* type of structure for a consistent hashing node */
+  uint32_t seq;                          /* sequential number */
+  uint32_t hash;                         /* hash value */
+} TCCHIDXNODE;
+
+typedef struct {                         /* type of structure for a consistent hashing object */
+  TCCHIDXNODE *nodes;                    /* node array */
+  int nnum;                              /* number of the node array */
+} TCCHIDX;
 
 
 /* Check whether a string is numeric completely or not.
@@ -2694,6 +2660,18 @@ char *tcstrjoin3(const TCMAP *map, char delim);
 void *tcstrjoin4(const TCMAP *map, int *sp);
 
 
+/* Sort top records of an array.
+   `base' spacifies the pointer to an array.
+   `nmemb' specifies the number of elements of the array.
+   `size' specifies the size of each element.
+   `top' specifies the number of top records.
+   `compar' specifies the pointer to comparing function.  The two arguments specify the pointers
+   of elements.  The comparing function should returns positive if the former is big, negative
+   if the latter is big, 0 if both are equal. */
+void tctopsort(void *base, size_t nmemb, size_t size, size_t top,
+               int(*compar)(const void *, const void *));
+
+
 /* Suspend execution of the current thread.
    `sec' specifies the interval of the suspension in seconds.
    If successful, the return value is true, else, it is false. */
@@ -2707,6 +2685,28 @@ bool tcsleep(double sec);
    Because the object of the return value is created with the function `tcmapnew', it should be
    deleted with the function `tcmapdel' when it is no longer in use. */
 TCMAP *tcsysinfo(void);
+
+
+/* Create a consistent hashing object.
+   `range' specifies the number of nodes.  It should be more than 0.  The range of hash values is
+   from 0 to less than the specified number.
+   The return value is the new consistent hashing object.
+   Consistent hashing is useful because the addition or removal of one node does not
+   significantly change the mapping of keys to nodes. */
+TCCHIDX *tcchidxnew(int range);
+
+
+/* Delete a consistent hashing object.
+   `chidx' specifies the consistent hashing object. */
+void tcchidxdel(TCCHIDX *chidx);
+
+
+/* Get the consistent hashing value of a record.
+   `chidx' specifies the consistent hashing object.
+   `ptr' specifies the pointer to the region of the record.
+   `size' specifies the size of the region.
+   The return value is the hash value of the record. */
+int tcchidxhash(TCCHIDX *chidx, const void *ptr, int size);
 
 
 
@@ -3563,8 +3563,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.25"
-#define _TC_LIBVER     816
+#define _TC_VERSION    "1.4.26"
+#define _TC_LIBVER     817
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

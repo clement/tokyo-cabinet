@@ -634,7 +634,7 @@ static int procwrite(const char *path, int rnum, int bnum, int apow, int fpow,
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
-  if((iflags & (1 << 4)) && !tctdbsetindex(tdb, "flag", TDBITLEXICAL)){
+  if((iflags & (1 << 4)) && !tctdbsetindex(tdb, "flag", TDBITTOKEN)){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
@@ -871,7 +871,7 @@ static int procrcat(const char *path, int rnum, int bnum, int apow, int fpow,
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
-  if((iflags & (1 << 4)) && !tctdbsetindex(tdb, "flag", TDBITLEXICAL)){
+  if((iflags & (1 << 4)) && !tctdbsetindex(tdb, "flag", TDBITTOKEN)){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
@@ -1061,7 +1061,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
-  if(!tctdbsetindex(tdb, "flag", TDBITLEXICAL)){
+  if(!tctdbsetindex(tdb, "flag", TDBITTOKEN)){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
@@ -1297,6 +1297,37 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
   if(!tctdbopen(tdb, path, TDBOWRITER | omode)){
     eprint(tdb, "tctdbopen");
     err = true;
+  }
+  iprintf("random updating:\n");
+  for(int i = 1; i <= rnum; i++){
+    if(myrand(2) == 0){
+      char pkbuf[RECBUFSIZ];
+      int pksiz = sprintf(pkbuf, "%X", myrand(rnum) + 1);
+      TCMAP *cols = tcmapnew2(7);
+      char vbuf[RECBUFSIZ*2];
+      int vsiz = sprintf(vbuf, "%d", myrand(i) + 1);
+      tcmapput(cols, "c1", 3, vbuf, vsiz);
+      vsiz = sprintf(vbuf, " %d, %d ", myrand(i) + 1, rnum / (myrand(rnum) + 1));
+      tcmapput(cols, "flag", 4, vbuf, vsiz);
+      if(!tctdbputcat(tdb, pkbuf, pksiz, cols)){
+        eprint(tdb, "tctdbputcat");
+        err = true;
+        break;
+      }
+      tcmapdel(cols);
+    } else {
+      char pkbuf[RECBUFSIZ];
+      int pksiz = sprintf(pkbuf, "%X", myrand(rnum) + 1);
+      if(!tctdbout(tdb, pkbuf, pksiz) && tctdbecode(tdb) != TCENOREC){
+        eprint(tdb, "tctdbout");
+        err = true;
+        break;
+      }
+    }
+    if(rnum > 250 && i % (rnum / 250) == 0){
+      iputchar('.');
+      if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+    }
   }
   iprintf("checking iterator:\n");
   int inum = 0;
@@ -1577,7 +1608,7 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }
-  if(!tctdbsetindex(tdb, "flag", TDBITLEXICAL)){
+  if(!tctdbsetindex(tdb, "flag", TDBITTOKEN)){
     eprint(tdb, "tctdbsetindex");
     err = true;
   }

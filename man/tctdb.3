@@ -922,7 +922,7 @@ The function `tctdbsetindex' is used in order to set a column index to a table d
 `\fIname\fR' specifies the name of a column.  If the name of an existing index is specified, the index is rebuilt.  An empty string means the primary key.
 .RE
 .RS
-`\fItype\fR' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise\-or and the index exists, this function merely returns failure.
+`\fItype\fR' specifies the index type: `TDBITLEXICAL' for lexical string, `TDBITDECIMAL' for decimal string, `TDBITTOKEN' for token inverted index.  If it is `TDBITOPT', the index is optimized.  If it is `TDBITVOID', the index is removed.  If `TDBITKEEP' is added by bitwise\-or and the index exists, this function merely returns failure.
 .RE
 .RS
 If successful, the return value is true, else, it is false.

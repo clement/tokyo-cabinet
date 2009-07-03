@@ -4659,7 +4659,6 @@ static void tcmpooldelglobal(void){
 #define TCRANDDEV      "/dev/urandom"    // path of the random device file
 #define TCDISTMAXLEN   4096              // maximum size of a string for distance checking
 #define TCDISTBUFSIZ   16384             // size of a distance buffer
-#define TCCHIDXVNNUM   128               // number of virtual node of consistent hashing
 
 
 /* File descriptor of random number generator. */
@@ -4669,7 +4668,6 @@ int tcrandomdevfd = -1;
 /* private function prototypes */
 static void tcrandomfdclose(void);
 static time_t tcmkgmtime(struct tm *tm);
-static int tcchidxcmp(const void *a, const void *b);
 
 
 /* Get the larger value of two integers. */
@@ -5298,128 +5296,6 @@ void tcmd5hash(const void *ptr, int size, char *buf){
 }
 
 
-/* Sort top records of an array. */
-void tctopsort(void *base, size_t nmemb, size_t size, size_t top,
-               int(*compar)(const void *, const void *)){
-  assert(base && size > 0 && compar);
-  if(nmemb < 1) return;
-  if(top > nmemb) top = nmemb;
-  char *bp = base;
-  char *ep = bp + nmemb * size;
-  char *rp = bp + size;
-  int num = 1;
-  char swap[size];
-  while(rp < ep){
-    if(num < top){
-      int cidx = num;
-      while(cidx > 0){
-        int pidx = (cidx - 1) / 2;
-        if(compar(bp + cidx * size, bp + pidx * size) <= 0) break;
-        memcpy(swap, bp + cidx * size, size);
-        memcpy(bp + cidx * size, bp + pidx * size, size);
-        memcpy(bp + pidx * size, swap, size);
-        cidx = pidx;
-      }
-      num++;
-    } else if(compar(rp, bp) < 0){
-      memcpy(swap, bp, size);
-      memcpy(bp, rp, size);
-      memcpy(rp, swap, size);
-      int pidx = 0;
-      int bot = num / 2;
-      while(pidx < bot){
-        int cidx = pidx * 2 + 1;
-        if(cidx < num - 1 && compar(bp + cidx * size, bp + (cidx + 1) * size) < 0) cidx++;
-        if(compar(bp + pidx * size, bp + cidx * size) > 0) break;
-        memcpy(swap, bp + pidx * size, size);
-        memcpy(bp + pidx * size, bp + cidx * size, size);
-        memcpy(bp + cidx * size, swap, size);
-        pidx = cidx;
-      }
-    }
-    rp += size;
-  }
-  num = top - 1;
-  while(num > 0){
-    memcpy(swap, bp, size);
-    memcpy(bp, bp + num * size, size);
-    memcpy(bp + num * size, swap, size);
-    int pidx = 0;
-    int bot = num / 2;
-    while(pidx < bot){
-      int cidx = pidx * 2 + 1;
-      if(cidx < num - 1 && compar(bp + cidx * size, bp + (cidx + 1) * size) < 0) cidx++;
-      if(compar(bp + pidx * size, bp + cidx * size) > 0) break;
-      memcpy(swap, bp + pidx * size, size);
-      memcpy(bp + pidx * size, bp + cidx * size, size);
-      memcpy(bp + cidx * size, swap, size);
-      pidx = cidx;
-    }
-    num--;
-  }
-}
-
-
-/* Create a consistent hashing object. */
-TCCHIDX *tcchidxnew(int range){
-  assert(range > 0);
-  TCCHIDX *chidx;
-  TCMALLOC(chidx, sizeof(*chidx));
-  int nnum = range * TCCHIDXVNNUM;
-  TCCHIDXNODE *nodes;
-  TCMALLOC(nodes, nnum * sizeof(*nodes));
-  unsigned int seed = 725;
-  for(int i = 0; i < range; i++){
-    int end = (i + 1) * TCCHIDXVNNUM;
-    for(int j = i * TCCHIDXVNNUM; j < end; j++){
-      nodes[j].seq = i;
-      nodes[j].hash = (seed = seed * 123456761 + 211);
-    }
-  }
-  qsort(nodes, nnum, sizeof(*nodes), tcchidxcmp);
-  chidx->nodes = nodes;
-  chidx->nnum = nnum;
-  return chidx;
-}
-
-
-/* Delete a consistent hashing object. */
-void tcchidxdel(TCCHIDX *chidx){
-  assert(chidx);
-  TCFREE(chidx->nodes);
-  TCFREE(chidx);
-}
-
-
-/* Get the consistent hashing value of a record. */
-int tcchidxhash(TCCHIDX *chidx, const void *ptr, int size){
-  assert(chidx && ptr && size >= 0);
-  uint32_t hash = 19771007;
-  const char *rp = (char *)ptr + size;
-  while(size--){
-    hash = (hash * 31) ^ *(uint8_t *)--rp;
-    hash ^= hash << 7;
-  }
-  TCCHIDXNODE *nodes = chidx->nodes;
-  int low = 0;
-  int high = chidx->nnum;
-  while(low < high){
-    int mid = (low + high) >> 1;
-    uint32_t nhash = nodes[mid].hash;
-    if(hash < nhash){
-      high = mid;
-    } else if(hash > nhash){
-      low = mid + 1;
-    } else {
-      low = mid;
-      break;
-    }
-  }
-  if(low >= chidx->nnum) low = 0;
-  return nodes[low].seq & INT_MAX;
-}
-
-
 /* Get the time of day in seconds. */
 double tctime(void){
   struct timeval tv;
@@ -5748,17 +5624,6 @@ static void tcrandomfdclose(void){
 }
 
 
-/* Compare two consistent hashing nodes.
-   `a' specifies the pointer to one node object.
-   `b' specifies the pointer to the other node object.
-   The return value is positive if the former is big, negative if the latter is big, 0 if both
-   are equivalent. */
-static int tcchidxcmp(const void *a, const void *b){
-  if(((TCCHIDXNODE *)a)->hash == ((TCCHIDXNODE *)b)->hash) return 0;
-  return ((TCCHIDXNODE *)a)->hash > ((TCCHIDXNODE *)b)->hash;
-}
-
-
 /* Make the GMT from a time structure.
    `tm' specifies the pointer to the time structure.
    The return value is the GMT. */
@@ -5777,6 +5642,13 @@ static time_t tcmkgmtime(struct tm *tm){
 /*************************************************************************************************
  * miscellaneous utilities (for experts)
  *************************************************************************************************/
+
+
+#define TCCHIDXVNNUM   128               // number of virtual node of consistent hashing
+
+
+/* private function prototypes */
+static int tcchidxcmp(const void *a, const void *b);
 
 
 /* Check whether a string is numeric completely or not. */
@@ -6005,6 +5877,68 @@ void *tcstrjoin4(const TCMAP *map, int *sp){
 }
 
 
+/* Sort top records of an array. */
+void tctopsort(void *base, size_t nmemb, size_t size, size_t top,
+               int(*compar)(const void *, const void *)){
+  assert(base && size > 0 && compar);
+  if(nmemb < 1) return;
+  if(top > nmemb) top = nmemb;
+  char *bp = base;
+  char *ep = bp + nmemb * size;
+  char *rp = bp + size;
+  int num = 1;
+  char swap[size];
+  while(rp < ep){
+    if(num < top){
+      int cidx = num;
+      while(cidx > 0){
+        int pidx = (cidx - 1) / 2;
+        if(compar(bp + cidx * size, bp + pidx * size) <= 0) break;
+        memcpy(swap, bp + cidx * size, size);
+        memcpy(bp + cidx * size, bp + pidx * size, size);
+        memcpy(bp + pidx * size, swap, size);
+        cidx = pidx;
+      }
+      num++;
+    } else if(compar(rp, bp) < 0){
+      memcpy(swap, bp, size);
+      memcpy(bp, rp, size);
+      memcpy(rp, swap, size);
+      int pidx = 0;
+      int bot = num / 2;
+      while(pidx < bot){
+        int cidx = pidx * 2 + 1;
+        if(cidx < num - 1 && compar(bp + cidx * size, bp + (cidx + 1) * size) < 0) cidx++;
+        if(compar(bp + pidx * size, bp + cidx * size) > 0) break;
+        memcpy(swap, bp + pidx * size, size);
+        memcpy(bp + pidx * size, bp + cidx * size, size);
+        memcpy(bp + cidx * size, swap, size);
+        pidx = cidx;
+      }
+    }
+    rp += size;
+  }
+  num = top - 1;
+  while(num > 0){
+    memcpy(swap, bp, size);
+    memcpy(bp, bp + num * size, size);
+    memcpy(bp + num * size, swap, size);
+    int pidx = 0;
+    int bot = num / 2;
+    while(pidx < bot){
+      int cidx = pidx * 2 + 1;
+      if(cidx < num - 1 && compar(bp + cidx * size, bp + (cidx + 1) * size) < 0) cidx++;
+      if(compar(bp + pidx * size, bp + cidx * size) > 0) break;
+      memcpy(swap, bp + pidx * size, size);
+      memcpy(bp + pidx * size, bp + cidx * size, size);
+      memcpy(bp + cidx * size, swap, size);
+      pidx = cidx;
+    }
+    num--;
+  }
+}
+
+
 /* Suspend execution of the current thread. */
 bool tcsleep(double sec){
   if(!isnormal(sec) || sec <= 0.0) return false;
@@ -6055,6 +5989,77 @@ TCMAP *tcsysinfo(void){
 #else
   return NULL;
 #endif
+}
+
+
+/* Create a consistent hashing object. */
+TCCHIDX *tcchidxnew(int range){
+  assert(range > 0);
+  TCCHIDX *chidx;
+  TCMALLOC(chidx, sizeof(*chidx));
+  int nnum = range * TCCHIDXVNNUM;
+  TCCHIDXNODE *nodes;
+  TCMALLOC(nodes, nnum * sizeof(*nodes));
+  unsigned int seed = 725;
+  for(int i = 0; i < range; i++){
+    int end = (i + 1) * TCCHIDXVNNUM;
+    for(int j = i * TCCHIDXVNNUM; j < end; j++){
+      nodes[j].seq = i;
+      nodes[j].hash = (seed = seed * 123456761 + 211);
+    }
+  }
+  qsort(nodes, nnum, sizeof(*nodes), tcchidxcmp);
+  chidx->nodes = nodes;
+  chidx->nnum = nnum;
+  return chidx;
+}
+
+
+/* Delete a consistent hashing object. */
+void tcchidxdel(TCCHIDX *chidx){
+  assert(chidx);
+  TCFREE(chidx->nodes);
+  TCFREE(chidx);
+}
+
+
+/* Get the consistent hashing value of a record. */
+int tcchidxhash(TCCHIDX *chidx, const void *ptr, int size){
+  assert(chidx && ptr && size >= 0);
+  uint32_t hash = 19771007;
+  const char *rp = (char *)ptr + size;
+  while(size--){
+    hash = (hash * 31) ^ *(uint8_t *)--rp;
+    hash ^= hash << 7;
+  }
+  TCCHIDXNODE *nodes = chidx->nodes;
+  int low = 0;
+  int high = chidx->nnum;
+  while(low < high){
+    int mid = (low + high) >> 1;
+    uint32_t nhash = nodes[mid].hash;
+    if(hash < nhash){
+      high = mid;
+    } else if(hash > nhash){
+      low = mid + 1;
+    } else {
+      low = mid;
+      break;
+    }
+  }
+  if(low >= chidx->nnum) low = 0;
+  return nodes[low].seq & INT_MAX;
+}
+
+
+/* Compare two consistent hashing nodes.
+   `a' specifies the pointer to one node object.
+   `b' specifies the pointer to the other node object.
+   The return value is positive if the former is big, negative if the latter is big, 0 if both
+   are equivalent. */
+static int tcchidxcmp(const void *a, const void *b){
+  if(((TCCHIDXNODE *)a)->hash == ((TCCHIDXNODE *)b)->hash) return 0;
+  return ((TCCHIDXNODE *)a)->hash > ((TCCHIDXNODE *)b)->hash;
 }
 
 
