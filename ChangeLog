@@ -1,3 +1,9 @@
+2009-05-21  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcadb.c (tcadbmisc): "sync", "optimize", "vanish" commands were added.
+
+	- Release: 1.4.22
+
 2009-05-10  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tchdb.c (tchdbsetdfunit, tchdbdfunit, tchdbdefrag): new functions.

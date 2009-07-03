@@ -771,6 +771,12 @@ static int procmisc(const char *name, int rnum){
       case 1: name = "outlist"; break;
       case 2: name = "getlist"; break;
       }
+      tclistclear(args);
+      for(int j = myrand(4) * 2; j > 0; j--){
+        char abuf[RECBUFSIZ];
+        int asiz = sprintf(abuf, "%d", myrand(rnum) + 1);
+        tclistpush(args, abuf, asiz);
+      }
       TCLIST *rv = tcadbmisc(adb, name, args);
       if(rv){
         tclistdel(rv);
@@ -787,6 +793,35 @@ static int procmisc(const char *name, int rnum){
     if(rnum > 250 && i % (rnum / 250) == 0){
       iputchar('.');
       if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
+    }
+  }
+  tclistdel(args);
+  args = tclistnew2(1);
+  if(myrand(10) == 0){
+    TCLIST *rv = tcadbmisc(adb, "sync", args);
+    if(rv){
+      tclistdel(rv);
+    } else {
+      eprint(adb, "tcadbmisc");
+      err = true;
+    }
+  }
+  if(myrand(10) == 0){
+    TCLIST *rv = tcadbmisc(adb, "optimize", args);
+    if(rv){
+      tclistdel(rv);
+    } else {
+      eprint(adb, "tcadbmisc");
+      err = true;
+    }
+  }
+  if(myrand(10) == 0){
+    TCLIST *rv = tcadbmisc(adb, "vanish", args);
+    if(rv){
+      tclistdel(rv);
+    } else {
+      eprint(adb, "tcadbmisc");
+      err = true;
     }
   }
   tclistdel(args);

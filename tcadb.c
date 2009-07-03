@@ -1609,6 +1609,25 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
           TCFREE(vbuf);
         }
       }
+    } else if(!strcmp(name, "sync")){
+      rv = tclistnew2(1);
+      if(!tcadbsync(adb)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "optimize")){
+      rv = tclistnew2(1);
+      const char *params = argc > 0 ? TCLISTVALPTR(args, 0) : NULL;
+      if(!tcadboptimize(adb, params)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "vanish")){
+      rv = tclistnew2(1);
+      if(!tcadbvanish(adb)){
+        tclistdel(rv);
+        rv = NULL;
+      }
     } else {
       rv = NULL;
     }
@@ -1701,6 +1720,25 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
           TCLISTPUSH(rv, vbuf, vsiz);
           TCFREE(vbuf);
         }
+      }
+    } else if(!strcmp(name, "sync")){
+      rv = tclistnew2(1);
+      if(!tcadbsync(adb)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "optimize")){
+      rv = tclistnew2(1);
+      const char *params = argc > 0 ? TCLISTVALPTR(args, 0) : NULL;
+      if(!tcadboptimize(adb, params)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "vanish")){
+      rv = tclistnew2(1);
+      if(!tcadbvanish(adb)){
+        tclistdel(rv);
+        rv = NULL;
       }
     } else {
       rv = NULL;
@@ -1815,6 +1853,25 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "sync")){
+      rv = tclistnew2(1);
+      if(!tcadbsync(adb)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "optimize")){
+      rv = tclistnew2(1);
+      const char *params = argc > 0 ? TCLISTVALPTR(args, 0) : NULL;
+      if(!tcadboptimize(adb, params)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "vanish")){
+      rv = tclistnew2(1);
+      if(!tcadbvanish(adb)){
         tclistdel(rv);
         rv = NULL;
       }
@@ -1950,6 +2007,25 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         tclistdel(rv);
         rv = NULL;
       }
+    } else if(!strcmp(name, "sync")){
+      rv = tclistnew2(1);
+      if(!tcadbsync(adb)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "optimize")){
+      rv = tclistnew2(1);
+      const char *params = argc > 0 ? TCLISTVALPTR(args, 0) : NULL;
+      if(!tcadboptimize(adb, params)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "vanish")){
+      rv = tclistnew2(1);
+      if(!tcadbvanish(adb)){
+        tclistdel(rv);
+        rv = NULL;
+      }
     } else if(!strcmp(name, "defrag")){
       rv = tclistnew2(1);
       int64_t step = argc > 0 ? tcatoi(TCLISTVALPTR(args, 0)) : -1;
@@ -2070,6 +2146,25 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "sync")){
+      rv = tclistnew2(1);
+      if(!tcadbsync(adb)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "optimize")){
+      rv = tclistnew2(1);
+      const char *params = argc > 0 ? TCLISTVALPTR(args, 0) : NULL;
+      if(!tcadboptimize(adb, params)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "vanish")){
+      rv = tclistnew2(1);
+      if(!tcadbvanish(adb)){
         tclistdel(rv);
         rv = NULL;
       }
@@ -2201,6 +2296,25 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "sync")){
+      rv = tclistnew2(1);
+      if(!tcadbsync(adb)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "optimize")){
+      rv = tclistnew2(1);
+      const char *params = argc > 0 ? TCLISTVALPTR(args, 0) : NULL;
+      if(!tcadboptimize(adb, params)){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "vanish")){
+      rv = tclistnew2(1);
+      if(!tcadbvanish(adb)){
         tclistdel(rv);
         rv = NULL;
       }
