@@ -3347,13 +3347,16 @@ The function `tcstrucstoutf' is used in order to convert a UCS\-2 array into a U
 .br
 \fBvoid tcstrucstoutf(const uint16_t *\fIary\fB, int \fInum\fB, char *\fIstr\fB);\fR
 .RS
-`\fIary\fR' specifies the array of UCS\-2 code codes.
+`\fIary\fR' specifies the array of UCS\-2 codes.
 .RE
 .RS
 `\fInum\fR' specifies the number of the array.
 .RE
 .RS
 `\fIstr\fR' specifies the pointer to the region into which the result UTF\-8 string is written.  The size of the buffer should be sufficient.
+.RE
+.RS
+The return value is the length of the result string.
 .RE
 .RE
 .PP

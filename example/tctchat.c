@@ -39,7 +39,7 @@ static void proc(TCTMPL *tmpl, TCMPOOL *mpool){
   const char *search = tcstrskipspc(tcmapget4(params, "search", ""));
   int page = tcatoi(tcmapget4(params, "page", "1"));
   const char *dbpath = tctmplconf(tmpl, "dbpath");
-  if(!dbpath) dbpath = "casket.tct";
+  if(!dbpath) dbpath = "tctchat.tct";
   TCLIST *msgs = tcmpoollistnew(mpool);
   TCTDB *tdb = tcmpoolpush(mpool, tctdbnew(), (void (*)(void *))tctdbdel);
   rp = getenv("REQUEST_METHOD");

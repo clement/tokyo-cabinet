@@ -11,14 +11,14 @@
 SHELL = /bin/sh
 
 # Targets
-MYBINS = tcutilex tchdbex tcbdbex tcfdbex tctdbex tcadbex tctchat.cgi
+MYBINS = tcutilex tchdbex tcbdbex tcfdbex tctdbex tcadbex tctchat.cgi tctsearch.cgi
 
 # Building binaries
 CC = gcc
 CFLAGS = -ansi -Wall -pedantic -I. -I..
 C99FLAGS = -std=c99 -Wall -pedantic -I. -I..
 LDFLAGS =
-LIBS = -L. -L.. -ltokyocabinet -lz -lpthread -lm -lc
+LIBS = -L. -L.. -ltokyocabinet -lz -lbz2 -lpthread -lm -lc
 LDENV = LD_RUN_PATH=/lib:/usr/lib:$(HOME)/lib:/usr/local/lib:.:..
 
 
@@ -48,7 +48,11 @@ clean :
 	rm -rf $(MYBINS) *.exe *.o a.out check.out gmon.out leak.log casket* *.tct *.idx.* *~
 
 
-.PHONY : all clean
+static :
+	make LDFLAGS="$(LDFLAGS) -static"
+
+
+.PHONY : all clean static tctchat.tct tctsearch.tct
 
 
 
@@ -83,6 +87,26 @@ tcadbex : tcadbex.o
 
 tctchat.cgi : tctchat.c
 	$(LDENV) $(CC) $(C99FLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+
+tctsearch.cgi : tctsearch.c
+	$(LDENV) $(CC) $(C99FLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+
+tctchat.tct :
+	rm -rf tctchat.tct*
+	LD_LIBRARY_PATH=/usr/local/lib:.:.. ../tctmgr create tctchat.tct
+	LD_LIBRARY_PATH=/usr/local/lib:.:.. ../tctmgr setindex -it qgram tctchat.tct "t"
+	chmod 666 tctchat.tct*
+
+
+tctsearch.tct :
+	rm -rf tctsearch.tct*
+	LD_LIBRARY_PATH=/usr/local/lib:.:.. ../tctmgr create tctsearch.tct
+	LD_LIBRARY_PATH=/usr/local/lib:.:.. ../tctmgr setindex -it qgram tctsearch.tct "text"
+	LD_LIBRARY_PATH=/usr/local/lib:.:.. ../tctmgr setindex -it qgram tctsearch.tct "title"
+	../lab/htmldoctotsv -t .. | \
+	  LD_LIBRARY_PATH=/usr/local/lib:.:.. ../tctmgr importtsv tctsearch.tct
 
 
 

@@ -54,7 +54,7 @@ static int proczlib(const char *ibuf, int isiz, bool dec, bool gz);
 static int procbzip(const char *ibuf, int isiz, bool dec);
 static int procxml(const char *ibuf, int isiz, bool dec, bool br);
 static int proccstr(const char *ibuf, int isiz, bool dec, bool js);
-static int procucs(const char *ibuf, int isiz, bool dec, bool un);
+static int procucs(const char *ibuf, int isiz, bool dec, bool un, const char *kw);
 static int prochash(const char *ibuf, int isiz, bool crc, int ch);
 static int procdate(const char *str, int jl, bool wf, bool rf);
 static int proctmpl(const char *ibuf, int isiz, TCMAP *vars);
@@ -584,12 +584,16 @@ static int runucs(int argc, char **argv){
   char *path = NULL;
   bool dec = false;
   bool un = false;
+  char *kw = NULL;
   for(int i = 2; i < argc; i++){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-d")){
         dec = true;
       } else if(!strcmp(argv[i], "-un")){
         un = true;
+      } else if(!strcmp(argv[i], "-kw")){
+        if(++i >= argc) usage();
+        kw = argv[i];
       } else {
         usage();
       }
@@ -611,7 +615,7 @@ static int runucs(int argc, char **argv){
     eprintf("%s: cannot open", path ? path : "(stdin)");
     return 1;
   }
-  int rv = procucs(ibuf, isiz, dec, un);
+  int rv = procucs(ibuf, isiz, dec, un, kw);
   if(path && path[0] == '@') printf("\n");
   tcfree(ibuf);
   return rv;
@@ -1087,17 +1091,25 @@ static int proccstr(const char *ibuf, int isiz, bool dec, bool js){
 
 
 /* perform ucs command */
-static int procucs(const char *ibuf, int isiz, bool dec, bool un){
+static int procucs(const char *ibuf, int isiz, bool dec, bool un, const char *kw){
   if(un){
     uint16_t *ary = tcmalloc(isiz * sizeof(uint16_t) + 1);
     int anum;
     tcstrutftoucs(ibuf, ary, &anum);
-    anum = tcstrucsnorm(ary, anum, TCUNLOWER | TCUNNOACC | TCUNSPACE);
+    anum = tcstrucsnorm(ary, anum, TCUNSPACE | TCUNLOWER | TCUNNOACC | TCUNWIDTH);
     char *str = tcmalloc(anum * 3 + 1);
     tcstrucstoutf(ary, anum, str);
     printf("%s", str);
     tcfree(str);
     tcfree(ary);
+  } else if(kw){
+    TCLIST *words = tcstrtokenize(kw);
+    TCLIST *texts = tcstrkwic(ibuf, words, 10, TCKWMUTAB);
+    for(int i = 0; i < tclistnum(texts); i++){
+      printf("%s\n", tclistval2(texts, i));
+    }
+    tclistdel(texts);
+    tclistdel(words);
   } else if(dec){
     uint16_t *ary = tcmalloc(isiz + 1);
     int anum = 0;
@@ -1231,6 +1243,20 @@ static int procconf(int mode){
     printf("sysconf(_SC_CLK_TCK): %ld\n", sysconf(_SC_CLK_TCK));
     printf("sysconf(_SC_OPEN_MAX): %ld\n", sysconf(_SC_OPEN_MAX));
     printf("sysconf(_SC_PAGESIZE): %ld\n", sysconf(_SC_PAGESIZE));
+    TCMAP *info = tcsysinfo();
+    if(info){
+      const char *val = tcmapget2(info, "size");
+      if(val) printf("sysinfo(size): %s\n", val);
+      val = tcmapget2(info, "rss");
+      if(val) printf("sysinfo(rss): %s\n", val);
+      val = tcmapget2(info, "total");
+      if(val) printf("sysinfo(total): %s\n", val);
+      val = tcmapget2(info, "free");
+      if(val) printf("sysinfo(free): %s\n", val);
+      val = tcmapget2(info, "cached");
+      if(val) printf("sysinfo(cached): %s\n", val);
+      tcmapdel(info);
+    }
     struct stat sbuf;
     if(stat(MYCDIRSTR, &sbuf) == 0){
       printf("stat(st_uid): %d\n", (int)sbuf.st_uid);

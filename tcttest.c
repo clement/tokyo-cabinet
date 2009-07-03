@@ -1059,6 +1059,10 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(tdb, __LINE__, "tctdbsetdfunit");
     err = true;
   }
+  if(!tctdbsetinvcache(tdb, -1, 0.5)){
+    eprint(tdb, __LINE__, "tctdbsetinvcache");
+    err = true;
+  }
   if(!tctdbopen(tdb, path, TDBOWRITER | TDBOCREAT | TDBOTRUNC | omode)){
     eprint(tdb, __LINE__, "tctdbopen");
     err = true;
@@ -1087,15 +1091,17 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(tdb, __LINE__, "tctdbsetindex");
     err = true;
   }
-  TCTDB *tdbdup = tctdbnew();
-  if(tctdbopen(tdbdup, path, TDBOREADER)){
-    eprint(tdb, __LINE__, "(validation)");
-    err = true;
-  } else if(tctdbecode(tdbdup) != TCETHREAD){
-    eprint(tdb, __LINE__, "(validation)");
-    err = true;
+  if(TCUSEPTHREAD){
+    TCTDB *tdbdup = tctdbnew();
+    if(tctdbopen(tdbdup, path, TDBOREADER)){
+      eprint(tdb, __LINE__, "(validation)");
+      err = true;
+    } else if(tctdbecode(tdbdup) != TCETHREAD){
+      eprint(tdb, __LINE__, "(validation)");
+      err = true;
+    }
+    tctdbdel(tdbdup);
   }
-  tctdbdel(tdbdup);
   iprintf("writing:\n");
   for(int i = 1; i <= rnum; i++){
     int id = (int)tctdbgenuid(tdb);
@@ -1280,8 +1286,30 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
         if(myrand(3) != 0) tctdbqrysetlimit(qry, myrand(i), myrand(10));
       }
     }
-    TCLIST *res = tctdbqrysearch(qry);
-    tclistdel(res);
+    if(myrand(10) == 0){
+      TDBQRY *qrys[4];
+      int num = myrand(5);
+      for(int j = 0; j < num; j++){
+        qrys[j] = qry;
+      }
+      TCLIST *res = tctdbmetasearch(qrys, num, TDBMSUNION + myrand(3));
+      if(num > 0){
+        for(int j = 0; j < 3 && j < tclistnum(res); j++){
+          int pksiz;
+          const char *pkbuf = tclistval(res, j, &pksiz);
+          TCMAP *cols = tctdbget(tdb, pkbuf, pksiz);
+          if(cols){
+            TCLIST *texts = tctdbqrykwic(qrys[0], cols, NULL, myrand(10), TCKWNOOVER);
+            tclistdel(texts);
+            tcmapdel(cols);
+          }
+        }
+      }
+      tclistdel(res);
+    } else {
+      TCLIST *res = tctdbqrysearch(qry);
+      tclistdel(res);
+    }
     if(rnum > 250 && i % (rnum / 250) == 0){
       iputchar('.');
       if(i == rnum || i % (rnum / 10) == 0) iprintf(" (%08d)\n", i);
@@ -1611,6 +1639,10 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
   }
   if(!tctdbsetxmsiz(tdb, rnum * sizeof(int))){
     eprint(tdb, __LINE__, "tctdbsetxmsiz");
+    err = true;
+  }
+  if(!tctdbsetinvcache(tdb, -1, 0.5)){
+    eprint(tdb, __LINE__, "tctdbsetinvcache");
     err = true;
   }
   if(!tctdbsetdfunit(tdb, 8)){

@@ -880,7 +880,17 @@ static int procmisc(int rnum){
           if(dary[j] != dary[j]) err = true;
         }
       }
-      if(tcstrucsnorm(dary, danum, TCUNLOWER | TCUNNOACC | TCUNSPACE) > danum) err = true;
+      tcstrutfnorm(ustr, TCUNSPACE | TCUNLOWER | TCUNNOACC | TCUNWIDTH);
+      if(tcstrucsnorm(dary, danum, TCUNSPACE | TCUNLOWER | TCUNNOACC | TCUNWIDTH) > danum)
+        err = true;
+      list = tcstrtokenize("a ab abc b bc bcd abcde \"I'm nancy\" x \"xx");
+      if(tclistnum(list) != 10) err = true;
+      int opts = myrand(TCKWMUBRCT + 1);
+      if(myrand(2) == 0) opts |= TCKWNOOVER;
+      if(myrand(2) == 0) opts |= TCKWPULEAD;
+      TCLIST *texts = tcstrkwic(ustr, list, myrand(10), opts);
+      tclistdel(texts);
+      tclistdel(list);
       list = tclistnew3("hop", "step", "jump", "touchdown", NULL);
       if(tclistnum(list) != 4) err = true;
       tclistprintf(list, "%s:%010d:%7.3f", "game set", 123456789, 12345.6789);

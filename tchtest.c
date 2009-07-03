@@ -974,15 +974,17 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(hdb, __LINE__, "tchdbopen");
     err = true;
   }
-  TCHDB *hdbdup = tchdbnew();
-  if(tchdbopen(hdbdup, path, HDBOREADER)){
-    eprint(hdb, __LINE__, "(validation)");
-    err = true;
-  } else if(tchdbecode(hdbdup) != TCETHREAD){
-    eprint(hdb, __LINE__, "(validation)");
-    err = true;
+  if(TCUSEPTHREAD){
+    TCHDB *hdbdup = tchdbnew();
+    if(tchdbopen(hdbdup, path, HDBOREADER)){
+      eprint(hdb, __LINE__, "(validation)");
+      err = true;
+    } else if(tchdbecode(hdbdup) != TCETHREAD){
+      eprint(hdb, __LINE__, "(validation)");
+      err = true;
+    }
+    tchdbdel(hdbdup);
   }
-  tchdbdel(hdbdup);
   iprintf("writing:\n");
   for(int i = 1; i <= rnum; i++){
     char buf[RECBUFSIZ];

@@ -1392,15 +1392,17 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
     eprint(bdb, __LINE__, "tcbdbopen");
     err = true;
   }
-  TCBDB *bdbdup = tcbdbnew();
-  if(tcbdbopen(bdbdup, path, BDBOREADER)){
-    eprint(bdb, __LINE__, "(validation)");
-    err = true;
-  } else if(tcbdbecode(bdbdup) != TCETHREAD){
-    eprint(bdb, __LINE__, "(validation)");
-    err = true;
+  if(TCUSEPTHREAD){
+    TCBDB *bdbdup = tcbdbnew();
+    if(tcbdbopen(bdbdup, path, BDBOREADER)){
+      eprint(bdb, __LINE__, "(validation)");
+      err = true;
+    } else if(tcbdbecode(bdbdup) != TCETHREAD){
+      eprint(bdb, __LINE__, "(validation)");
+      err = true;
+    }
+    tcbdbdel(bdbdup);
   }
-  tcbdbdel(bdbdup);
   iprintf("writing:\n");
   for(int i = 1; i <= rnum; i++){
     char buf[RECBUFSIZ];

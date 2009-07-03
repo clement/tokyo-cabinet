@@ -5042,7 +5042,7 @@ void tcstrutftoucs(const char *str, uint16_t *ary, int *np){
 
 
 /* Convert a UCS-2 array into a UTF-8 string. */
-void tcstrucstoutf(const uint16_t *ary, int num, char *str){
+int tcstrucstoutf(const uint16_t *ary, int num, char *str){
   assert(ary && num >= 0 && str);
   unsigned char *wp = (unsigned char *)str;
   for(int i = 0; i < num; i++){
@@ -5059,6 +5059,7 @@ void tcstrucstoutf(const uint16_t *ary, int num, char *str){
     }
   }
   *wp = '\0';
+  return (char *)wp - str;
 }
 
 
@@ -5648,6 +5649,8 @@ static time_t tcmkgmtime(struct tm *tm){
 
 
 /* private function prototypes */
+static int tcstrutfkwicputtext(const uint16_t *oary, const uint16_t *nary, int si, int ti,
+                               int end, char *buf, const TCLIST *uwords, int opts);
 static int tcchidxcmp(const void *a, const void *b);
 
 
@@ -5711,12 +5714,33 @@ const char *tcstrskipspc(const char *str){
 }
 
 
+/* Normalize a UTF-8 string. */
+char *tcstrutfnorm(char *str, int opts){
+  assert(str);
+  uint16_t buf[TCDISTBUFSIZ];
+  uint16_t *ary;
+  int len = strlen(str);
+  if(len < TCDISTBUFSIZ){
+    ary = buf;
+  } else {
+    TCMALLOC(ary, len * sizeof(*ary));
+  }
+  int num;
+  tcstrutftoucs(str, ary, &num);
+  num = tcstrucsnorm(ary, num, opts);
+  tcstrucstoutf(ary, num, str);
+  if(ary != buf) TCFREE(ary);
+  return str;
+}
+
+
 /* Normalize a UCS-2 array. */
 int tcstrucsnorm(uint16_t *ary, int num, int opts){
   assert(ary && num >= 0);
+  bool spcmode = opts & TCUNSPACE;
   bool lowmode = opts & TCUNLOWER;
   bool nacmode = opts & TCUNNOACC;
-  bool spcmode = opts & TCUNSPACE;
+  bool widmode = opts & TCUNWIDTH;
   int wi = 0;
   for(int i = 0; i < num; i++){
     int c = ary[i];
@@ -5916,16 +5940,16 @@ int tcstrucsnorm(uint16_t *ary, int num, int opts){
         }
       } else if(c == 0x2010){
         // hyphen
-        ary[wi++] = 0x002d;
+        ary[wi++] = widmode ? 0x002d : c;
       } else if(c == 0x2015){
         // fullwidth horizontal line
-        ary[wi++] = 0x002d;
+        ary[wi++] = widmode ? 0x002d : c;
       } else if(c == 0x2019){
         // apostrophe
-        ary[wi++] = 0x0027;
+        ary[wi++] = widmode ? 0x0027 : c;
       } else if(c == 0x2033){
         // double quotes
-        ary[wi++] = 0x0022;
+        ary[wi++] = widmode ? 0x0022 : c;
       } else {
         // (otherwise)
         ary[wi++] = c;
@@ -5933,7 +5957,7 @@ int tcstrucsnorm(uint16_t *ary, int num, int opts){
     } else if(high == 0x22){
       if(c == 0x2212){
         // minus sign
-        ary[wi++] = 0x002d;
+        ary[wi++] = widmode ? 0x002d : c;
       } else {
         // (otherwise)
         ary[wi++] = c;
@@ -5944,6 +5968,8 @@ int tcstrucsnorm(uint16_t *ary, int num, int opts){
         if(spcmode){
           ary[wi++] = 0x0020;
           if(wi < 2 || ary[wi-2] == 0x0020) wi--;
+        } else if(widmode){
+          ary[wi++] = 0x0020;
         } else {
           ary[wi++] = c;
         }
@@ -5954,167 +5980,191 @@ int tcstrucsnorm(uint16_t *ary, int num, int opts){
     } else if(high == 0xff){
       if(c == 0xff01){
         // fullwidth exclamation
-        ary[wi++] = 0x0021;
+        ary[wi++] = widmode ? 0x0021 : c;
       } else if(c == 0xff03){
         // fullwidth igeta
-        ary[wi++] = 0x0023;
+        ary[wi++] = widmode ? 0x0023 : c;
       } else if(c == 0xff04){
         // fullwidth dollar
-        ary[wi++] = 0x0024;
+        ary[wi++] = widmode ? 0x0024 : c;
       } else if(c == 0xff05){
         // fullwidth parcent
-        ary[wi++] = 0x0025;
+        ary[wi++] = widmode ? 0x0025 : c;
       } else if(c == 0xff06){
         // fullwidth ampersand
-        ary[wi++] = 0x0026;
+        ary[wi++] = widmode ? 0x0026 : c;
       } else if(c == 0xff0a){
         // fullwidth asterisk
-        ary[wi++] = 0x002a;
+        ary[wi++] = widmode ? 0x002a : c;
       } else if(c == 0xff0b){
         // fullwidth plus
-        ary[wi++] = 0x002b;
+        ary[wi++] = widmode ? 0x002b : c;
       } else if(c == 0xff0c){
         // fullwidth comma
-        ary[wi++] = 0x002c;
+        ary[wi++] = widmode ? 0x002c : c;
       } else if(c == 0xff0e){
         // fullwidth period
-        ary[wi++] = 0x002e;
+        ary[wi++] = widmode ? 0x002e : c;
       } else if(c == 0xff0f){
         // fullwidth slash
-        ary[wi++] = 0x002f;
+        ary[wi++] = widmode ? 0x002f : c;
       } else if(c == 0xff1a){
         // fullwidth colon
-        ary[wi++] = 0x003a;
+        ary[wi++] = widmode ? 0x003a : c;
       } else if(c == 0xff1b){
         // fullwidth semicolon
-        ary[wi++] = 0x003b;
+        ary[wi++] = widmode ? 0x003b : c;
       } else if(c == 0xff1d){
         // fullwidth equal
-        ary[wi++] = 0x003d;
+        ary[wi++] = widmode ? 0x003d : c;
       } else if(c == 0xff1f){
         // fullwidth question
-        ary[wi++] = 0x003f;
+        ary[wi++] = widmode ? 0x003f : c;
       } else if(c == 0xff20){
         // fullwidth atmark
-        ary[wi++] = 0x0040;
+        ary[wi++] = widmode ? 0x0040 : c;
       } else if(c == 0xff3c){
         // fullwidth backslash
-        ary[wi++] = 0x005c;
+        ary[wi++] = widmode ? 0x005c : c;
       } else if(c == 0xff3e){
         // fullwidth circumflex
-        ary[wi++] = 0x005e;
+        ary[wi++] = widmode ? 0x005e : c;
       } else if(c == 0xff3f){
         // fullwidth underscore
-        ary[wi++] = 0x005f;
+        ary[wi++] = widmode ? 0x005f : c;
       } else if(c == 0xff5c){
         // fullwidth vertical line
-        ary[wi++] = 0x007c;
+        ary[wi++] = widmode ? 0x007c : c;
       } else if(c >= 0xff21 && c <= 0xff3a){
         // fullwidth alphabets
-        if(lowmode){
-          c -= 0xfee0;
-          if(c >= 0x0041 && c <= 0x005a) c += 0x20;
-          ary[wi++] = c;
+        if(widmode){
+          if(lowmode){
+            ary[wi++] = c - 0xfee0 + 0x20;
+          } else {
+            ary[wi++] = c - 0xfee0;
+          }
+        } else if(lowmode){
+          ary[wi++] = c + 0x20;
         } else {
-          ary[wi++] = c - 0xfee0;
+          ary[wi++] = c;
         }
       } else if(c >= 0xff41 && c <= 0xff5a){
         // fullwidth small alphabets
-        ary[wi++] = c - 0xfee0;
+        ary[wi++] = widmode ? c - 0xfee0 : c;
       } else if(c >= 0xff10 && c <= 0xff19){
         // fullwidth numbers
-        ary[wi++] = c - 0xfee0;
+        ary[wi++] = widmode ? c - 0xfee0 : c;
       } else if(c == 0xff61){
         // halfwidth full stop
-        ary[wi++] = 0x3002;
+        ary[wi++] = widmode ? 0x3002 : c;
       } else if(c == 0xff62){
         // halfwidth left corner
-        ary[wi++] = 0x300c;
+        ary[wi++] = widmode ? 0x300c : c;
       } else if(c == 0xff63){
         // halfwidth right corner
-        ary[wi++] = 0x300d;
+        ary[wi++] = widmode ? 0x300d : c;
       } else if(c == 0xff64){
         // halfwidth comma
-        ary[wi++] = 0x3001;
+        ary[wi++] = widmode ? 0x3001 : c;
       } else if(c == 0xff65){
         // halfwidth middle dot
-        ary[wi++] = 0x30fb;
+        ary[wi++] = widmode ? 0x30fb : c;
       } else if(c == 0xff66){
         // halfwidth wo
-        ary[wi++] = 0x30f2;
+        ary[wi++] = widmode ? 0x30f2 : c;
       } else if(c >= 0xff67 && c <= 0xff6b){
         // halfwidth small a-o
-        ary[wi++] = (c - 0xff67) * 2 + 0x30a1;
+        ary[wi++] = widmode ? (c - 0xff67) * 2 + 0x30a1 : c;
       } else if(c >= 0xff6c && c <= 0xff6e){
         // halfwidth small ya-yo
-        ary[wi++] = (c - 0xff6c) * 2 + 0x30e3;
+        ary[wi++] = widmode ? (c - 0xff6c) * 2 + 0x30e3 : c;
       } else if(c == 0xff6f){
         // halfwidth small tu
-        ary[wi++] = 0x30c3;
+        ary[wi++] = widmode ? 0x30c3 : c;
       } else if(c == 0xff70){
         // halfwidth prolonged mark
-        ary[wi++] = 0x30fc;
+        ary[wi++] = widmode ? 0x30fc : c;
       } else if(c >= 0xff71 && c <= 0xff75){
         // halfwidth a-o
-        ary[wi] = (c - 0xff71) * 2 + 0x30a2;
-        if(c == 0xff73 && i < num - 1 && ary[i+1] == 0xff9e){
-          ary[wi] = 0x30f4;
-          i++;
+        if(widmode){
+          ary[wi] = (c - 0xff71) * 2 + 0x30a2;
+          if(c == 0xff73 && i < num - 1 && ary[i+1] == 0xff9e){
+            ary[wi] = 0x30f4;
+            i++;
+          }
+          wi++;
+        } else {
+          ary[wi++] = c;
         }
-        wi++;
       } else if(c >= 0xff76 && c <= 0xff7a){
         // halfwidth ka-ko
-        ary[wi] = (c - 0xff76) * 2 + 0x30ab;
-        if(i < num - 1 && ary[i+1] == 0xff9e){
-          ary[wi]++;
-          i++;
+        if(widmode){
+          ary[wi] = (c - 0xff76) * 2 + 0x30ab;
+          if(i < num - 1 && ary[i+1] == 0xff9e){
+            ary[wi]++;
+            i++;
+          }
+          wi++;
+        } else {
+          ary[wi++] = c;
         }
-        wi++;
       } else if(c >= 0xff7b && c <= 0xff7f){
         // halfwidth sa-so
-        ary[wi] = (c - 0xff7b) * 2 + 0x30b5;
-        if(i < num - 1 && ary[i+1] == 0xff9e){
-          ary[wi]++;
-          i++;
+        if(widmode){
+          ary[wi] = (c - 0xff7b) * 2 + 0x30b5;
+          if(i < num - 1 && ary[i+1] == 0xff9e){
+            ary[wi]++;
+            i++;
+          }
+          wi++;
+        } else {
+          ary[wi++] = c;
         }
-        wi++;
       } else if(c >= 0xff80 && c <= 0xff84){
         // halfwidth ta-to
-        ary[wi] = (c - 0xff80) * 2 + 0x30bf + (c >= 0xff82 ? 1 : 0);
-        if(i < num - 1 && ary[i+1] == 0xff9e){
-          ary[wi]++;
-          i++;
+        if(widmode){
+          ary[wi] = (c - 0xff80) * 2 + 0x30bf + (c >= 0xff82 ? 1 : 0);
+          if(i < num - 1 && ary[i+1] == 0xff9e){
+            ary[wi]++;
+            i++;
+          }
+          wi++;
+        } else {
+          ary[wi++] = c;
         }
-        wi++;
       } else if(c >= 0xff85 && c <= 0xff89){
         // halfwidth na-no
-        ary[wi++] = c - 0xcebb;
+        ary[wi++] = widmode ? c - 0xcebb : c;
       } else if(c >= 0xff8a && c <= 0xff8e){
         // halfwidth ha-ho
-        ary[wi] = (c - 0xff8a) * 3 + 0x30cf;
-        if(i < num - 1 && ary[i+1] == 0xff9e){
-          ary[wi]++;
-          i++;
-        } else if(i < num - 1 && ary[i+1] == 0xff9f){
-          ary[wi] += 2;
-          i++;
+        if(widmode){
+          ary[wi] = (c - 0xff8a) * 3 + 0x30cf;
+          if(i < num - 1 && ary[i+1] == 0xff9e){
+            ary[wi]++;
+            i++;
+          } else if(i < num - 1 && ary[i+1] == 0xff9f){
+            ary[wi] += 2;
+            i++;
+          }
+          wi++;
+        } else {
+          ary[wi++] = c;
         }
-        wi++;
       } else if(c >= 0xff8f && c <= 0xff93){
         // halfwidth ma-mo
-        ary[wi++] = c - 0xceb1;
+        ary[wi++] = widmode ? c - 0xceb1 : c;
       } else if(c >= 0xff94 && c <= 0xff96){
         // halfwidth ya-yo
-        ary[wi++] = (c - 0xff94) * 2 + 0x30e4;
+        ary[wi++] = widmode ? (c - 0xff94) * 2 + 0x30e4 : c;
       } else if(c >= 0xff97 && c <= 0xff9b){
         // halfwidth ra-ro
-        ary[wi++] = c - 0xceae;
+        ary[wi++] = widmode ? c - 0xceae : c;
       } else if(c == 0xff9c){
         // halfwidth wa
-        ary[wi++] = 0x30ef;
+        ary[wi++] = widmode ? 0x30ef : c;
       } else if(c == 0xff9d){
         // halfwidth nn
-        ary[wi++] = 0x30f3;
+        ary[wi++] = widmode ? 0x30f3 : c;
       } else {
         // otherwise
         ary[wi++] = c;
@@ -6130,6 +6180,167 @@ int tcstrucsnorm(uint16_t *ary, int num, int opts){
     }
   }
   return wi;
+}
+
+
+/* Generate a keyword-in-context string from a text and keywords. */
+TCLIST *tcstrkwic(const char *str, const TCLIST *words, int width, int opts){
+  assert(str && words && width >= 0);
+  TCLIST *texts = tclistnew();
+  int len = strlen(str);
+  uint16_t *oary, *nary;
+  TCMALLOC(oary, sizeof(*oary) * len + 1);
+  TCMALLOC(nary, sizeof(*nary) * len + 1);
+  int oanum, nanum;
+  tcstrutftoucs(str, oary, &oanum);
+  tcstrutftoucs(str, nary, &nanum);
+  nanum = tcstrucsnorm(nary, nanum, TCUNLOWER | TCUNNOACC | TCUNWIDTH);
+  if(nanum != oanum){
+    memcpy(nary, oary, sizeof(*oary) * oanum);
+    for(int i = 0; i < oanum; i++){
+      if(nary[i] >= 'A' && nary[i] <= 'Z') nary[i] += 'a' - 'A';
+    }
+    nanum = oanum;
+  }
+  int wnum = TCLISTNUM(words);
+  TCLIST *uwords = tclistnew2(wnum);
+  for(int i = 0; i < wnum; i++){
+    const char *word;
+    int wsiz;
+    TCLISTVAL(word, words, i, wsiz);
+    uint16_t *uwary;
+    TCMALLOC(uwary, sizeof(*uwary) * wsiz + 1);
+    int uwnum;
+    tcstrutftoucs(word, uwary, &uwnum);
+    uwnum = tcstrucsnorm(uwary, uwnum, TCUNSPACE | TCUNLOWER | TCUNNOACC | TCUNWIDTH);
+    if(uwnum > 0){
+      tclistpushmalloc(uwords, uwary, sizeof(*uwary) * uwnum);
+    } else {
+      TCFREE(uwary);
+    }
+  }
+  wnum = TCLISTNUM(uwords);
+  int ri = 0;
+  int pi = 0;
+  while(ri < nanum){
+    int step = 0;
+    for(int i = 0; i < wnum; i++){
+      const char *val;
+      int uwnum;
+      TCLISTVAL(val, uwords, i, uwnum);
+      uint16_t *uwary = (uint16_t *)val;
+      uwnum /= sizeof(*uwary);
+      if(ri + uwnum <= nanum){
+        int ci = 0;
+        while(ci < uwnum && nary[ri+ci] == uwary[ci]){
+          ci++;
+        }
+        if(ci == uwnum){
+          int si = tclmax(ri - width, 0);
+          if(opts & TCKWNOOVER) si = tclmax(si, pi);
+          int ti = tclmin(ri + uwnum + width, nanum);
+          char *tbuf;
+          TCMALLOC(tbuf, (ti - si) * 5 + 1);
+          int wi = 0;
+          if(ri > si) wi += tcstrutfkwicputtext(oary, nary, si, ri, ri,
+                                                tbuf + wi, uwords, opts);
+          if(opts & TCKWMUTAB){
+            tbuf[wi++] = '\t';
+          } else if(opts & TCKWMUCTRL){
+            tbuf[wi++] = 0x02;
+          } else if(opts & TCKWMUBRCT){
+            tbuf[wi++] = '[';
+          }
+          wi += tcstrucstoutf(oary + ri, ci, tbuf + wi);
+          if(opts & TCKWMUTAB){
+            tbuf[wi++] = '\t';
+          } else if(opts & TCKWMUCTRL){
+            tbuf[wi++] = 0x03;
+          } else if(opts & TCKWMUBRCT){
+            tbuf[wi++] = ']';
+          }
+          if(ti > ri + ci) wi += tcstrutfkwicputtext(oary, nary, ri + ci, ti,
+                                                     nanum, tbuf + wi, uwords, opts);
+          if(wi > 0){
+            tclistpushmalloc(texts, tbuf, wi);
+          } else {
+            TCFREE(tbuf);
+          }
+          if(ti > step) step = ti;
+          if(step > pi) pi = step;
+          if(opts & TCKWNOOVER) break;
+        }
+      }
+    }
+    if(ri == 0 && step < 1 && (opts & TCKWPULEAD)){
+      int ti = tclmin(ri + width * 2, nanum);
+      if(ti > 0){
+        char *tbuf;
+        TCMALLOC(tbuf, ti * 5 + 1);
+        int wi = 0;
+        wi += tcstrutfkwicputtext(oary, nary, 0, ti, nanum, tbuf + wi, uwords, opts);
+        if(!(opts & TCKWNOOVER) && opts & TCKWMUTAB){
+          tbuf[wi++] = '\t';
+          tbuf[wi++] = '\t';
+        }
+        tclistpushmalloc(texts, tbuf, wi);
+      }
+      step = ti;
+    }
+    if(opts & TCKWNOOVER){
+      ri = (step > 0) ? step : ri + 1;
+    } else {
+      ri++;
+    }
+  }
+  tclistdel(uwords);
+  TCFREE(nary);
+  TCFREE(oary);
+  return texts;
+}
+
+
+/* Tokenize a text separating by white space characters. */
+TCLIST *tcstrtokenize(const char *str){
+  assert(str);
+  TCLIST *tokens = tclistnew();
+  const unsigned char *rp = (unsigned char *)str;
+  while(*rp != '\0'){
+    while(*rp <= ' '){
+      rp++;
+    }
+    if(*rp == '"'){
+      rp++;
+      TCXSTR *buf = tcxstrnew();
+      while(*rp != '\0'){
+        if(*rp == '\\'){
+          rp++;
+          if(*rp != '\0') TCXSTRCAT(buf, rp, 1);
+          rp++;
+        } else if(*rp == '"'){
+          rp++;
+          break;
+        } else {
+          TCXSTRCAT(buf, rp, 1);
+          rp++;
+        }
+      }
+      int size = TCXSTRSIZE(buf);
+      tclistpushmalloc(tokens, tcxstrtomalloc(buf), size);
+    } else {
+      const unsigned char *ep = rp;
+      while(*ep > ' '){
+        ep++;
+      }
+      if(ep > rp) TCLISTPUSH(tokens, rp, ep - rp);
+      if(*ep != '\0'){
+        rp = ep + 1;
+      } else {
+        break;
+      }
+    }
+  }
+  return tokens;
 }
 
 
@@ -6391,32 +6602,62 @@ bool tcsleep(double sec){
 /* Get the current system information. */
 TCMAP *tcsysinfo(void){
 #if defined(_SYS_LINUX_)
+  TCMAP *info = tcmapnew2(TCMAPTINYBNUM);
   char path[1024];
   sprintf(path, "/proc/%d/status", (int)getpid());
   TCLIST *lines = tcreadfilelines(path);
-  if(!lines) return NULL;
-  int ln = tclistnum(lines);
-  TCMAP *info = tcmapnew2(ln + 1);
-  char numbuf[TCNUMBUFSIZ];
-  for(int i = 0; i < ln; i++){
-    const char *line = TCLISTVALPTR(lines, i);
-    const char *rp = strchr(line, ':');
-    if(!rp) continue;
-    rp++;
-    while(*rp > '\0' && *rp <= ' '){
+  if(lines){
+    int ln = tclistnum(lines);
+    char numbuf[TCNUMBUFSIZ];
+    for(int i = 0; i < ln; i++){
+      const char *line = TCLISTVALPTR(lines, i);
+      const char *rp = strchr(line, ':');
+      if(!rp) continue;
       rp++;
+      while(*rp > '\0' && *rp <= ' '){
+        rp++;
+      }
+      if(tcstrifwm(line, "VmSize:")){
+        int64_t size = tcatoix(rp);
+        sprintf(numbuf, "%lld", (long long)size);
+        tcmapput2(info, "size", numbuf);
+      } else if(tcstrifwm(line, "VmRSS:")){
+        int64_t size = tcatoix(rp);
+        sprintf(numbuf, "%lld", (long long)size);
+        tcmapput2(info, "rss", numbuf);
+      }
     }
-    if(tcstrifwm(line, "VmSize:")){
-      int64_t size = tcatoix(rp);
-      sprintf(numbuf, "%lld", (long long)size);
-      tcmapput2(info, "size", numbuf);
-    } else if(tcstrifwm(line, "VmRSS:")){
-      int64_t size = tcatoix(rp);
-      sprintf(numbuf, "%lld", (long long)size);
-      tcmapput2(info, "rss", numbuf);
-    }
+    tclistdel(lines);
   }
-  tclistdel(lines);
+  sprintf(path, "/proc/meminfo");
+  lines = tcreadfilelines(path);
+  if(lines){
+    int ln = tclistnum(lines);
+    char numbuf[TCNUMBUFSIZ];
+    for(int i = 0; i < ln; i++){
+      const char *line = TCLISTVALPTR(lines, i);
+      const char *rp = strchr(line, ':');
+      if(!rp) continue;
+      rp++;
+      while(*rp > '\0' && *rp <= ' '){
+        rp++;
+      }
+      if(tcstrifwm(line, "MemTotal:")){
+        int64_t size = tcatoix(rp);
+        sprintf(numbuf, "%lld", (long long)size);
+        tcmapput2(info, "total", numbuf);
+      } else if(tcstrifwm(line, "MemFree:")){
+        int64_t size = tcatoix(rp);
+        sprintf(numbuf, "%lld", (long long)size);
+        tcmapput2(info, "free", numbuf);
+      } else if(tcstrifwm(line, "Cached:")){
+        int64_t size = tcatoix(rp);
+        sprintf(numbuf, "%lld", (long long)size);
+        tcmapput2(info, "cached", numbuf);
+      }
+    }
+    tclistdel(lines);
+  }
   return info;
 #else
   return NULL;
@@ -6481,6 +6722,70 @@ int tcchidxhash(TCCHIDX *chidx, const void *ptr, int size){
   }
   if(low >= chidx->nnum) low = 0;
   return nodes[low].seq & INT_MAX;
+}
+
+
+/* Put a text into a KWIC buffer.
+   `oary' specifies the original code array.
+   `nary' specifies the normalized code array.
+   `si' specifies the start index of the text.
+   `ti' specifies the terminal index of the text.
+   `end' specifies the end index of the code array.
+   `buf' specifies the pointer to the output buffer.
+   `uwords' specifies the list object of the words to be marked up.
+   `opts' specifies the options.
+   The return value is the length of the output. */
+static int tcstrutfkwicputtext(const uint16_t *oary, const uint16_t *nary, int si, int ti,
+                               int end, char *buf, const TCLIST *uwords, int opts){
+  assert(oary && nary && si >= 0 && ti >= 0 && end >= 0 && buf && uwords);
+  if(!(opts & TCKWNOOVER)) return tcstrucstoutf(oary + si, ti - si, buf);
+  if(!(opts & TCKWMUTAB) && !(opts & TCKWMUCTRL) && !(opts & TCKWMUBRCT))
+    return tcstrucstoutf(oary + si, ti - si, buf);
+  int wnum = TCLISTNUM(uwords);
+  int ri = si;
+  int wi = 0;
+  while(ri < ti){
+    int step = 0;
+    for(int i = 0; i < wnum; i++){
+      const char *val;
+      int uwnum;
+      TCLISTVAL(val, uwords, i, uwnum);
+      uint16_t *uwary = (uint16_t *)val;
+      uwnum /= sizeof(*uwary);
+      if(ri + uwnum <= end){
+        int ci = 0;
+        while(ci < uwnum && nary[ri+ci] == uwary[ci]){
+          ci++;
+        }
+        if(ci == uwnum){
+          if(opts & TCKWMUTAB){
+            buf[wi++] = '\t';
+          } else if(opts & TCKWMUCTRL){
+            buf[wi++] = 0x02;
+          } else if(opts & TCKWMUBRCT){
+            buf[wi++] = '[';
+          }
+          wi += tcstrucstoutf(oary + ri, ci, buf + wi);
+          if(opts & TCKWMUTAB){
+            buf[wi++] = '\t';
+          } else if(opts & TCKWMUCTRL){
+            buf[wi++] = 0x03;
+          } else if(opts & TCKWMUBRCT){
+            buf[wi++] = ']';
+          }
+          step = ri + ci;
+          break;
+        }
+      }
+    }
+    if(step > 0){
+      ri = step;
+    } else {
+      wi += tcstrucstoutf(oary + ri, 1, buf + wi);
+      ri++;
+    }
+  }
+  return wi;
 }
 
 
@@ -8166,8 +8471,7 @@ char *tccstrunescape(const char *str){
           }
           uint16_t ary[1];
           ary[0] = code;
-          tcstrucstoutf(ary, 1, buf + wi);
-          wi += strlen(buf + wi);
+          wi += tcstrucstoutf(ary, 1, buf + wi);
         } else if(c >= '0' && c <= '8'){
           int code = 0;
           for(int i = 0; i < 3; i++){

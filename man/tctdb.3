@@ -1079,6 +1079,28 @@ The function `tctdbqryhint' is used in order to get the hint of a query object.
 The return value is the hint string.
 .RE
 .RE
+.PP
+The function `tctdbmetasearch' is used in order to retrieve records with multiple query objects and get the set of the result.
+.PP
+.RS
+.br
+\fBTCLIST *tctdbmetasearch(TDBQRY **\fIqrys\fB, int \fInum\fB, int \fItype\fB);\fR
+.RS
+`\fIqrys\fR' specifies an array of the query objects.
+.RE
+.RS
+`\fInum\fR' specifies the number of elements of the array.
+.RE
+.RS
+`\fItype\fR' specifies a set operation type: `TDBMSUNION' for the union set, `TDBMSISECT' for the intersection set, `TDBMSDIFF' for the difference set.
+.RE
+.RS
+The return value is a list object of the primary keys of the corresponding records.  This function does never fail.  It returns an empty list even if no record corresponds.
+.RE
+.RS
+If the first query object has the order setting, the result array is sorted by the order.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.
+.RE
+.RE
 
 .SH SEE ALSO
 .PP

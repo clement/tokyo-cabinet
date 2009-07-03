@@ -40,7 +40,7 @@
 #define HDBMAXAPOW     16                // maximum alignment power
 #define HDBDEFFPOW     10                // default free block pool power
 #define HDBMAXFPOW     20                // maximum free block pool power
-#define HDBDEFXMSIZ    ((1LL<<20)*64)    // default size of the extra mapped memory
+#define HDBDEFXMSIZ    (64LL<<20)        // default size of the extra mapped memory
 #define HDBXFSIZINC    32768             // increment of extra file size
 #define HDBMINRUNIT    48                // minimum record reading unit
 #define HDBMAXHSIZ     32                // maximum record header size

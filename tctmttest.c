@@ -834,6 +834,10 @@ static int procwicked(const char *path, int tnum, int rnum, int opts, int omode)
     eprint(tdb, __LINE__, "tctdbsetdfunit");
     err = true;
   }
+  if(!tctdbsetinvcache(tdb, -1, 0.5)){
+    eprint(tdb, __LINE__, "tctdbsetinvcache");
+    err = true;
+  }
   if(!tctdbopen(tdb, path, TDBOWRITER | TDBOCREAT | TDBOTRUNC | omode)){
     eprint(tdb, __LINE__, "tctdbopen");
     err = true;

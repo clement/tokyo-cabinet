@@ -805,7 +805,7 @@ static int procimporttsv(const char *path, const char *file, int omode, bool sc)
       continue;
     }
     *pv = '\0';
-    if(sc) tcstrtolower(line);
+    if(sc) tcstrutfnorm(line, TCUNSPACE | TCUNLOWER | TCUNNOACC | TCUNWIDTH);
     if(!tchdbput2(hdb, line, pv + 1)){
       printerr(hdb);
       err = true;

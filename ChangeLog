@@ -1,3 +1,17 @@
+2009-06-22  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcstrutfnorm, tcstrkwic, tcstrtokenize): new functions.
+
+	* tcutil.c (tcstrutfnorm, tcstrucsnorm): "TCUNWIDTH" option was added.
+
+	* tctdb.c (tctdbsetinvcache, tctdbidxsyncicc, tctdbidxcmpkey): new functions.
+
+	* tctdb.c (tctdbmetasearch, tctdbget4, tctdbqrykwic): new functions.
+
+	* tctdb.c (tctdbsetindeximpl): the xmsiz parameter is now configured.
+
+	- Release: 1.4.28
+
 2009-06-16  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tcstrskipspc, tcstrucsnorm): new functions.

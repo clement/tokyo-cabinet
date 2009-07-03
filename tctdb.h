@@ -59,6 +59,8 @@ typedef struct {                         /* type of structure for a table databa
   uint8_t opts;                          /* options */
   int32_t lcnum;                         /* max number of cached leaves */
   int32_t ncnum;                         /* max number of cached nodes */
+  int64_t iccmax;                        /* maximum size of the inverted cache */
+  double iccsync;                        /* synchronization ratio of the inverted cache */
   TDBIDX *idxs;                          /* column indices */
   int inum;                              /* number of column indices */
   bool tran;                             /* whether in the transaction */
@@ -152,6 +154,12 @@ enum {                                   /* enumeration for order types */
   TDBQOSTRDESC,                          /* string descending */
   TDBQONUMASC,                           /* number ascending */
   TDBQONUMDESC                           /* number descending */
+};
+
+enum {                                   /* enumeration for set operation types */
+  TDBMSUNION,                            /* union */
+  TDBMSISECT,                            /* intersection */
+  TDBMSDIFF                              /* difference */
 };
 
 enum {                                   /* enumeration for post treatments */
@@ -747,6 +755,19 @@ bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op);
 const char *tctdbqryhint(TDBQRY *qry);
 
 
+/* Retrieve records with multiple query objects and get the set of the result.
+   `qrys' specifies an array of the query objects.
+   `num' specifies the number of elements of the array.
+   `type' specifies a set operation type: `TDBMSUNION' for the union set, `TDBMSISECT' for the
+   intersection set, `TDBMSDIFF' for the difference set.
+   The return value is a list object of the primary keys of the corresponding records.  This
+   function does never fail.  It returns an empty list even if no record corresponds.
+   If the first query object has the order setting, the result array is sorted by the order.
+   Because the object of the return value is created with the function `tclistnew', it should be
+   deleted with the function `tclistdel' when it is no longer in use. */
+TCLIST *tctdbmetasearch(TDBQRY **qrys, int num, int type);
+
+
 
 /*************************************************************************************************
  * features for experts
@@ -866,6 +887,17 @@ int64_t tctdbuidseed(TCTDB *tdb);
 bool tctdbsetuidseed(TCTDB *tdb, int64_t seed);
 
 
+/* Set the parameters of the inverted cache of a table database object.
+   `tdb' specifies the table database object.
+   `iccmax' specifies the maximum size.  If it is not more than 0, the default value is
+   specified.  The default value is 67108864.
+   `iccsync' specifies synchronization ratio.  If it is not more than 0, the default value is
+   specified.  The default value is 0.01.
+   If successful, the return value is true, else, it is false.
+   Note that the caching parameters should be set before the database is opened. */
+bool tctdbsetinvcache(TCTDB *tdb, int64_t iccmax, double iccsync);
+
+
 /* Set the custom codec functions of a table database object.
    `tdb' specifies the table database object.
    `enc' specifies the pointer to the custom encoding function.  It receives four parameters.
@@ -921,6 +953,23 @@ bool tctdbdefrag(TCTDB *tdb, int64_t step);
    is called in the critical section guarded by the same locks of database operations. */
 bool tctdbputproc(TCTDB *tdb, const void *pkbuf, int pksiz, const void *cbuf, int csiz,
                   TCPDPROC proc, void *op);
+
+
+/* Retrieve the value of a column of a record in a table database object.
+   `tdb' specifies the table database object.
+   `pkbuf' specifies the pointer to the region of the primary key.
+   `pksiz' specifies the size of the region of the primary key.
+   `nbuf' specifies the pointer to the region of the column name.
+   `nsiz' specifies the size of the region of the column name.
+   `sp' specifies the pointer to the variable into which the size of the region of the return
+   value is assigned.
+   If successful, the return value is the pointer to the region of the value of the column of the
+   corresponding record.  `NULL' is returned if no record corresponds or there is no column.
+   Because an additional zero code is appended at the end of the region of the return value,
+   the return value can be treated as a character string.  Because the region of the return
+   value is allocated with the `malloc' call, it should be released with the `free' call when
+   it is no longer in use. */
+char *tctdbget4(TCTDB *tdb, const void *pkbuf, int pksiz, const void *nbuf, int nsiz, int *sp);
 
 
 /* Move the iterator to the record corresponding a key of a table database object.
@@ -988,6 +1037,23 @@ int tctdbstrtoindextype(const char *str);
 int tctdbqrycount(TDBQRY *qry);
 
 
+/* Generate a keyword-in-context string from a query object.
+   `qry' specifies the query object.
+   `cols' specifies a map object containing columns.
+   `name' specifies the name of a column.  If it is `NULL', the first column of the query is
+   specified.
+   `width' specifies the width of strings picked up around each keyword.
+   `opts' specifies options by bitwise-or: `TCKWMUTAB' specifies that each keyword is marked up
+   between two tab characters, `TCKWMUCTRL' specifies that each keyword is marked up by the STX
+   (0x02) code and the ETX (0x03) code, `TCKWMUBRCT' specifies that each keyword is marked up by
+   the two square brackets, `TCKWNOOVER' specifies that each context does not overlap,
+   `TCKWPULEAD' specifies that the lead string is picked up forcibly.
+   The return value is the list object whose elements are strings around keywords.
+   Because the object of the return value is created with the function `tclistnew', it should
+   be deleted with the function `tclistdel' when it is no longer in use. */
+TCLIST *tctdbqrykwic(TDBQRY *qry, TCMAP *cols, const char *name, int width, int opts);
+
+
 /* Convert a string into the query operation number.
    `str' specifies a string.
    The return value is the query operation number or -1 on failure. */
@@ -998,6 +1064,12 @@ int tctdbqrystrtocondop(const char *str);
    `str' specifies a string.
    The return value is the query order type or -1 on failure. */
 int tctdbqrystrtoordertype(const char *str);
+
+
+/* Convert a string into the set operation type number.
+   `str' specifies a string.
+   The return value is the set operation type or -1 on failure. */
+int tctdbmetastrtosettype(const char *str);
 
 
 

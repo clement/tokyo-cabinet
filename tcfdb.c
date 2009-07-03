@@ -34,7 +34,7 @@
 #define FDBOPAQUEOFF   128               // offset of the region for the opaque field
 
 #define FDBDEFWIDTH    255               // default value width
-#define FDBDEFLIMSIZ   (256*(1LL<<20))   // default limit size
+#define FDBDEFLIMSIZ   (256LL<<20)       // default limit size
 #define FDBRMTXNUM     127               // number of record mutexes
 #define FDBTRUNCALW    256               // number of record for truncate allowance
 #define FDBIDARYUNIT   2048              // size of ID array allocation unit

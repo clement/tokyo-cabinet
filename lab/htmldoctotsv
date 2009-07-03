@@ -8,29 +8,51 @@
 use strict;
 use warnings;
 use Encode;
+use Cwd 'realpath';
 
 my $path = '.';
 my $mode_table = 0;
+my $mode_hex = 0;
 
 for(my $i = 0; $i < scalar(@ARGV); $i++){
     my $arg = $ARGV[$i];
     if($arg =~ /^-/){
         if($arg eq '-t'){
             $mode_table = 1;
+        } elsif($arg eq '-x'){
+            $mode_hex = 1;
         }
     } else {
         $path = $arg;
     }
 }
 
-open(my $lfh, "find $path -type f -iregex '.*\.html?' -print |") || die("could not open");
+sub trimhtml {
+    my $text = shift;
+    $text =~ s/<[^>]*>/ /g;
+    $text =~ s/&lt;/</g;
+    $text =~ s/&gt;/>/g;
+    $text =~ s/&quot;/"/g;
+    $text =~ s/&nbsp;/ /g;
+    $text =~ s/&amp;/\&/g;
+    $text =~ s/\s+/ /g;
+    $text =~ s/^ *//;
+    $text =~ s/ *$//;
+    return $text;
+}
+
+$ENV{LANG} = "C";
+$ENV{LC_ALL} = "C";
+open(my $lfh, "find $path -type f -iregex '.*\.html?' -print | sort |") || die("could not open");
 my $id = 0;
 while(defined($path = <$lfh>)){
     chomp($path);
+    $path = realpath($path);
+    next if(!defined($path));
+    my @stat = stat($path);
+    next if(scalar(@stat) < 10);
+    my $mtime = $stat[9];
     open(my $ifh, "<$path") || next;
-    my $name = $path;
-    $name =~ s/.*\///;
-    $name =~ s/\.html?//i;
     my $encname = "UTF-8";
     my @lines;
     while(defined(my $line = <$ifh>)){
@@ -44,25 +66,31 @@ while(defined($path = <$lfh>)){
     }
     my $text = join('', @lines);
     $text = encode("UTF-8", decode($encname, $text)) if($encname ne "UTF-8");
-    $text =~ s/<[^>]*>/ /g;
-    $text =~ s/&lt;/</g;
-    $text =~ s/&gt;/>/g;
-    $text =~ s/&quot;/"/g;
-    $text =~ s/&nbsp;/ /g;
-    $text =~ s/&amp;/\&/g;
-    $text =~ s/\s+/ /g;
-    $text =~ s/^ *//;
-    $text =~ s/ *$//;
-    next if(length($text) < 1);
+    $text =~ s/<!--.*?-->//is;
+    my $title = "";
+    if($text =~ /<title[^>]*>[^<]*<\/title>/i){
+        $title = $text;
+        $title =~ s/.*<title[^>]*>([^<]*)<\/title>.*/$1/is;
+        $title = trimhtml($title);
+    }
+    $text =~ s/.*<body[^>]*>(.*)<\/body>.*/$1/is;
+    $text =~ s/<style[^>]*>.*?<\/style>//is;
+    $text =~ s/<script[^>]*>.*?<\/script>//is;
+    $text = trimhtml($text);
+    next if(length($title) < 1 && length($text) < 1);
     $id++;
+    my $key = $mode_hex ? sprintf("%X", $id) : $id;
     if($mode_table){
-        printf("%d\t", $id);
-        printf("path\t%s\t", $path);
-        printf("name\t%s\t", $name);
-        printf("len\t%s\t", length($text));
-        printf("text\t%s\n", $text);
+        printf("%s", $key);
+        printf("\tpath\t%s", $path);
+        printf("\tsize\t%s", length($text));
+        printf("\tmtime\t%s", $mtime);
+        printf("\ttitle\t%s", $title) if(length($title) > 0);
+        printf("\ttext\t%s", $text);
+        printf("\n");
     } else {
-        printf("%d\t%s\n", $id, $text);
+        $text = $title . " " . $text if(length($title) > 0);
+        printf("%s\t%s\n", $key, $text);
     }
     close($ifh);
 }

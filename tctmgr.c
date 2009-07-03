@@ -49,7 +49,8 @@ static int procout(const char *path, const char *pkbuf, int pksiz, int omode);
 static int procget(const char *path, const char *pkbuf, int pksiz, int omode, bool px, bool pz);
 static int proclist(const char *path, int omode, int max, bool pv, bool px, const char *fmstr);
 static int procsearch(const char *path, TCLIST *conds, const char *oname, const char *otype,
-                      int omode, int max, int skip, bool pv, bool px, bool ph, int bt, bool rm);
+                      int omode, int max, int skip, bool pv, bool px, bool kw, bool ph, int bt,
+                      bool rm, const char *mtype);
 static int procoptimize(const char *path, int bnum, int apow, int fpow, int opts, int omode,
                         bool df);
 static int procsetindex(const char *path, const char *name, int omode, int type);
@@ -106,8 +107,8 @@ static void usage(void){
   fprintf(stderr, "  %s out [-nl|-nb] [-sx] path pkey\n", g_progname);
   fprintf(stderr, "  %s get [-nl|-nb] [-sx] [-px] [-pz] path pkey\n", g_progname);
   fprintf(stderr, "  %s list [-nl|-nb] [-m num] [-pv] [-px] [-fm str] path\n", g_progname);
-  fprintf(stderr, "  %s search [-nl|-nb] [-ord name type] [-m num] [-sk num] [-pv] [-px] [-ph]"
-          " [-bt num] [-rm] path [name op expr ...]\n", g_progname);
+  fprintf(stderr, "  %s search [-nl|-nb] [-ord name type] [-m num] [-sk num] [-kw] [-pv] [-px]"
+          " [-ph] [-bt num] [-rm] [-ms type] path [name op expr ...]\n", g_progname);
   fprintf(stderr, "  %s optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] [-df]"
           " path [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "  %s setindex [-nl|-nb] [-it type] path name\n", g_progname);
@@ -446,9 +447,11 @@ static int runsearch(int argc, char **argv){
   int skip = -1;
   bool pv = false;
   bool px = false;
+  bool kw = false;
   bool ph = false;
   int bt = 0;
   bool rm = false;
+  char *mtype = NULL;
   for(int i = 2; i < argc; i++){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-nl")){
@@ -466,6 +469,8 @@ static int runsearch(int argc, char **argv){
       } else if(!strcmp(argv[i], "-sk")){
         if(++i >= argc) usage();
         skip = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-kw")){
+        kw = true;
       } else if(!strcmp(argv[i], "-pv")){
         pv = true;
       } else if(!strcmp(argv[i], "-px")){
@@ -477,6 +482,9 @@ static int runsearch(int argc, char **argv){
         bt = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-rm")){
         rm = true;
+      } else if(!strcmp(argv[i], "-ms")){
+        if(++i >= argc) usage();
+        mtype = argv[i];
       } else {
         usage();
       }
@@ -487,7 +495,8 @@ static int runsearch(int argc, char **argv){
     }
   }
   if(!path || tclistnum(conds) % 3 != 0) usage();
-  int rv = procsearch(path, conds, oname, otype, omode, max, skip, pv, px, ph, bt, rm);
+  int rv = procsearch(path, conds, oname, otype, omode, max, skip,
+                      pv, px, kw, ph, bt, rm, mtype);
   return rv;
 }
 
@@ -924,7 +933,8 @@ static int proclist(const char *path, int omode, int max, bool pv, bool px, cons
 
 /* perform search command */
 static int procsearch(const char *path, TCLIST *conds, const char *oname, const char *otype,
-                      int omode, int max, int skip, bool pv, bool px, bool ph, int bt, bool rm){
+                      int omode, int max, int skip, bool pv, bool px, bool kw, bool ph, int bt,
+                      bool rm, const char *mtype){
   TCTDB *tdb = tctdbnew();
   if(g_dbgfd >= 0) tctdbsetdbgfd(tdb, g_dbgfd);
   if(!tctdbsetcodecfunc(tdb, _tc_recencode, NULL, _tc_recdecode, NULL)) printerr(tdb);
@@ -981,44 +991,97 @@ static int procsearch(const char *path, TCLIST *conds, const char *oname, const 
     printf("total: %.5f sec. (%.5f s/q = %.5f q/s)\n", sum, sum / bt, bt / sum);
   } else {
     double stime = tctime();
-    TCLIST *res = tctdbqrysearch(qry);
-    double etime = tctime();
-    int rnum = tclistnum(res);
-    for(int i = 0; i < rnum; i++){
-      int pksiz;
-      const char *pkbuf = tclistval(res, i, &pksiz);
-      printdata(pkbuf, pksiz, px);
-      if(pv){
-        TCMAP *cols = tctdbget(tdb, pkbuf, pksiz);
-        if(cols){
-          tcmapiterinit(cols);
-          const char *kbuf;
-          int ksiz;
-          while((kbuf = tcmapiternext(cols, &ksiz)) != NULL){
-            int vsiz;
-            const char *vbuf = tcmapiterval(kbuf, &vsiz);
-            putchar('\t');
-            printdata(kbuf, ksiz, px);
-            putchar('\t');
-            printdata(vbuf, vsiz, px);
+    TCLIST *res;
+    TCLIST *hints;
+    int count;
+    int mtnum = mtype ? tctdbmetastrtosettype(mtype) : -1;
+    if(mtnum >= 0){
+      TDBQRY *qrys[cnum/3+1];
+      int qnum = 0;
+      for(int i = 0; i < cnum - 2; i += 3){
+        const char *name = tclistval2(conds, i);
+        const char *opstr = tclistval2(conds, i + 1);
+        const char *expr  = tclistval2(conds, i + 2);
+        int op = tctdbqrystrtocondop(opstr);
+        if(op >= 0){
+          qrys[qnum] = tctdbqrynew(tdb);
+          tctdbqryaddcond(qrys[qnum], name, op, expr);
+          if(oname){
+            int type = tctdbqrystrtoordertype(otype);
+            if(type >= 0) tctdbqrysetorder(qrys[qnum], oname, type);
           }
-          tcmapdel(cols);
+          tctdbqrysetlimit(qrys[qnum], max, skip);
+          qnum++;
         }
       }
-      putchar('\n');
+      res = tctdbmetasearch(qrys, qnum, mtnum);
+      hints = qnum > 0 ? tcstrsplit(tctdbqryhint(qrys[0]), "\n") : tclistnew2(1);
+      count = qnum > 0 ? tctdbqrycount(qrys[0]) : 0;
+      for(int i = 0; i < qnum; i++){
+        tctdbqrydel(qrys[i]);
+      }
+    } else {
+      res = tctdbqrysearch(qry);
+      hints = tcstrsplit(tctdbqryhint(qry), "\n");
+      count = tctdbqrycount(qry);
+    }
+    double etime = tctime();
+    if(max < 0) max = INT_MAX;
+    int rnum = tclistnum(res);
+    for(int i = 0; i < rnum && max > 0; i++){
+      int pksiz;
+      const char *pkbuf = tclistval(res, i, &pksiz);
+      if(kw){
+        TCMAP *cols = tctdbget(tdb, pkbuf, pksiz);
+        if(cols){
+          TCLIST *texts = tctdbqrykwic(qry, cols, NULL, 16, TCKWMUTAB);
+          int tnum = tclistnum(texts);
+          for(int j = 0; j < tnum && max > 0; j++){
+            int tsiz;
+            const char *text = tclistval(texts, j, &tsiz);
+            printdata(pkbuf, pksiz, px);
+            putchar('\t');
+            printdata(text, tsiz, px);
+            putchar('\n');
+            max--;
+          }
+          tclistdel(texts);
+          tcmapdel(cols);
+        }
+      } else {
+        printdata(pkbuf, pksiz, px);
+        if(pv){
+          TCMAP *cols = tctdbget(tdb, pkbuf, pksiz);
+          if(cols){
+            tcmapiterinit(cols);
+            const char *kbuf;
+            int ksiz;
+            while((kbuf = tcmapiternext(cols, &ksiz)) != NULL){
+              int vsiz;
+              const char *vbuf = tcmapiterval(kbuf, &vsiz);
+              putchar('\t');
+              printdata(kbuf, ksiz, px);
+              putchar('\t');
+              printdata(vbuf, vsiz, px);
+            }
+            tcmapdel(cols);
+          }
+        }
+        putchar('\n');
+        max--;
+      }
     }
     if(ph){
-      TCLIST *hints = tcstrsplit(tctdbqryhint(qry), "\n");
       int hnum = tclistnum(hints);
       for(int i = 0; i < hnum; i++){
         const char *hint = tclistval2(hints, i);
         if(*hint == '\0') continue;
         printf("\t:::: %s\n", hint);
       }
-      tclistdel(hints);
-      printf("\t:::: number of records: %d\n", tctdbqrycount(qry));
+      printf("\t:::: number of records: %d\n", count);
       printf("\t:::: elapsed time: %.5f\n", etime - stime);
     }
+    tclistdel(hints);
     tclistdel(res);
   }
   tctdbqrydel(qry);
@@ -1037,6 +1100,13 @@ static int procoptimize(const char *path, int bnum, int apow, int fpow, int opts
   TCTDB *tdb = tctdbnew();
   if(g_dbgfd >= 0) tctdbsetdbgfd(tdb, g_dbgfd);
   if(!tctdbsetcodecfunc(tdb, _tc_recencode, NULL, _tc_recdecode, NULL)) printerr(tdb);
+  int64_t msiz = 0;
+  TCMAP *info = tcsysinfo();
+  if(info){
+    msiz = tcatoi(tcmapget4(info, "total", "0"));
+    tcmapdel(info);
+  }
+  if(!tctdbsetinvcache(tdb, msiz >= (1 << 30) ? msiz / 4 : 0, 1.0)) printerr(tdb);
   if(!tctdbopen(tdb, path, TDBOWRITER | omode)){
     printerr(tdb);
     tctdbdel(tdb);
@@ -1068,6 +1138,13 @@ static int procsetindex(const char *path, const char *name, int omode, int type)
   TCTDB *tdb = tctdbnew();
   if(g_dbgfd >= 0) tctdbsetdbgfd(tdb, g_dbgfd);
   if(!tctdbsetcodecfunc(tdb, _tc_recencode, NULL, _tc_recdecode, NULL)) printerr(tdb);
+  int64_t msiz = 0;
+  TCMAP *info = tcsysinfo();
+  if(info){
+    msiz = tcatoi(tcmapget4(info, "total", "0"));
+    tcmapdel(info);
+  }
+  if(!tctdbsetinvcache(tdb, msiz >= (1 << 30) ? msiz / 4 : 0, 1.0)) printerr(tdb);
   if(!tctdbopen(tdb, path, TDBOWRITER | omode)){
     printerr(tdb);
     tctdbdel(tdb);
@@ -1097,6 +1174,13 @@ static int procimporttsv(const char *path, const char *file, int omode, bool sc)
   TCTDB *tdb = tctdbnew();
   if(g_dbgfd >= 0) tctdbsetdbgfd(tdb, g_dbgfd);
   if(!tctdbsetcodecfunc(tdb, _tc_recencode, NULL, _tc_recdecode, NULL)) printerr(tdb);
+  int64_t msiz = 0;
+  TCMAP *info = tcsysinfo();
+  if(info){
+    msiz = tcatoi(tcmapget4(info, "total", "0"));
+    tcmapdel(info);
+  }
+  if(!tctdbsetinvcache(tdb, msiz >= (1 << 30) ? msiz / 4 : 0, 1.0)) printerr(tdb);
   if(!tctdbopen(tdb, path, TDBOWRITER | TDBOCREAT | omode)){
     printerr(tdb);
     tctdbdel(tdb);
@@ -1113,7 +1197,7 @@ static int procimporttsv(const char *path, const char *file, int omode, bool sc)
       continue;
     }
     *pv = '\0';
-    if(sc) tcstrtolower(line);
+    if(sc) tcstrutfnorm(line, TCUNSPACE | TCUNLOWER | TCUNNOACC | TCUNWIDTH);
     const char *pkey;
     if(*line == '\0'){
       sprintf(numbuf, "%lld", (long long)tctdbgenuid(tdb));

@@ -291,12 +291,17 @@ module TokyoCabinet {
     const long QPPUT = 1 << 0;
     const long QPOUT = 1 << 1;
     const long QPSTOP = 1 << 24;
+    const long MSUNION = 0;
+    const long MSISECT = 1;
+    const long MSDIFF = 2;
     void addcond(in string name, in long op, in string expr);
     void setorder(in string name, in long type);
     void setlimit(in long max, in long skip);
     List search();
     boolean searchout();
     string hint();
+    typedef sequence<TDBQRY> QueryList;
+    List metasearch(in QueryList qrys, in long type);
   };
   //----------------------------------------------------------------
   // the abstract database API

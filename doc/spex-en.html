@@ -118,7 +118,7 @@
 
 <p>Table database does not express simple key/value structure but expresses a structure like a table of relational database.  Each record is identified by the primary key and has a set of multiple columns named with arbitrary strings.  For example, a stuff in your company can be expressed by a record identified by the primary key of the employee ID number and structured by columns of his name, division, salary, and so on.  Unlike relational database, table database does not need to define any data schema and can contain records of various structures different from each other.</p>
 
-<p>Table database supports query functions with not only the primary key but also with conditions about arbitrary columns.  Each column condition is composed of the name of a column and a condition expression.  Operators of full matching, forward matching, regular expression matching, and so on are provided for the string type.  Operators of full matching, range matching and so on are provided for the number type.  A query can contain multiple conditions.  The order of the result set can be specified as the ascending or descending order of strings or numbers.</p>
+<p>Table database supports query functions with not only the primary key but also with conditions about arbitrary columns.  Each column condition is composed of the name of a column and a condition expression.  Operators of full matching, forward matching, regular expression matching, and so on are provided for the string type.  Operators of full matching, range matching and so on are provided for the number type.  Operators for tag search and full-text search are also provided.  A query can contain multiple conditions for logical intersection.  Search by multiple queries for logical union is also available.  The order of the result set can be specified as the ascending or descending order of strings or numbers.</p>
 
 <p>You can create indices for arbitrary columns to improve performance of search and sorting.  Although columns do not have data types, indices have types for strings or numbers.  Inverted indices for space separated tokens and character N-gram tokens are also supported.  The query optimizer uses indices in suitable way according to each query.  Indices are implemented as different files of B+ tree database.</p>
 
@@ -2098,9 +2098,10 @@
 
 <dl class="api">
 <dt><code>void tcstrucstoutf(const uint16_t *<var>ary</var>, int <var>num</var>, char *<var>str</var>);</code></dt>
-<dd>`<var>ary</var>' specifies the array of UCS-2 code codes.</dd>
+<dd>`<var>ary</var>' specifies the array of UCS-2 codes.</dd>
 <dd>`<var>num</var>' specifies the number of the array.</dd>
 <dd>`<var>str</var>' specifies the pointer to the region into which the result UTF-8 string is written.  The size of the buffer should be sufficient.</dd>
+<dd>The return value is the length of the result string.</dd>
 </dl>
 
 <p>The function `tcstrsplit' is used in order to create a list object by splitting a string.</p>
@@ -2842,7 +2843,7 @@ int main(int argc, char **argv){
 <dd>Process XML.  By default, escape meta characters.</dd>
 <dt><code>tcucodec cstr [-d] [-js] [<var>file</var>]</code></dt>
 <dd>Perform C-string escaping and its unescaping.</dd>
-<dt><code>tcucodec ucs [-d] [-un] [<var>file</var>]</code></dt>
+<dt><code>tcucodec ucs [-d] [-un] [-kw <var>str</var>] [<var>file</var>]</code></dt>
 <dd>Convert UTF-8 string into UCS-2 array.</dd>
 <dt><code>tcucodec hash [-crc] [-ch <var>num</var>] [<var>file</var>]</code></dt>
 <dd>Calculate the hash value.  By default, use MD5 function.</dd>
@@ -2871,6 +2872,7 @@ int main(int argc, char **argv){
 <li><code>-crc</code> : use CRC32 function.</li>
 <li><code>-js</code> : use JSON compatible format.</li>
 <li><code>-un</code> : perform UCS normalization.</li>
+<li><code>-kw <var>str</var></code> : generate KWIC string.</li>
 <li><code>-ch <var>num</var></code> : use consistent hashing function.</li>
 <li><code>-ds <var>str</var></code> : specify the time.</li>
 <li><code>-jl <var>num</var></code> : specify the jet lag.</li>
@@ -5751,6 +5753,17 @@ int main(int argc, char **argv){
 <dd>The return value is the hint string.</dd>
 </dl>
 
+<p>The function `tctdbmetasearch' is used in order to retrieve records with multiple query objects and get the set of the result.</p>
+
+<dl class="api">
+<dt><code>TCLIST *tctdbmetasearch(TDBQRY **<var>qrys</var>, int <var>num</var>, int <var>type</var>);</code></dt>
+<dd>`<var>qrys</var>' specifies an array of the query objects.</dd>
+<dd>`<var>num</var>' specifies the number of elements of the array.</dd>
+<dd>`<var>type</var>' specifies a set operation type: `TDBMSUNION' for the union set, `TDBMSISECT' for the intersection set, `TDBMSDIFF' for the difference set.</dd>
+<dd>The return value is a list object of the primary keys of the corresponding records.  This function does never fail.  It returns an empty list even if no record corresponds.</dd>
+<dd>If the first query object has the order setting, the result array is sorted by the order.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
+</dl>
+
 <h3 id="tctdbapi_example">Example Code</h3>
 
 <p>The following code is an example to use a table database.</p>
@@ -5952,7 +5965,7 @@ int main(int argc, char **argv){
 <dd>Print the value of a record.</dd>
 <dt><code>tctmgr list [-nl|-nb] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>path</var></code></dt>
 <dd>Print the primary keys of all records, separated by line feeds.</dd>
-<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-sk <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
+<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-sk <var>num</var>] [-kw] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] [-ms <var>type</var>] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
 <dd>Print records matching conditions, separated by line feeds.</dd>
 <dt><code>tctmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] [-df] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>Optimize a database file.</dd>
@@ -5986,9 +5999,11 @@ int main(int argc, char **argv){
 <li><code>-fm <var>str</var></code> : specify the prefix of keys.</li>
 <li><code>-ord <var>name</var> <var>type</var></code> : specify the order of the result.</li>
 <li><code>-sk <var>num</var></code> : specify the number of skipped records.</li>
+<li><code>-kw</code> : print KWIC string.</li>
 <li><code>-ph</code> : print hint information also.</li>
 <li><code>-bt</code> : specify the number of benchmark tests.</li>
 <li><code>-rm</code> : remove every record in the result.</li>
+<li><code>-ms <var>type</var></code> : specify the set operation of meta search.</li>
 <li><code>-tz</code> : enable the option `UINT8_MAX'.</li>
 <li><code>-df</code> : perform defragmentation only.</li>
 <li><code>-it <var>type</var></code> : specify the index type among "lexical", "decimal", "token", "qgram", and "void".</li>
@@ -5997,7 +6012,7 @@ int main(int argc, char **argv){
 <li><code>-sc</code> : normalize keys as lower cases.</li>
 </ul>
 
-<p>The operator of the `search' subcommand is one of "STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ", "FTSPH", "FTSAND", "FTSOR", and "FTSEX".  If "~" preposes each operator, the logical meaning is reversed.  If "+" preposes each operator, no index is used for the operator.  The type of the `-ord' option is one of "STRASC", "STRDESC", "NUMASC", and "NUMDESC".  This command returns 0 on success, another on failure.</p>
+<p>The operator of the `search' subcommand is one of "STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ", "FTSPH", "FTSAND", "FTSOR", and "FTSEX".  If "~" preposes each operator, the logical meaning is reversed.  If "+" preposes each operator, no index is used for the operator.  The type of the `-ord' option is one of "STRASC", "STRDESC", "NUMASC", and "NUMDESC".  The type of the `-ms' option is one of "UNION", "ISECT", and "DIFF".  This command returns 0 on success, another on failure.</p>
 
 <hr />
 

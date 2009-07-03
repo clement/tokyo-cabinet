@@ -2418,11 +2418,12 @@ void tcstrutftoucs(const char *str, uint16_t *ary, int *np);
 
 
 /* Convert a UCS-2 array into a UTF-8 string.
-   `ary' specifies the array of UCS-2 code codes.
+   `ary' specifies the array of UCS-2 codes.
    `num' specifies the number of the array.
    `str' specifies the pointer to the region into which the result UTF-8 string is written.  The
-   size of the buffer should be sufficient. */
-void tcstrucstoutf(const uint16_t *ary, int num, char *str);
+   size of the buffer should be sufficient.
+   The return value is the length of the result string. */
+int tcstrucstoutf(const uint16_t *ary, int num, char *str);
 
 
 /* Create a list object by splitting a string.
@@ -2576,9 +2577,18 @@ int tcdayofweek(int year, int mon, int day);
 
 
 enum {                                   /* enumeration for UCS normalization */
-  TCUNLOWER = 1 << 0,                    /* lower case normalization */
-  TCUNNOACC = 1 << 1,                    /* strip accent marks */
-  TCUNSPACE = 1 << 2                     /* white space normalization */
+  TCUNSPACE = 1 << 0,                    /* white space normalization */
+  TCUNLOWER = 1 << 1,                    /* lower case normalization */
+  TCUNNOACC = 1 << 2,                    /* strip accent marks */
+  TCUNWIDTH = 1 << 3                     /* half-width normalization */
+};
+
+enum {                                   /* enumeration for KWIC generator */
+  TCKWMUTAB = 1 << 0,                    /* mark up by tabs */
+  TCKWMUCTRL = 1 << 1,                   /* mark up by control characters */
+  TCKWMUBRCT = 1 << 2,                   /* mark up by brackets */
+  TCKWNOOVER = 1 << 24,                  /* no overlap */
+  TCKWPULEAD = 1 << 25                   /* pick up the lead string */
 };
 
 typedef struct {                         /* type of structure for a consistent hashing node */
@@ -2611,15 +2621,50 @@ int64_t tcatoih(const char *str);
 const char *tcstrskipspc(const char *str);
 
 
+/* Normalize a UTF-8 string.
+   `str' specifies the string of UTF-8.
+   `opts' specifies options by bitwise-or: `TCUNSPACE' specifies that white space characters are
+   normalized into the ASCII space and they are squeezed into one, `TCUNLOWER' specifies that
+   alphabetical characters are normalized into lower cases, `TCUNNOACC' specifies that
+   alphabetical characters with accent marks are normalized without accent marks, `TCUNWIDTH'
+   specifies that full-width characters are normalized into half-width characters.
+   The return value is the string itself. */
+char *tcstrutfnorm(char *str, int opts);
+
+
 /* Normalize a UCS-2 array.
-   `ary' specifies the array of UCS-2 code codes.
+   `ary' specifies the array of UCS-2 codes.
    `num' specifies the number of elements of the array.
-   `opts' specifies options by bitwise-or: `TCUNLOWER' specifies that alphabetical characters are
-   normalized into lower cases, `TCUNNOACC' specifies that alphabetical characters with accent
-   marks are normalized without accent marks, `TCUNSPACE' specifies that white space characters
-   are normalized into the ASCII space and they are squeezed into one.
+   `opts' specifies options by bitwise-or: `TCUNSPACE' specifies that white space characters are
+   normalized into the ASCII space and they are squeezed into one, `TCUNLOWER' specifies that
+   alphabetical characters are normalized into lower cases, `TCUNNOACC' specifies that
+   alphabetical characters with accent marks are normalized without accent marks, `TCUNWIDTH'
+   specifies that full-width characters are normalized into half-width characters.
    The return value is the number of elements of the result array. */
 int tcstrucsnorm(uint16_t *ary, int num, int opts);
+
+
+/* Generate a keyword-in-context string from a text and keywords.
+   `str' specifies the text string of UTF-8.
+   `words' specifies a list object of the keyword strings.
+   `width' specifies the width of strings picked up around each keyword.
+   `opts' specifies options by bitwise-or: `TCKWMUTAB' specifies that each keyword is marked up
+   between two tab characters, `TCKWMUCTRL' specifies that each keyword is marked up by the STX
+   (0x02) code and the ETX (0x03) code, `TCKWMUBRCT' specifies that each keyword is marked up by
+   the two square brackets, `TCKWNOOVER' specifies that each context does not overlap,
+   `TCKWPULEAD' specifies that the lead string is picked up forcibly.
+   The return value is the list object whose elements are strings around keywords.
+   Because the object of the return value is created with the function `tclistnew', it should
+   be deleted with the function `tclistdel' when it is no longer in use. */
+TCLIST *tcstrkwic(const char *str, const TCLIST *words, int width, int opts);
+
+
+/* Tokenize a text separating by white space characters.
+   `str' specifies the string.
+   The return value is the list object whose elements are extracted tokens.
+   Because the object of the return value is created with the function `tclistnew', it should
+   be deleted with the function `tclistdel' when it is no longer in use. */
+TCLIST *tcstrtokenize(const char *str);
 
 
 /* Create a list object by splitting a region by zero code.
@@ -2704,7 +2749,8 @@ bool tcsleep(double sec);
 /* Get the current system information.
    The return value is a map object of the current system information or `NULL' on failure.  The
    key "size" specifies the process size in bytes.  The "rss" specifies the resident set size in
-   bytes.
+   bytes.  "total" specifies the total size of the real memory.  "free" specifies the free size
+   of the real memory.  "cached" specifies the cached size of the real memory.
    Because the object of the return value is created with the function `tcmapnew', it should be
    deleted with the function `tcmapdel' when it is no longer in use. */
 TCMAP *tcsysinfo(void);
@@ -3588,8 +3634,8 @@ typedef unsigned char TCBITMAP;          /* type of a bit map object */
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.27"
-#define _TC_LIBVER     818
+#define _TC_VERSION    "1.4.28"
+#define _TC_LIBVER     819
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

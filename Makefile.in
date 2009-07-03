@@ -472,6 +472,8 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket > check.out
 	$(RUNENV) $(RUNCMD) ./tctmgr search -m 10 -ord name STRDESC -pv -ph casket \
 	  name STRBW mi birth NUMBT 19700101,19791231 lang STRAND ja,en > check.out
+	$(RUNENV) $(RUNCMD) ./tctmgr search -ord birth NUMDESC -pv -ms UNION casket \
+	  name STREQ mikio name STRINC fal name FTSEX "ba na na"
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket name
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex -it dec casket birth
 	$(RUNENV) $(RUNCMD) ./tctmgr setindex casket lang

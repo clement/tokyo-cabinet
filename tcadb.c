@@ -2827,7 +2827,7 @@ bool tcadbforeach(TCADB *adb, TCITER iter, void *op){
 /* Map records of an abstract database object into another B+ tree database. */
 bool tcadbmapbdb(TCADB *adb, TCLIST *keys, TCBDB *bdb, ADBMAPPROC proc, void *op, int64_t csiz){
   assert(adb && bdb && proc);
-  if(csiz < 0) csiz = 256 * 1024 * 1024;
+  if(csiz < 0) csiz = 256LL << 20;
   TCLIST *recs = tclistnew2(tclmin(csiz / 64 + 256, INT_MAX / 4));
   ADBMAPBDB map;
   map.adb = adb;

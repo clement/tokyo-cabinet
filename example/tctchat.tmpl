@@ -16,14 +16,13 @@
 <style type="text/css">
 html { margin: 0em; padding: 0em; background: #eeeeee; color: #222222; }
 body { margin :0em; padding: 0.5em 1em; }
+hr { margin: 0px 0px; height: 1px; border: none; background: #aaaaaa; color: #aaaaaa; }
 h1 { margin: 8px 5px; padding: 0px; font-size: 125%; }
 h1 a { color: #000000; }
-hr { margin: 0px 0px; height: 1px; border: none; background: #aaaaaa; color: #aaaaaa; }
-form { margin: 5px; padding: 0px; }
 p { margin: 5px; padding: 0px; }
 a { color: #2288ff; text-decoration: none; }
 a:hover { color: #2288ff; text-decoration: underline; }
-div.searchform { font-size: 80%; float: right; }
+div.searchform { margin: 5px; font-size: 80%; float: right; }
 div.page { margin: 10px 10px 3px 10px ; text-align: right; font-size: 80%; color: #999999; }
 a.move,span.move { margin: 1px 1px; padding: 1px 8px;
   background: #ffffff; border: 1pt solid #dddddd; -moz-border-radius: 5px; }
@@ -89,34 +88,36 @@ function autoupdate(){
     }
   }
   if("[%search ENC URL%]".length != 0 || "[%prev%]".length != 0) return;
-  var inputnode = document.getElementById("textinput");
-  if(inputnode) inputnode.focus();
+  var inputnode = document.getElementById("authorinput");
+  if(inputnode){
+    if(inputnode.getAttribute("value").length == 0){
+      if(inputnode) inputnode.focus();
+    } else {
+      inputnode = document.getElementById("textinput");
+      if(inputnode) inputnode.focus();
+    }
+  }
   setTimeout(refresh, interval);
 }
 </script>
 </head>
 
 <body onload="autoupdate();">
-
 <form method="get" action="[%url%]">
 <div class="searchform">
 <input type="text" name="search" value="[%search ENC XML%]" size="16" title="search" tabindex="4" accesskey="4" id="searchinput" />
 <input type="submit" value="search" size="16" title="go" tabindex="5" accesskey="5" id="searchsubmit" />
 </div>
 </form>
-
 <h1><a href="[%url%]">[%title ENC XML%]</a></h1>
 [% FOREACH msgs msg \%]
 <div class="msg">[%msg ENC XML%]</div>
 [% END \%]
-
 <hr />
-
 <div class="page">
-[% IF prev %]<a href="[%url%]?page=[%prev%]&amp;search=[%search ENC URL%]" class="move">PREV</a>[% ELSE %]<span class="move void">PREV</span>[% END %]
-[% IF next %]<a href="[%url%]?page=[%next%]&amp;search=[%search ENC URL%]" class="move">NEXT</a>[% ELSE %]<span class="move void">NEXT</span>[% END %]
+[% IF prev %]<a href="[%url%]?page=[%prev%]&amp;search=[%search ENC URL%]" class="move">PREV</a>[% ELSE %]<span class="move">PREV</span>[% END %]
+[% IF next %]<a href="[%url%]?page=[%next%]&amp;search=[%search ENC URL%]" class="move">NEXT</a>[% ELSE %]<span class="move">NEXT</span>[% END %]
 </div>
-
 <div class="chatlogs" id="chatlogs">
 [% FOREACH logs log \%]
 <div class="chatlog" id="CL[%log.pk%]">
@@ -126,9 +127,7 @@ function autoupdate(){
 </div>
 [% END \%]
 </div>
-
 <hr />
-
 <form method="post" action="[%url%]">
 <div class="writeform" id="writeform">
 <input type="text" name="author" value="[%author ENC XML%]" size="12" title="author" tabindex="1" accesskey="1" id="authorinput" />
@@ -136,9 +135,7 @@ function autoupdate(){
 <input type="submit" value="post" title="post" tabindex="3" accesskey="3" id="writesubmit" />
 </div>
 </form>
-
 <hr />
-
 </body>
 
 </html>

@@ -120,7 +120,7 @@
 
 <p>テーブルデータベースは、単純なキーと値の構造ではなく、リレーショナルデータベースの表のような構造を表現します。各レコードは主キーで識別されるとともに、任意の文字列で名前を付けられたコラムの集合を値として持ちます。例えば、社員番号を主キーにして、名前や部署や給与などのコラムを構造化して格納することができます。リレーショナルデータベースと違ってデータスキーマを事前に定義する必要はなく、レコード毎に異なる種類のコラムを持たせることができます。</p>
 
-<p>テーブルデータベースに対しては、主キー以外の条件でも問い合わせを行うことができます。条件はコラムの名前と条件式で構成されます。条件式の演算子としては、文字列型に関しては完全一致や前方一致や正規表現などが提供され、数値型に関しては完全一致や範囲一致が提供されます。複数の条件式を組み合わせることもできます。検索結果の順序は文字列または数値の昇順または降順を指定することができます。</p>
+<p>テーブルデータベースに対しては、主キー以外の条件でも問い合わせを行うことができます。条件はコラムの名前と条件式で構成されます。条件式の演算子としては、文字列型に関しては完全一致や前方一致や正規表現などが提供され、数値型に関しては完全一致や範囲一致が提供されます。タグ検索や全文検索の演算子も提供されます。クエリに複数の条件式を持たせることで論理積条件を指定できます。複数のクエリを使って検索を行うことで論理和条件を指定できます。検索結果の順序は文字列または数値の昇順または降順を指定することができます。</p>
 
 <p>コラムを使った検索やソートを高速化するために、コラム毎のインデックスを作成することができます。コラムには型の概念はありませんが、インデックスには文字列型もしくは数値型の区別があります。空白区切りトークンと文字N-gramトークンの転置インデックスもサポートされます。クエリオプティマイザは検索条件やソート条件に応じた最適な順序でインデックスを利用します。インデックスはB+木データベースの外部ファイルとして実装されます。</p>
 
@@ -2100,9 +2100,10 @@
 
 <dl class="api">
 <dt><code>void tcstrucstoutf(const uint16_t *<var>ary</var>, int <var>num</var>, char *<var>str</var>);</code></dt>
-<dd>`<var>ary</var>' specifies the array of UCS-2 code codes.</dd>
+<dd>`<var>ary</var>' specifies the array of UCS-2 codes.</dd>
 <dd>`<var>num</var>' specifies the number of the array.</dd>
 <dd>`<var>str</var>' specifies the pointer to the region into which the result UTF-8 string is written.  The size of the buffer should be sufficient.</dd>
+<dd>The return value is the length of the result string.</dd>
 </dl>
 
 <p>The function `tcstrsplit' is used in order to create a list object by splitting a string.</p>
@@ -2844,7 +2845,7 @@ int main(int argc, char **argv){
 <dd>XMLの処理を行う。デフォルトではメタ文字のエスケープを行う。</dd>
 <dt><code>tcucodec cstr [-d] [-js] [<var>file</var>]</code></dt>
 <dd>C文字列のエスケープとそのアンエスケープを行う。</dd>
-<dt><code>tcucodec ucs [-d] [-un] [<var>file</var>]</code></dt>
+<dt><code>tcucodec ucs [-d] [-un] [-kw <var>str</var>] [<var>file</var>]</code></dt>
 <dd>UTF-8の文字列をUCS-2の配列に変換する。</dd>
 <dt><code>tcucodec hash [-crc] [-ch <var>num</var>] [<var>file</var>]</code></dt>
 <dd>ハッシュ値を算出する。デフォルトではMD5関数を用いる。</dd>
@@ -2873,6 +2874,7 @@ int main(int argc, char **argv){
 <li><code>-crc</code> : CRC32関数を用いる。</li>
 <li><code>-js</code> : JSON互換形式を用いる。</li>
 <li><code>-un</code> : UCSの正規化を行う。</li>
+<li><code>-kw <var>str</var></code> : KWIC文字列を生成する。</li>
 <li><code>-ch <var>num</var></code> : コンシステントハッシュ関数を用いる。</li>
 <li><code>-ds <var>str</var></code> : 時刻を指定する。</li>
 <li><code>-jl <var>num</var></code> : 時差を指定する。</li>
@@ -5753,6 +5755,17 @@ int main(int argc, char **argv){
 <dd>The return value is the hint string.</dd>
 </dl>
 
+<p>The function `tctdbmetasearch' is used in order to retrieve records with multiple query objects and get the set of the result.</p>
+
+<dl class="api">
+<dt><code>TCLIST *tctdbmetasearch(TDBQRY **<var>qrys</var>, int <var>num</var>, int <var>type</var>);</code></dt>
+<dd>`<var>qrys</var>' specifies an array of the query objects.</dd>
+<dd>`<var>num</var>' specifies the number of elements of the array.</dd>
+<dd>`<var>type</var>' specifies a set operation type: `TDBMSUNION' for the union set, `TDBMSISECT' for the intersection set, `TDBMSDIFF' for the difference set.</dd>
+<dd>The return value is a list object of the primary keys of the corresponding records.  This function does never fail.  It returns an empty list even if no record corresponds.</dd>
+<dd>If the first query object has the order setting, the result array is sorted by the order.  Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
+</dl>
+
 <h3 id="tctdbapi_example">コード例</h3>
 
 <p>テーブルデータベースを使ったコード例を以下に示します。</p>
@@ -5953,7 +5966,7 @@ int main(int argc, char **argv){
 <dd>レコードの値を取得して標準出力する。</dd>
 <dt><code>tctmgr list [-nl|-nb] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>path</var></code></dt>
 <dd>全てのレコードの主キーを改行で区切って標準出力する。</dd>
-<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-sk <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
+<dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-sk <var>num</var>] [-kw] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] [-ms <var>type</var>] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
 <dd>検索条件に合致するレコードを改行で区切って標準出力する。</dd>
 <dt><code>tctmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] [-df] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>データベースを最適化する。</dd>
@@ -5987,9 +6000,11 @@ int main(int argc, char **argv){
 <li><code>-fm <var>str</var></code> : キーの接頭辞を指定する。</li>
 <li><code>-ord <var>name</var> <var>type</var></code> : 結果の並び順を指定する。</li>
 <li><code>-sk <var>num</var></code> : 結果のスキップ件数を指定する。</li>
+<li><code>-kw</code> : KWIC文字列を出力する。</li>
 <li><code>-ph</code> : ヒント情報も出力する。</li>
 <li><code>-bt</code> : ベンチマークテストの回数を指定する。</li>
 <li><code>-rm</code> : 結果のレコードを全て削除する。</li>
+<li><code>-ms <var>type</var></code> : メタ検索の集合演算を指定する。</li>
 <li><code>-tz</code> : オプション `UINT8_MAX' を有効にする。</li>
 <li><code>-df</code> : デフラグのみを行う。</li>
 <li><code>-it</code> : インデックスの型を "lexical" か "decimal" か "token" か "qgram" か "void" で指定する。</li>
@@ -5997,7 +6012,7 @@ int main(int argc, char **argv){
 <li><code>-sc</code> : キーを小文字に正規化する。</li>
 </ul>
 
-<p>`search' サブコマンドの演算子には、"STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ", "FTSPH", "FTSAND", "FTSOR", "FTSEX" のいずれかを用いることができます。各演算子に "~" を接頭させると論理的な意味が反転されます。"+" を接頭させるとその演算子にはインデックスが適用されません。`-ord' オプションの型指定には、"STRASC", "STRDESC", "NUMASC", "NUMDESC" のいずれかを用いることができます。このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
+<p>`search' サブコマンドの演算子には、"STREQ", "STRINC", "STRBW", "STREW", "STRAND", "STROR", "STROREQ", "STRRX", "NUMEQ", "NUMGT", "NUMGE", "NUMLT", "NUMLE", "NUMBT", "NUMOREQ", "FTSPH", "FTSAND", "FTSOR", "FTSEX" のいずれかを用いることができます。各演算子に "~" を接頭させると論理的な意味が反転されます。"+" を接頭させるとその演算子にはインデックスが適用されません。`-ord' オプションの型指定には、"STRASC", "STRDESC", "NUMASC", "NUMDESC" のいずれかを用いることができます。`-ms' オプションの型指定には、"UNION", "ISECT", "DIFF" のいずれかを用いることができます。このコマンドは処理が正常に終了すれば 0 を返し、エラーがあればそれ以外の値を返して終了します。</p>
 
 <hr />
 
@@ -6705,6 +6720,10 @@ cp -f "$srcpath" "$destpath"
 <li>TDBQOSTRASC : 数値の昇順</li>
 <li>TDBQOSTRDESC : 数値の降順</li>
 </ul>
+
+<p>`<code>TDBQCSTRAND</code>' と `<code>TDBQCSTROR</code>' は、いわゆるタグ検索のための演算子です。タグ検索とは、空白またはコンマで区切られたトークンをタグとみなして、そのタグが存在するか否かを判定してレコードを探す操作です。`<code>TDBQCSTRINC</code>' のように任意の部分文字列を探すのではなく、トークン単位の完全一致を判定します。タグ検索を高速化するには後述のトークン転置インデックスを張ることが推奨されます。`<code>TDBQCSTROREQ</code>' 演算子もタグ検索に使うことができますが、SQLのIN演算子と同じように、検索されるレコードのコラムには単一のトークンしか含まれてはならないという制約があります。その分、通常の文字列型のインデックスが効くという利点があります。</p>
+
+<p>`<code>TDBQCFTSPH</code>' と `<code>TDBQCFTSAND</code>' と `<code>TDBQCFTSOR</code>' と `<code>TDBQCFTSEX</code>' は、いわゆる全文検索のための演算子です。全文検索は前述のタグ検索と違って、空白やコンマの区切りを単位としない任意の部分文字列の一致を判定できる点で `<code>TDBQCSTRINC</code>' に類似しています。ただし、大文字小文字やアクセントマークなどの違いを吸収するため、ユーザが入力した任意のテキストを検索するのに便利です。全文検索を実用的な速度で動作させるためには後述のq-gram転置インデックスを張っておくことが必要です。`<code>TDBQCFTSEX</code>' 演算子で用いる複合検索式においては、空白で区切って複数のトークンを指定すると、その全てのトークンを含むというAND条件で検索できます。空白および「&amp;&amp;」で区切っても同じ意味になります。空白および「||」で区切ると、両辺のトークンのどちらかを含むというOR条件で検索できます。トークンに空白を含めたい場合は「""」で括ります。演算子の結合優先順位は「""」「||」「&amp;&amp;」の順になります。同一順位の演算子は左結合で評価されます。</p>
 
 <h3 id="tips_tctdbindex">テーブルデータベースのインデックス</h3>
 

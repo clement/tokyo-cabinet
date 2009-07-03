@@ -64,7 +64,7 @@ Process XML.  By default, escape meta characters.
 Perform C\-string escaping and its unescaping.
 .RE
 .br
-\fBtcucodec ucs \fR[\fB\-d\fR]\fB \fR[\fB\-un\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
+\fBtcucodec ucs \fR[\fB\-d\fR]\fB \fR[\fB\-un\fR]\fB \fR[\fB\-kw \fIstr\fB\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
 .RS
 Convert UTF\-8 string into UCS\-2 array.
 .RE
@@ -120,6 +120,8 @@ Options feature the following.
 \fB\-js\fR : use JSON compatible format.
 .br
 \fB\-un\fR : perform UCS normalization.
+.br
+\fB\-kw \fIstr\fR\fR : generate KWIC string.
 .br
 \fB\-ch \fInum\fR\fR : use consistent hashing function.
 .br
