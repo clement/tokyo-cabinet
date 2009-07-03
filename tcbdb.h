@@ -74,6 +74,7 @@ typedef struct {                         /* type of structure for a B+ tree data
   uint64_t lleaf;                        /* ID number of the last visited leaf */
   bool tran;                             /* whether in the transaction */
   char *rbopaque;                        /* opaque for rollback */
+  uint64_t clock;                        /* logical clock */
   int64_t cnt_saveleaf;                  /* tesing counter for leaf save times */
   int64_t cnt_loadleaf;                  /* tesing counter for leaf load times */
   int64_t cnt_killleaf;                  /* tesing counter for leaf kill times */
@@ -108,6 +109,7 @@ enum {                                   /* enumeration for open modes */
 
 typedef struct {                         /* type of structure for a B+ tree cursor */
   TCBDB *bdb;                            /* database object */
+  uint64_t clock;                        /* logical clock */
   uint64_t id;                           /* ID number of the leaf */
   int32_t kidx;                          /* number of the key */
   int32_t vidx;                          /* number of the value */

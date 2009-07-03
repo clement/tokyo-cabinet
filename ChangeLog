@@ -1,3 +1,11 @@
+2009-04-20  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcbdb.c (tcbdbcuroutimpl): shift mechanism of cursors on deleted leaves was added.
+
+	* tcbdb.c (tcbdbleafcheck): new function.
+
+	- Release: 1.4.16
+
 2009-04-08  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tcsleep): new function.

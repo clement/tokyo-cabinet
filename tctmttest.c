@@ -1154,16 +1154,20 @@ static void *threadwicked(void *targ){
       break;
     case 9:
       if(id == 0) iputchar('9');
-      if(!tctdbout(tdb, pkbuf, pksiz) && tctdbecode(tdb) != TCENOREC){
-        eprint(tdb, "tctdbout");
-        err = true;
+      if(myrand(2) == 0){
+        if(!tctdbout(tdb, pkbuf, pksiz) && tctdbecode(tdb) != TCENOREC){
+          eprint(tdb, "tctdbout");
+          err = true;
+        }
       }
       break;
     case 10:
       if(id == 0) iputchar('A');
-      if(!tctdbout2(tdb, pkbuf) && tctdbecode(tdb) != TCENOREC){
-        eprint(tdb, "tctdbout2");
-        err = true;
+      if(myrand(2) == 0){
+        if(!tctdbout2(tdb, pkbuf) && tctdbecode(tdb) != TCENOREC){
+          eprint(tdb, "tctdbout2");
+          err = true;
+        }
       }
       break;
     case 11:
@@ -1302,13 +1306,13 @@ static void *threadwicked(void *targ){
           }
         }
         if(myrand(2) == 0){
-          if(!tctdbtrancommit(tdb)){
-            eprint(tdb, "tctdbtrancommit");
+          if(!tctdbtranabort(tdb)){
+            eprint(tdb, "tctdbtranabort");
             err = true;
           }
         } else {
-          if(!tctdbtranabort(tdb)){
-            eprint(tdb, "tctdbtranabort");
+          if(!tctdbtrancommit(tdb)){
+            eprint(tdb, "tctdbtrancommit");
             err = true;
           }
         }

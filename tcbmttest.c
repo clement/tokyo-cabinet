@@ -1196,7 +1196,7 @@ static void *threadwicked(void *targ){
       break;
     case 8:
       if(id == 0) iputchar('8');
-      if(myrand(10) == 0){
+      if(myrand(2) == 0){
         if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
           eprint(bdb, "tcbdbout");
           err = true;
@@ -1206,7 +1206,7 @@ static void *threadwicked(void *targ){
       break;
     case 9:
       if(id == 0) iputchar('9');
-      if(myrand(10) == 0){
+      if(myrand(2) == 0){
         if(!tcbdbout2(bdb, kbuf) && tcbdbecode(bdb) != TCENOREC){
           eprint(bdb, "tcbdbout2");
           err = true;
@@ -1272,7 +1272,7 @@ static void *threadwicked(void *targ){
           break;
         case 1:
           if(!tcbdbcurlast(cur) && tcbdbecode(bdb) != TCENOREC){
-            eprint(bdb, "tcbdbcurfirst");
+            eprint(bdb, "tcbdbcurlast");
             err = true;
           }
           break;
@@ -1334,20 +1334,22 @@ static void *threadwicked(void *targ){
             eprint(bdb, "tcbdbput");
             err = true;
           }
+          if(!nc) tcmapput(map, kbuf, ksiz, vbuf, vsiz);
         } else {
           if(!tcbdbout(bdb, kbuf, ksiz) && tcbdbecode(bdb) != TCENOREC){
             eprint(bdb, "tcbdbout");
             err = true;
           }
+          if(!nc) tcmapout(map, kbuf, ksiz);
         }
         if(nc && myrand(2) == 0){
-          if(!tcbdbtrancommit(bdb)){
-            eprint(bdb, "tcbdbtrancommit");
+          if(!tcbdbtranabort(bdb)){
+            eprint(bdb, "tcbdbtranabort");
             err = true;
           }
         } else {
-          if(!tcbdbtranabort(bdb)){
-            eprint(bdb, "tcbdbtranabort");
+          if(!tcbdbtrancommit(bdb)){
+            eprint(bdb, "tcbdbtrancommit");
             err = true;
           }
         }
@@ -1372,7 +1374,7 @@ static void *threadwicked(void *targ){
           eprint(bdb, "tcbdboptimize");
           err = true;
         }
-        if(!tcbdbcurfirst(cur)){
+        if(!tcbdbcurfirst(cur) && tcbdbecode(bdb) != TCENOREC){
           eprint(bdb, "tcbdbcurfirst");
           err = true;
         }

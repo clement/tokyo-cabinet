@@ -2018,7 +2018,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
   }
   if(rnum > 250) iprintf(" (%08d)\n", inum);
   inum = 0;
-  if(!tcbdbcurfirst(cur)){
+  if(!tcbdbcurfirst(cur) && tcbdbecode(bdb) != TCENOREC){
     eprint(bdb, "tcbdbcurfirst");
     err = true;
   }
@@ -2332,7 +2332,7 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
               tcmapout(map, tkbuf, tksiz);
               tcfree(tkbuf);
             } else if(tcbdbecode(bdb) != TCENOREC){
-              eprint(bdb, "tcbdbcurfirst");
+              eprint(bdb, "tcbdbcurkey");
               err = true;
             }
           } else {

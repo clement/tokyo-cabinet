@@ -1274,7 +1274,7 @@ static void *threadwicked(void *targ){
       break;
     case 8:
       if(id == 0) iputchar('8');
-      if(myrand(10) == 0){
+      if(myrand(2) == 0){
         if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
           eprint(hdb, "tchdbout");
           err = true;
@@ -1284,7 +1284,7 @@ static void *threadwicked(void *targ){
       break;
     case 9:
       if(id == 0) iputchar('9');
-      if(myrand(10) == 0){
+      if(myrand(2) == 0){
         if(!tchdbout2(hdb, kbuf) && tchdbecode(hdb) != TCENOREC){
           eprint(hdb, "tchdbout2");
           err = true;
@@ -1383,20 +1383,22 @@ static void *threadwicked(void *targ){
             eprint(hdb, "tchdbput");
             err = true;
           }
+          if(!nc) tcmapput(map, kbuf, ksiz, vbuf, vsiz);
         } else {
           if(!tchdbout(hdb, kbuf, ksiz) && tchdbecode(hdb) != TCENOREC){
             eprint(hdb, "tchdbout");
             err = true;
           }
+          if(!nc) tcmapout(map, kbuf, ksiz);
         }
         if(nc && myrand(2) == 0){
-          if(!tchdbtrancommit(hdb)){
-            eprint(hdb, "tchdbtrancommit");
+          if(!tchdbtranabort(hdb)){
+            eprint(hdb, "tchdbtranabort");
             err = true;
           }
         } else {
-          if(!tchdbtranabort(hdb)){
-            eprint(hdb, "tchdbtranabort");
+          if(!tchdbtrancommit(hdb)){
+            eprint(hdb, "tchdbtrancommit");
             err = true;
           }
         }
