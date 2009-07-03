@@ -659,7 +659,7 @@ The function `tcfdbrange' is used in order to get range matching ID numbers in a
 `\fInp\fR' specifies the pointer to the variable into which the number of elements of the return value is assigned.
 .RE
 .RS
-If successful, the return value is the pointer to an array of ID numbers of the corresponding records.  `NULL' is returned on failure.  This function does never fail and return an empty array even if no key corresponds.
+If successful, the return value is the pointer to an array of ID numbers of the corresponding records.  `NULL' is returned on failure.  This function does never fail.  It returns an empty array even if no key corresponds.
 .RE
 .RS
 Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.
@@ -690,7 +690,7 @@ The function `tcfdbrange2' is used in order to get range matching decimal keys i
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding decimal keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding decimal keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.
@@ -715,7 +715,7 @@ The function `tcfdbrange3' is used in order to get range matching decimal keys w
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding decimal keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding decimal keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.
@@ -740,7 +740,7 @@ The function `tcfdbrange4' is used in order to get keys with an interval notatio
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding decimal keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding decimal keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.
@@ -762,7 +762,7 @@ The function `tcfdbrange5' is used in order to get keys with an interval notatio
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding decimal keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding decimal keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.

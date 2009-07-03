@@ -1,0 +1,78 @@
+[% CONF dbpath "tctchat.tct" \%]
+[% CONF url "tctchat.cgi" \%]
+[% CONF title "A Tiny Chat System by Tokyo Cabinet" \%]
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<link rel="start" href="[%url%]" />
+<title>[%title ENC XML%]</title>
+<style type="text/css">html { margin: 0em; padding: 0em; }
+body { margin :0em; padding: 0.5em 1em; background: #eeeeee; color: #222222; }
+h1 { margin: 3px; padding: 0px; font-size: 125%; }
+h1 a { color: #000000; }
+hr { margin: 0px 0px; height: 1px; border: none; background: #aaaaaa; color: #aaaaaa; }
+form { margin: 5px; padding: 0px; }
+p { margin: 5px; padding: 0px; }
+a { color: #2288ff; text-decoration: none; }
+a:hover { color: #2288ff; text-decoration: underline; }
+div.page { margin: 2px 10px; font-size: 80%; color: #888888; float: right; }
+div.msg { margin: 5px; padding: 5px 10px; background: #ddeeff; }
+div.chatlogs { margin: 8px; padding: 5px; background: #ffffff; }
+div.chatlog { margin: 3px 1px; padding: 5px; border-bottom: 1pt dashed #ddeeee; }
+span.d { font-size: 80%; color: #888888; float: right;}
+span.a { color: #555555; }
+span.a:after { content: " : "; color: #888888; }
+span.c01 { color: #aa1111; }
+span.c02 { color: #11aa11; }
+span.c03 { color: #1111aa; }
+span.c04 { color: #aa5500; }
+span.c05 { color: #00aa55; }
+span.c06 { color: #5500aa; }
+span.c07 { color: #55aa00; }
+span.c08 { color: #0055aa; }
+span.c09 { color: #aa0055; }
+span.c10 { color: #aaaa00; }
+span.c11 { color: #00aaaa; }
+span.c12 { color: #aa00aa; }
+span.t { color: #111111; }
+div.writeform { margin: 5px; padding: 5px; }
+</style>
+</head>
+
+<body>
+<div class="page">
+[% IF prev %]<a href="[%url%]?page=[%prev%]">[PREV]</a>[% ELSE %]<span class="void">[PREV]</span>[% END %]
+[% IF next %]<a href="[%url%]?page=[%next%]">[NEXT]</a>[% ELSE %]<span class="void">[NEXT]</span>[% END %]
+</div>
+<h1><a href="[%url%]">[%title ENC XML%]</a></h1>
+[% FOREACH msgs msg \%]
+<div class="msg">[%msg ENC XML%]</div>
+[% END \%]
+<hr />
+<div class="chatlogs">
+[% FOREACH logs log \%]
+<div class="chatlog" id="log-[%log.pk%]">
+<span class="d">[%log.d ENC XML%]</span>
+<span class="a [%log.c%]">[%log.a ENC XML%]</span>
+<span class="t">[%log.t ENC XML%]</span>
+</div>
+[% END \%]
+</div>
+<hr />
+<form method="post" action="[%url%]">
+<div class="writeform">
+<input type="text" name="author" value="[%author ENC XML%]" size="16" title="author" tabindex="1" accesskey="1" />
+<input type="text" name="text" value="" size="64" title="text" tabindex="2" accesskey="2" />
+<input type="submit" value="post" title="post" tabindex="3" accesskey="3" />
+</div>
+</form>
+<hr />
+</body>
+
+</html>

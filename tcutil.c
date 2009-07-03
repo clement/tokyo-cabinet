@@ -334,13 +334,13 @@ static void tcvxstrprintf(TCXSTR *xstr, const char *format, va_list ap){
       case 'b':
         if(lnum >= 2){
           tlen = tcnumtostrbin(va_arg(ap, unsigned long long), tbuf,
-                               tcatoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
+                               tcatoi(cbuf + 1), (cbuf[1] == '0') ? '0' : ' ');
         } else if(lnum >= 1){
           tlen = tcnumtostrbin(va_arg(ap, unsigned long), tbuf,
-                               tcatoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
+                               tcatoi(cbuf + 1), (cbuf[1] == '0') ? '0' : ' ');
         } else {
           tlen = tcnumtostrbin(va_arg(ap, unsigned int), tbuf,
-                               tcatoi(cbuf + 1), cbuf[1] == '0' ? '0' : ' ');
+                               tcatoi(cbuf + 1), (cbuf[1] == '0') ? '0' : ' ');
         }
         TCXSTRCAT(xstr, tbuf, tlen);
         break;
@@ -929,6 +929,20 @@ void tclistinvert(TCLIST *list){
     top++;
     bot--;
   }
+}
+
+
+/* Perform formatted output into a list object. */
+void tclistprintf(TCLIST *list, const char *format, ...){
+  assert(list && format);
+  TCXSTR *xstr = tcxstrnew();
+  va_list ap;
+  va_start(ap, format);
+  tcvxstrprintf(xstr, format, ap);
+  va_end(ap);
+  int size = TCXSTRSIZE(xstr);
+  char *ptr = tcxstrtomalloc(xstr);
+  tclistpushmalloc(list, ptr, size);
 }
 
 
@@ -2162,6 +2176,15 @@ const void *tcmapget3(TCMAP *map, const void *kbuf, int ksiz, int *sp){
 }
 
 
+/* Retrieve a string record in a map object with specifying the default value string. */
+const char *tcmapget4(TCMAP *map, const char *kstr, const char *dstr){
+  assert(map && kstr && dstr);
+  int vsiz;
+  const char *vbuf = tcmapget(map, kstr, strlen(kstr), &vsiz);
+  return vbuf ? vbuf : dstr;
+}
+
+
 /* Initialize the iterator of a map object at the record corresponding a key. */
 void tcmapiterinit2(TCMAP *map, const void *kbuf, int ksiz){
   assert(map && kbuf && ksiz >= 0);
@@ -2277,6 +2300,19 @@ void *tcmaploadone(const void *ptr, int size, const void *kbuf, int ksiz, int *s
     rp += rsiz;
   }
   return NULL;
+}
+
+
+/* Perform formatted output into a map object. */
+void tcmapprintf(TCMAP *map, const char *kstr, const char *format, ...){
+  assert(map && kstr && format);
+  TCXSTR *xstr = tcxstrnew();
+  va_list ap;
+  va_start(ap, format);
+  tcvxstrprintf(xstr, format, ap);
+  va_end(ap);
+  tcmapput(map, kstr, strlen(kstr), TCXSTRPTR(xstr), TCXSTRSIZE(xstr));
+  tcxstrdel(xstr);
 }
 
 
@@ -3452,6 +3488,15 @@ const void *tctreeget3(const TCTREE *tree, const void *kbuf, int ksiz, int *sp){
 }
 
 
+/* Retrieve a string record in a tree object with specifying the default value string. */
+const char *tctreeget4(TCTREE *tree, const char *kstr, const char *dstr){
+  assert(tree && kstr && dstr);
+  int vsiz;
+  const char *vbuf = tctreeget(tree, kstr, strlen(kstr), &vsiz);
+  return vbuf ? vbuf : dstr;
+}
+
+
 /* Initialize the iterator of a tree object in front of records corresponding a key. */
 void tctreeiterinit2(TCTREE *tree, const void *kbuf, int ksiz){
   assert(tree && kbuf && ksiz >= 0);
@@ -3588,6 +3633,19 @@ void *tctreeloadone(const void *ptr, int size, const void *kbuf, int ksiz, int *
     rp += rsiz;
   }
   return NULL;
+}
+
+
+/* Perform formatted output into a tree object. */
+void tctreeprintf(TCTREE *tree, const char *kstr, const char *format, ...){
+  assert(tree && kstr && format);
+  TCXSTR *xstr = tcxstrnew();
+  va_list ap;
+  va_start(ap, format);
+  tcvxstrprintf(xstr, format, ap);
+  va_end(ap);
+  tctreeput(tree, kstr, strlen(kstr), TCXSTRPTR(xstr), TCXSTRSIZE(xstr));
+  tcxstrdel(xstr);
 }
 
 
@@ -4479,7 +4537,7 @@ void tcmpooldel(TCMPOOL *mpool){
 
 
 /* Relegate an arbitrary object to a memory pool object. */
-void tcmpoolput(TCMPOOL *mpool, void *ptr, void (*del)(void *)){
+void tcmpoolpush(TCMPOOL *mpool, void *ptr, void (*del)(void *)){
   assert(mpool && ptr && del);
   if(pthread_mutex_lock(mpool->mutex) != 0) tcmyfatal("locking failed");
   int num = mpool->num;
@@ -4495,37 +4553,37 @@ void tcmpoolput(TCMPOOL *mpool, void *ptr, void (*del)(void *)){
 
 
 /* Relegate an allocated region to a memory pool object. */
-void tcmpoolputptr(TCMPOOL *mpool, void *ptr){
+void tcmpoolpushptr(TCMPOOL *mpool, void *ptr){
   assert(mpool && ptr);
-  tcmpoolput(mpool, ptr, (void (*)(void *))free);
+  tcmpoolpush(mpool, ptr, (void (*)(void *))free);
 }
 
 
 /* Relegate an extensible string object to a memory pool object. */
-void tcmpoolputxstr(TCMPOOL *mpool, TCXSTR *xstr){
+void tcmpoolpushxstr(TCMPOOL *mpool, TCXSTR *xstr){
   assert(mpool && xstr);
-  tcmpoolput(mpool, xstr, (void (*)(void *))tcxstrdel);
+  tcmpoolpush(mpool, xstr, (void (*)(void *))tcxstrdel);
 }
 
 
 /* Relegate a list object to a memory pool object. */
-void tcmpoolputlist(TCMPOOL *mpool, TCLIST *list){
+void tcmpoolpushlist(TCMPOOL *mpool, TCLIST *list){
   assert(mpool && list);
-  tcmpoolput(mpool, list, (void (*)(void *))tclistdel);
+  tcmpoolpush(mpool, list, (void (*)(void *))tclistdel);
 }
 
 
 /* Relegate a map object to a memory pool object. */
-void tcmpoolputmap(TCMPOOL *mpool, TCMAP *map){
+void tcmpoolpushmap(TCMPOOL *mpool, TCMAP *map){
   assert(mpool && map);
-  tcmpoolput(mpool, map, (void (*)(void *))tcmapdel);
+  tcmpoolpush(mpool, map, (void (*)(void *))tcmapdel);
 }
 
 
 /* Relegate a tree object to a memory pool object. */
-void tcmpoolputtree(TCMPOOL *mpool, TCTREE *tree){
+void tcmpoolpushtree(TCMPOOL *mpool, TCTREE *tree){
   assert(mpool && tree);
-  tcmpoolput(mpool, tree, (void (*)(void *))tctreedel);
+  tcmpoolpush(mpool, tree, (void (*)(void *))tctreedel);
 }
 
 
@@ -4534,7 +4592,7 @@ void *tcmpoolmalloc(TCMPOOL *mpool, size_t size){
   assert(mpool && size > 0);
   void *ptr;
   TCMALLOC(ptr, size);
-  tcmpoolput(mpool, ptr, (void (*)(void *))free);
+  tcmpoolpush(mpool, ptr, (void (*)(void *))free);
   return ptr;
 }
 
@@ -4543,7 +4601,7 @@ void *tcmpoolmalloc(TCMPOOL *mpool, size_t size){
 TCXSTR *tcmpoolxstrnew(TCMPOOL *mpool){
   assert(mpool);
   TCXSTR *xstr = tcxstrnew();
-  tcmpoolput(mpool, xstr, (void (*)(void *))tcxstrdel);
+  tcmpoolpush(mpool, xstr, (void (*)(void *))tcxstrdel);
   return xstr;
 }
 
@@ -4552,7 +4610,7 @@ TCXSTR *tcmpoolxstrnew(TCMPOOL *mpool){
 TCLIST *tcmpoollistnew(TCMPOOL *mpool){
   assert(mpool);
   TCLIST *list = tclistnew();
-  tcmpoolput(mpool, list, (void (*)(void *))tclistdel);
+  tcmpoolpush(mpool, list, (void (*)(void *))tclistdel);
   return list;
 }
 
@@ -4561,7 +4619,7 @@ TCLIST *tcmpoollistnew(TCMPOOL *mpool){
 TCMAP *tcmpoolmapnew(TCMPOOL *mpool){
   assert(mpool);
   TCMAP *map = tcmapnew();
-  tcmpoolput(mpool, map, (void (*)(void *))tcmapdel);
+  tcmpoolpush(mpool, map, (void (*)(void *))tcmapdel);
   return map;
 }
 
@@ -4570,7 +4628,7 @@ TCMAP *tcmpoolmapnew(TCMPOOL *mpool){
 TCTREE *tcmpooltreenew(TCMPOOL *mpool){
   assert(mpool);
   TCTREE *tree = tctreenew();
-  tcmpoolput(mpool, tree, (void (*)(void *))tctreedel);
+  tcmpoolpush(mpool, tree, (void (*)(void *))tctreedel);
   return tree;
 }
 
@@ -7369,6 +7427,61 @@ char *tcxmlunescape(const char *str){
 }
 
 
+
+/*************************************************************************************************
+ * encoding utilities (for experts)
+ *************************************************************************************************/
+
+
+/* Encode a map object into a string in the x-www-form-urlencoded format. */
+char *tcwwwformencode(const TCMAP *params){
+  assert(params);
+  TCXSTR *xstr = tcxstrnew3(tcmaprnum(params) * TCXSTRUNIT * 3 + 1);
+  TCMAPREC *cur = params->cur;
+  tcmapiterinit((TCMAP *)params);
+  const char *kbuf;
+  int ksiz;
+  while((kbuf = tcmapiternext((TCMAP *)params, &ksiz)) != NULL){
+    int vsiz;
+    const char *vbuf = tcmapiterval(kbuf, &vsiz);
+    char *kenc = tcurlencode(kbuf, ksiz);
+    char *venc = tcurlencode(vbuf, vsiz);
+    if(TCXSTRSIZE(xstr) > 0) TCXSTRCAT(xstr, "&", 1);
+    tcxstrcat2(xstr, kenc);
+    TCXSTRCAT(xstr, "=", 1);
+    tcxstrcat2(xstr, venc);
+    TCFREE(venc);
+    TCFREE(kenc);
+  }
+  ((TCMAP *)params)->cur = cur;
+  return tcxstrtomalloc(xstr);
+}
+
+
+/* Decode a query string in the x-www-form-urlencoded format. */
+void tcwwwformdecode(const char *str, TCMAP *params){
+  assert(str && params);
+  TCLIST *pairs = tcstrsplit(str, "&;");
+  int num = TCLISTNUM(pairs);
+  for(int i = 0; i < num; i++){
+    char *key = tcstrdup(tclistval2(pairs, i));
+    char *val = strchr(key, '=');
+    if(val){
+      *(val++) = '\0';
+      int ksiz;
+      char *kbuf = tcurldecode(key, &ksiz);
+      int vsiz;
+      char *vbuf = tcurldecode(val, &vsiz);
+      tcmapput(params, kbuf, ksiz, vbuf, vsiz);
+      TCFREE(vbuf);
+      TCFREE(kbuf);
+    }
+    TCFREE(key);
+  }
+  tclistdel(pairs);
+}
+
+
 /* Split an XML string into tags and text sections. */
 TCLIST *tcxmlbreak(const char *str){
   assert(str);
@@ -7486,6 +7599,506 @@ TCMAP *tcxmlattrs(const char *str){
     }
   }
   return map;
+}
+
+
+
+/*************************************************************************************************
+ * template serializer
+ *************************************************************************************************/
+
+
+#define TCTMPLUNIT     65536             // allocation unit size of a template string
+#define TCTMPLMAXDEP   256               // maximum depth of template blocks
+#define TCTMPLBEGSEP   "[%"              // default beginning separator
+#define TCTMPLENDSEP   "%]"              // default beginning separator
+#define TCTYPRFXLIST   "[list]\0:"       // type prefix for a list object
+#define TCTYPRFXMAP    "[map]\0:"        // type prefix for a list object
+
+
+/* private function prototypes */
+static TCLIST *tctmpltokenize(const char *expr);
+static int tctmpldumpeval(TCXSTR *xstr, const char *expr, const TCLIST *elems, int cur, int num,
+                          const TCMAP **stack, int depth);
+static const char *tctmpldumpevalvar(const TCMAP **stack, int depth, const char *name, int *sp);
+
+
+/* Create a template object. */
+TCTMPL *tctmplnew(void){
+  TCTMPL *tmpl;
+  TCMALLOC(tmpl, sizeof(*tmpl));
+  tmpl->elems = NULL;
+  tmpl->begsep = NULL;
+  tmpl->endsep = NULL;
+  tmpl->conf = tcmapnew2(TCMAPTINYBNUM);
+  return tmpl;
+}
+
+
+/* Delete a template object. */
+void tctmpldel(TCTMPL *tmpl){
+  assert(tmpl);
+  tcmapdel(tmpl->conf);
+  if(tmpl->endsep) TCFREE(tmpl->endsep);
+  if(tmpl->begsep) TCFREE(tmpl->begsep);
+  if(tmpl->elems) tclistdel(tmpl->elems);
+  TCFREE(tmpl);
+}
+
+
+/* Set the separator strings of a template object. */
+void tctmplsetsep(TCTMPL *tmpl, const char *begsep, const char *endsep){
+  assert(tmpl && begsep && endsep);
+  if(tmpl->endsep) TCFREE(tmpl->endsep);
+  if(tmpl->begsep) TCFREE(tmpl->begsep);
+  tmpl->begsep = tcstrdup(begsep);
+  tmpl->endsep = tcstrdup(endsep);
+}
+
+
+/* Load a template string into a template object. */
+void tctmplload(TCTMPL *tmpl, const char *str){
+  assert(tmpl && str);
+  const char *begsep = tmpl->begsep;
+  if(!begsep) begsep = TCTMPLBEGSEP;
+  const char *endsep = tmpl->endsep;
+  if(!endsep) endsep = TCTMPLENDSEP;
+  int beglen = strlen(begsep);
+  int endlen = strlen(endsep);
+  if(beglen < 1 || endlen < 1) return;
+  int begchr = *begsep;
+  int endchr = *endsep;
+  if(tmpl->elems) tclistdel(tmpl->elems);
+  tcmapclear(tmpl->conf);
+  TCLIST *elems = tclistnew();
+  const char *rp = str;
+  const char *pv = rp;
+  while(*rp != '\0'){
+    if(*rp == begchr && tcstrfwm(rp, begsep)){
+      if(rp > pv) TCLISTPUSH(elems, pv, rp - pv);
+      rp += beglen;
+      pv = rp;
+      while(*rp != '\0'){
+        if(*rp == endchr && tcstrfwm(rp, endsep)){
+          bool chop = false;
+          while(pv < rp && *pv > '\0' && *pv <= ' '){
+            pv++;
+          }
+          if(*pv == '"'){
+            pv++;
+            const char *sp = pv;
+            while(pv < rp && *pv != '"'){
+              pv++;
+            }
+            if(pv > sp) TCLISTPUSH(elems, sp, pv - sp);
+          } else if(*pv == '\''){
+            pv++;
+            const char *sp = pv;
+            while(pv < rp && *pv != '\''){
+              pv++;
+            }
+            if(pv > sp) TCLISTPUSH(elems, sp, pv - sp);
+          } else {
+            const char *ep = rp;
+            if(ep > pv && ep[-1] == '\\'){
+              ep--;
+              chop = true;
+            }
+            while(ep > pv && ((unsigned char *)ep)[-1] <= ' '){
+              ep--;
+            }
+            int len = ep - pv;
+            char *buf;
+            TCMALLOC(buf, len + 1);
+            *buf = '\0';
+            memcpy(buf + 1, pv, len);
+            tclistpushmalloc(elems, buf, len + 1);
+            if(tcstrfwm(pv, "CONF")){
+              const char *expr = (char *)TCLISTVALPTR(elems, TCLISTNUM(elems) - 1) + 1;
+              TCLIST *tokens = tctmpltokenize(expr);
+              int tnum = TCLISTNUM(tokens);
+              if(tnum > 1 && !strcmp(TCLISTVALPTR(tokens, 0), "CONF")){
+                const char *name = TCLISTVALPTR(tokens, 1);
+                const char *value = (tnum > 2) ? TCLISTVALPTR(tokens, 2) : "";
+                tcmapput2(tmpl->conf, name, value);
+              }
+              tclistdel(tokens);
+            }
+          }
+          rp += endlen;
+          if(chop){
+            if(*rp == '\r') rp++;
+            if(*rp == '\n') rp++;
+          }
+          break;
+        }
+        rp++;
+      }
+      pv = rp;
+    } else {
+      rp++;
+    }
+  }
+  if(rp > pv) TCLISTPUSH(elems, pv, rp - pv);
+  tmpl->elems = elems;
+}
+
+
+/* Load a template string from a file into a template object. */
+bool tctmplload2(TCTMPL *tmpl, const char *path){
+  assert(tmpl && path);
+  char *str = tcreadfile(path, -1, NULL);
+  if(!str) return false;
+  tctmplload(tmpl, str);
+  TCFREE(str);
+  return true;
+}
+
+
+/* Serialize the template string of a template object. */
+char *tctmpldump(TCTMPL *tmpl, const TCMAP *vars){
+  assert(tmpl && vars);
+  TCXSTR *xstr = tcxstrnew3(TCTMPLUNIT);
+  TCLIST *elems = tmpl->elems;
+  if(elems){
+    int cur = 0;
+    int num = TCLISTNUM(elems);
+    const TCMAP *stack[TCTMPLMAXDEP];
+    int depth = 0;
+    stack[depth++] = tmpl->conf;
+    stack[depth++] = vars;
+    while(cur < num){
+      const char *elem;
+      int esiz;
+      TCLISTVAL(elem, elems, cur, esiz);
+      if(*elem == '\0' && esiz > 0){
+        cur = tctmpldumpeval(xstr, elem + 1, elems, cur, num, stack, depth);
+      } else {
+        TCXSTRCAT(xstr, elem, esiz);
+        cur++;
+      }
+    }
+  }
+  return tcxstrtomalloc(xstr);
+}
+
+
+/* Get the value of a configuration variable of a template object. */
+const char *tctmplconf(TCTMPL *tmpl, const char *name){
+  assert(tmpl && name);
+  return tcmapget2(tmpl->conf, name);
+}
+
+
+/* Store a list object into a list object with the type information. */
+void tclistpushlist(TCLIST *list, const TCLIST *obj){
+  assert(list && obj);
+  char vbuf[sizeof(TCTYPRFXLIST) - 1 + sizeof(obj)];
+  memcpy(vbuf, TCTYPRFXLIST, sizeof(TCTYPRFXLIST) - 1);
+  memcpy(vbuf + sizeof(TCTYPRFXLIST) - 1, &obj, sizeof(obj));
+  tclistpush(list, vbuf, sizeof(vbuf));
+}
+
+
+/* Store a map object into a list object with the type information. */
+void tclistpushmap(TCLIST *list, const TCMAP *obj){
+  assert(list && obj);
+  char vbuf[sizeof(TCTYPRFXMAP) - 1 + sizeof(obj)];
+  memcpy(vbuf, TCTYPRFXMAP, sizeof(TCTYPRFXMAP) - 1);
+  memcpy(vbuf + sizeof(TCTYPRFXMAP) - 1, &obj, sizeof(obj));
+  tclistpush(list, vbuf, sizeof(vbuf));
+}
+
+
+/* Store a list object into a map object with the type information. */
+void tcmapputlist(TCMAP *map, const char *kstr, const TCLIST *obj){
+  assert(map && kstr && obj);
+  char vbuf[sizeof(TCTYPRFXLIST) - 1 + sizeof(obj)];
+  memcpy(vbuf, TCTYPRFXLIST, sizeof(TCTYPRFXLIST) - 1);
+  memcpy(vbuf + sizeof(TCTYPRFXLIST) - 1, &obj, sizeof(obj));
+  tcmapput(map, kstr, strlen(kstr), vbuf, sizeof(vbuf));
+}
+
+
+/* Store a map object into a map object with the type information. */
+void tcmapputmap(TCMAP *map, const char *kstr, const TCMAP *obj){
+  assert(map && kstr && obj);
+  char vbuf[sizeof(TCTYPRFXMAP) - 1 + sizeof(obj)];
+  memcpy(vbuf, TCTYPRFXMAP, sizeof(TCTYPRFXMAP) - 1);
+  memcpy(vbuf + sizeof(TCTYPRFXMAP) - 1, &obj, sizeof(obj));
+  tcmapput(map, kstr, strlen(kstr), vbuf, sizeof(vbuf));
+}
+
+
+/* Tokenize an template expression.
+   `expr' specifies the expression.
+   The return value is a list object of tokens. */
+static TCLIST *tctmpltokenize(const char *expr){
+  TCLIST *tokens = tclistnew();
+  const unsigned char *rp = (unsigned char *)expr;
+  while(*rp != '\0'){
+    while(*rp > '\0' && *rp <= ' '){
+      rp++;
+    }
+    const unsigned char *pv = rp;
+    if(*rp == '"'){
+      pv++;
+      rp++;
+      while(*rp != '\0' && *rp != '"'){
+        rp++;
+      }
+      TCLISTPUSH(tokens, pv, rp - pv);
+      if(*rp == '"') rp++;
+    } else if(*rp == '\''){
+      pv++;
+      rp++;
+      while(*rp != '\0' && *rp != '\''){
+        rp++;
+      }
+      TCLISTPUSH(tokens, pv, rp - pv);
+      if(*rp == '\'') rp++;
+    } else {
+      while(*rp > ' '){
+        rp++;
+      }
+      if(rp > pv) TCLISTPUSH(tokens, pv, rp - pv);
+    }
+  }
+  return tokens;
+}
+
+
+/* Evaluate an template expression.
+   `xstr' specifies the output buffer.
+   `expr' specifies the expression.
+   `elems' specifies the list of elements.
+   `cur' specifies the current offset of the elements.
+   `num' specifies the number of the elements.
+   `stack' specifies the variable scope stack.
+   `depth' specifies the current depth of the stack.
+   The return value is the next offset of the elements. */
+static int tctmpldumpeval(TCXSTR *xstr, const char *expr, const TCLIST *elems, int cur, int num,
+                          const TCMAP **stack, int depth){
+  assert(expr && elems && cur >= 0 && num >= 0 && stack && depth >= 0);
+  cur++;
+  TCLIST *tokens = tctmpltokenize(expr);
+  int tnum = TCLISTNUM(tokens);
+  if(tnum > 0){
+    const char *cmd = TCLISTVALPTR(tokens, 0);
+    if(!strcmp(cmd, "IF")){
+      bool sign = true;
+      const char *eq = NULL;
+      const char *rx = NULL;
+      for(int i = 1; i < tnum; i++){
+        const char *token = TCLISTVALPTR(tokens, i);
+        if(!strcmp(token, "NOT")){
+          sign = !sign;
+        } else if(!strcmp(token, "EQ")){
+          if(++i < tnum) eq = TCLISTVALPTR(tokens, i);
+        } else if(!strcmp(token, "RX")){
+          if(++i < tnum) rx = TCLISTVALPTR(tokens, i);
+        }
+      }
+      TCXSTR *altxstr = NULL;
+      if(xstr){
+        const char *name = (tnum > 1) ? TCLISTVALPTR(tokens, 1) : "__";
+        int vsiz;
+        const char *vbuf = tctmpldumpevalvar(stack, depth, name, &vsiz);
+        bool bval = false;
+        if(vbuf){
+          if(eq){
+            if(!strcmp(vbuf, eq)) bval = true;
+          } else if(rx){
+            if(tcregexmatch(vbuf, rx)) bval = true;
+          } else {
+            bval = true;
+          }
+        }
+        if(bval != sign){
+          altxstr = xstr;
+          xstr = NULL;
+        }
+      }
+      while(cur < num){
+        const char *elem;
+        int esiz;
+        TCLISTVAL(elem, elems, cur, esiz);
+        if(*elem == '\0' && esiz > 0){
+          cur = tctmpldumpeval(xstr, elem + 1, elems, cur, num, stack, depth);
+          if(!strcmp(elem + 1, "ELSE")){
+            xstr = altxstr;
+          } else if(!strcmp(elem + 1, "END")){
+            break;
+          }
+        } else {
+          if(xstr) TCXSTRCAT(xstr, elem, esiz);
+          cur++;
+        }
+      }
+    } else if(!strcmp(cmd, "FOREACH")){
+      const TCLIST *list = NULL;
+      if(xstr){
+        const char *name = (tnum > 1) ? TCLISTVALPTR(tokens, 1) : "";
+        int vsiz;
+        const char *vbuf = tctmpldumpevalvar(stack, depth, name, &vsiz);
+        if(vbuf && vsiz == sizeof(TCTYPRFXLIST) - 1 + sizeof(list)){
+          memcpy(&list, vbuf + sizeof(TCTYPRFXLIST) - 1, sizeof(list));
+        }
+      }
+      if(list && TCLISTNUM(list) > 0){
+        const char *name = (tnum > 2) ? TCLISTVALPTR(tokens, 2) : "";
+        TCMAP *vars = tcmapnew2(1);
+        if(depth < TCTMPLMAXDEP){
+          stack[depth] = vars;
+          depth++;
+        }
+        int lnum = TCLISTNUM(list);
+        int beg = cur;
+        for(int i = 0; i < lnum; i++){
+          const char *vbuf;
+          int vsiz;
+          TCLISTVAL(vbuf, list, i, vsiz);
+          if(vsiz == sizeof(TCTYPRFXLIST) - 1 + sizeof(TCLIST *)){
+            TCLIST *obj;
+            memcpy(&obj, vbuf + sizeof(TCTYPRFXLIST) - 1, sizeof(obj));
+            tcmapputlist(vars, name, obj);
+          } else if(vsiz == sizeof(TCTYPRFXMAP) - 1 + sizeof(TCMAP *)){
+            TCMAP *obj;
+            memcpy(&obj, vbuf + sizeof(TCTYPRFXMAP) - 1, sizeof(obj));
+            tcmapputmap(vars, name, obj);
+          } else {
+            tcmapput2(vars, name, vbuf);
+          }
+          cur = beg;
+          while(cur < num){
+            const char *elem;
+            int esiz;
+            TCLISTVAL(elem, elems, cur, esiz);
+            if(*elem == '\0' && esiz > 0){
+              cur = tctmpldumpeval(xstr, elem + 1, elems, cur, num, stack, depth);
+              if(!strcmp(elem + 1, "END")) break;
+            } else {
+              if(xstr) TCXSTRCAT(xstr, elem, esiz);
+              cur++;
+            }
+          }
+        }
+        tcmapdel(vars);
+      } else {
+        while(cur < num){
+          const char *elem;
+          int esiz;
+          TCLISTVAL(elem, elems, cur, esiz);
+          if(*elem == '\0' && esiz > 0){
+            cur = tctmpldumpeval(NULL, elem + 1, elems, cur, num, stack, depth);
+            if(!strcmp(elem + 1, "END")) break;
+          } else {
+            cur++;
+          }
+        }
+      }
+    } else if(xstr){
+      int vsiz;
+      const char *vbuf = tctmpldumpevalvar(stack, depth, cmd, &vsiz);
+      const char *enc = "";
+      const char *def = NULL;
+      for(int i = 1; i < tnum; i++){
+        const char *token = TCLISTVALPTR(tokens, i);
+        if(!strcmp(token, "ENC")){
+          if(++i < tnum) enc = TCLISTVALPTR(tokens, i);
+        } else if(!strcmp(token, "DEF")){
+          if(++i < tnum) def = TCLISTVALPTR(tokens, i);
+        }
+      }
+      if(!vbuf && def){
+        vbuf = def;
+        vsiz = strlen(def);
+      }
+      if(vbuf){
+        if(!strcmp(enc, "URL")){
+          char *ebuf = tcurlencode(vbuf, vsiz);
+          tcxstrcat2(xstr, ebuf);
+          TCFREE(ebuf);
+        } else if(!strcmp(enc, "BASE")){
+          char *ebuf = tcbaseencode(vbuf, vsiz);
+          tcxstrcat2(xstr, ebuf);
+          TCFREE(ebuf);
+        } else if(!strcmp(enc, "QUOTE")){
+          char *ebuf = tcquoteencode(vbuf, vsiz);
+          tcxstrcat2(xstr, ebuf);
+          TCFREE(ebuf);
+        } else if(!strcmp(enc, "HEX")){
+          char *ebuf = tchexencode(vbuf, vsiz);
+          tcxstrcat2(xstr, ebuf);
+          TCFREE(ebuf);
+        } else if(!strcmp(enc, "XML") || !strcmp(enc, "HTML")){
+          char *ebuf = tcxmlescape(vbuf);
+          tcxstrcat2(xstr, ebuf);
+          TCFREE(ebuf);
+        } else if(!strcmp(enc, "MD5")){
+          char ebuf[48];
+          tcmd5hash(vbuf, vsiz, ebuf);
+          tcxstrcat2(xstr, ebuf);
+        } else {
+          tcxstrcat2(xstr, vbuf);
+        }
+      }
+    }
+  }
+  tclistdel(tokens);
+  return cur;
+}
+
+
+/* Evaluate a variable of a template expression.
+   `stack' specifies the variable scope stack.
+   `depth' specifies the current depth of the stack.
+   `name' specifies the variable name.
+   `sp' specifies the length of the region of the return value.
+   The return value is the pointer to the region of the evaluated value. */
+static const char *tctmpldumpevalvar(const TCMAP **stack, int depth, const char *name, int *sp){
+  assert(stack && depth >= 0 && name && sp);
+  const char *result = NULL;
+  TCLIST *tokens = tcstrsplit(name, ".");
+  int tnum = TCLISTNUM(tokens);
+  if(tnum > 0){
+    const char *token;
+    int tsiz;
+    TCLISTVAL(token, tokens, 0, tsiz);
+    for(int i = depth - 1; i >= 0; i--){
+      const TCMAP *vars = stack[i];
+      int vsiz;
+      const char *vbuf = tcmapget(vars, token, tsiz, &vsiz);
+      int tidx = 1;
+      if(vbuf){
+        while(vbuf){
+          if(vsiz == sizeof(TCTYPRFXLIST) - 1 + sizeof(TCLIST *)){
+            result = vbuf;
+            *sp = vsiz;
+            break;
+          } else if(vsiz == sizeof(TCTYPRFXMAP) - 1 + sizeof(TCMAP *)){
+            if(tidx < tnum){
+              memcpy(&vars, vbuf + sizeof(TCTYPRFXMAP) - 1, sizeof(TCMAP *));
+              TCLISTVAL(token, tokens, tidx, tsiz);
+              vbuf = tcmapget(vars, token, tsiz, &vsiz);
+              tidx++;
+            } else {
+              result = vbuf;
+              *sp = vsiz;
+              break;
+            }
+          } else {
+            result = vbuf;
+            *sp = vsiz;
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
+  tclistdel(tokens);
+  return result;
 }
 
 

@@ -652,7 +652,7 @@ The function `tctdbfwmkeys' is used in order to get forward matching primary key
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.
@@ -674,7 +674,7 @@ The function `tctdbfwmkeys2' is used in order to get forward matching string pri
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.
@@ -1012,7 +1012,7 @@ The function `tctdbqrysearch' is used in order to execute the search of a query 
 `\fIqry\fR' specifies the query object.
 .RE
 .RS
-The return value is a list object of the primary keys of the corresponding records.  This function does never fail and return an empty list even if no record corresponds.
+The return value is a list object of the primary keys of the corresponding records.  This function does never fail.  It returns an empty list even if no record corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.

@@ -277,8 +277,8 @@ char *tcadbiternext2(TCADB *adb);
    `psiz' specifies the size of the region of the prefix.
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
-   The return value is a list object of the corresponding keys.  This function does never fail
-   and return an empty list even if no key corresponds.
+   The return value is a list object of the corresponding keys.  This function does never fail.
+   It returns an empty list even if no key corresponds.
    Because the object of the return value is created with the function `tclistnew', it should be
    deleted with the function `tclistdel' when it is no longer in use.  Note that this function
    may be very slow because every key in the database is scanned. */
@@ -290,8 +290,8 @@ TCLIST *tcadbfwmkeys(TCADB *adb, const void *pbuf, int psiz, int max);
    `pstr' specifies the string of the prefix.
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
-   The return value is a list object of the corresponding keys.  This function does never fail
-   and return an empty list even if no key corresponds.
+   The return value is a list object of the corresponding keys.  This function does never fail.
+   It returns an empty list even if no key corresponds.
    Because the object of the return value is created with the function `tclistnew', it should be
    deleted with the function `tclistdel' when it is no longer in use.  Note that this function
    may be very slow because every key in the database is scanned. */

@@ -2202,7 +2202,7 @@ The function `tcmdbfwmkeys' is used in order to get forward matching keys in an 
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.
@@ -2224,7 +2224,7 @@ The function `tcmdbfwmkeys2' is used in order to get forward matching string key
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.
@@ -2695,7 +2695,7 @@ The function `tcndbfwmkeys' is used in order to get forward matching keys in an 
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.
@@ -2717,7 +2717,7 @@ The function `tcndbfwmkeys2' is used in order to get forward matching string key
 `\fImax\fR' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.
 .RE
 .RS
-The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.
+The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.
 .RE
 .RS
 Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.
@@ -2851,11 +2851,11 @@ Note that the deleted object and its derivatives can not be used anymore.
 .RE
 .RE
 .PP
-The function `tcmpoolput' is used in order to relegate an arbitrary object to a memory pool object.
+The function `tcmpoolpush' is used in order to relegate an arbitrary object to a memory pool object.
 .PP
 .RS
 .br
-\fBvoid tcmpoolput(TCMPOOL *\fImpool\fB, void *\fIptr\fB, void (*\fIdel\fB)(void *));\fR
+\fBvoid tcmpoolpush(TCMPOOL *\fImpool\fB, void *\fIptr\fB, void (*\fIdel\fB)(void *));\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
@@ -2870,11 +2870,11 @@ This function assures that the specified object is deleted when the memory pool 
 .RE
 .RE
 .PP
-The function `tcmpoolputptr' is used in order to relegate an allocated region to a memory pool object.
+The function `tcmpoolpushptr' is used in order to relegate an allocated region to a memory pool object.
 .PP
 .RS
 .br
-\fBvoid tcmpoolputptr(TCMPOOL *\fImpool\fB, void *\fIptr\fB);\fR
+\fBvoid tcmpoolpushptr(TCMPOOL *\fImpool\fB, void *\fIptr\fB);\fR
 .RS
 `\fIptr\fR' specifies the pointer to the region to be relegated.
 .RE
@@ -2883,11 +2883,11 @@ This function assures that the specified region is released when the memory pool
 .RE
 .RE
 .PP
-The function `tcmpoolputxstr' is used in order to relegate an extensible string object to a memory pool object.
+The function `tcmpoolpushxstr' is used in order to relegate an extensible string object to a memory pool object.
 .PP
 .RS
 .br
-\fBvoid tcmpoolputxstr(TCMPOOL *\fImpool\fB, TCXSTR *\fIxstr\fB);\fR
+\fBvoid tcmpoolpushxstr(TCMPOOL *\fImpool\fB, TCXSTR *\fIxstr\fB);\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
@@ -2899,11 +2899,11 @@ This function assures that the specified object is deleted when the memory pool 
 .RE
 .RE
 .PP
-The function `tcmpoolputlist' is used in order to relegate a list object to a memory pool object.
+The function `tcmpoolpushlist' is used in order to relegate a list object to a memory pool object.
 .PP
 .RS
 .br
-\fBvoid tcmpoolputlist(TCMPOOL *\fImpool\fB, TCLIST *\fIlist\fB);\fR
+\fBvoid tcmpoolpushlist(TCMPOOL *\fImpool\fB, TCLIST *\fIlist\fB);\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
@@ -2915,11 +2915,11 @@ This function assures that the specified object is deleted when the memory pool 
 .RE
 .RE
 .PP
-The function `tcmpoolputmap' is used in order to relegate a map object to a memory pool object.
+The function `tcmpoolpushmap' is used in order to relegate a map object to a memory pool object.
 .PP
 .RS
 .br
-\fBvoid tcmpoolputmap(TCMPOOL *\fImpool\fB, TCMAP *\fImap\fB);\fR
+\fBvoid tcmpoolpushmap(TCMPOOL *\fImpool\fB, TCMAP *\fImap\fB);\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
@@ -2931,11 +2931,11 @@ This function assures that the specified object is deleted when the memory pool 
 .RE
 .RE
 .PP
-The function `tcmpoolputtree' is used in order to relegate a tree object to a memory pool object.
+The function `tcmpoolpushtree' is used in order to relegate a tree object to a memory pool object.
 .PP
 .RS
 .br
-\fBvoid tcmpoolputtree(TCMPOOL *\fImpool\fB, TCTREE *\fItree\fB);\fR
+\fBvoid tcmpoolpushtree(TCMPOOL *\fImpool\fB, TCTREE *\fItree\fB);\fR
 .RS
 `\fImpool\fR' specifies the memory pool object.
 .RE
@@ -4481,38 +4481,6 @@ The return value is the unescaped string.
 .RE
 .RS
 This function restores only `&amp;', `&lt;', `&gt;', and `&quot;'.  Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.
-.RE
-.RE
-.PP
-The function `tcxmlbreak' is used in order to split an XML string into tags and text sections.
-.PP
-.RS
-.br
-\fBTCLIST *tcxmlbreak(const char *\fIstr\fB);\fR
-.RS
-`\fIstr\fR' specifies the XML string.
-.RE
-.RS
-The return value is the list object whose elements are strings of tags or text sections.
-.RE
-.RS
-Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Because this function does not check validation, it can handle also HTML and SGML.
-.RE
-.RE
-.PP
-The function `tcxmlattrs' is used in order to get the map of attributes of an XML tag.
-.PP
-.RS
-.br
-\fBTCMAP *tcxmlattrs(const char *\fIstr\fB);\fR
-.RS
-`\fIstr\fR' specifies the pointer to the region of a tag string.
-.RE
-.RS
-The return value is the map object containing attribute names and their values which are unescaped.  You can get the name of the tag with the key of an empty string.
-.RE
-.RS
-Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.
 .RE
 .RE
 

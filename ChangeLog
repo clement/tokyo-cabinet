@@ -1,3 +1,17 @@
+2009-06-04  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcwwwformencode, tcwwwformdecode): new functions.
+
+	* tcutil.c (tctmplnew, tctmpldel, tctmplload, tctmpldump): new functions.
+
+	* tcutil.c (tcmapget4, tctreeget4): new functions.
+
+	* tcutil.c (tclistprintf, tcmapprintf, tctreeprintf): new functions.
+
+	* tcucodec.c (runtmpl, proctmpl): new functions.
+
+	- Release: 1.4.24
+
 2009-05-24  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.c (tcmapiterinit2, tcmdbiterinit2): new functions.

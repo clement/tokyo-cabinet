@@ -475,7 +475,7 @@ int tcbdbvsiz2(TCBDB *bdb, const char *kstr);
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
    The return value is a list object of the keys of the corresponding records.  This function
-   does never fail and return an empty list even if no record corresponds.
+   does never fail.  It returns an empty list even if no record corresponds.
    Because the object of the return value is created with the function `tclistnew', it should
    be deleted with the function `tclistdel' when it is no longer in use. */
 TCLIST *tcbdbrange(TCBDB *bdb, const void *bkbuf, int bksiz, bool binc,
@@ -493,7 +493,7 @@ TCLIST *tcbdbrange(TCBDB *bdb, const void *bkbuf, int bksiz, bool binc,
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
    The return value is a list object of the keys of the corresponding records.  This function
-   does never fail and return an empty list even if no record corresponds.
+   does never fail.  It returns an empty list even if no record corresponds.
    Because the object of the return value is created with the function `tclistnew', it should
    be deleted with the function `tclistdel' when it is no longer in use. */
 TCLIST *tcbdbrange2(TCBDB *bdb, const char *bkstr, bool binc,
@@ -506,8 +506,8 @@ TCLIST *tcbdbrange2(TCBDB *bdb, const char *bkstr, bool binc,
    `psiz' specifies the size of the region of the prefix.
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
-   The return value is a list object of the corresponding keys.  This function does never fail
-   and return an empty list even if no key corresponds.
+   The return value is a list object of the corresponding keys.  This function does never fail.
+   It returns an empty list even if no key corresponds.
    Because the object of the return value is created with the function `tclistnew', it should be
    deleted with the function `tclistdel' when it is no longer in use. */
 TCLIST *tcbdbfwmkeys(TCBDB *bdb, const void *pbuf, int psiz, int max);
@@ -518,8 +518,8 @@ TCLIST *tcbdbfwmkeys(TCBDB *bdb, const void *pbuf, int psiz, int max);
    `pstr' specifies the string of the prefix.
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
-   The return value is a list object of the corresponding keys.  This function does never fail
-   and return an empty list even if no key corresponds.
+   The return value is a list object of the corresponding keys.  This function does never fail.
+   It returns an empty list even if no key corresponds.
    Because the object of the return value is created with the function `tclistnew', it should be
    deleted with the function `tclistdel' when it is no longer in use. */
 TCLIST *tcbdbfwmkeys2(TCBDB *bdb, const char *pstr, int max);

@@ -1465,7 +1465,7 @@
 <dd>`<var>pbuf</var>' specifies the pointer to the region of the prefix.</dd>
 <dd>`<var>psiz</var>' specifies the size of the region of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -1476,7 +1476,7 @@
 <dd>`<var>mdb</var>' specifies the on-memory hash database object.</dd>
 <dd>`<var>pstr</var>' specifies the string of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -1726,7 +1726,7 @@
 <dd>`<var>pbuf</var>' specifies the pointer to the region of the prefix.</dd>
 <dd>`<var>psiz</var>' specifies the size of the region of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
@@ -1737,7 +1737,7 @@
 <dd>`<var>ndb</var>' specifies the on-memory tree database object.</dd>
 <dd>`<var>pstr</var>' specifies the string of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
@@ -1814,55 +1814,55 @@
 <dd>Note that the deleted object and its derivatives can not be used anymore.</dd>
 </dl>
 
-<p>The function `tcmpoolput' is used in order to relegate an arbitrary object to a memory pool object.</p>
+<p>The function `tcmpoolpush' is used in order to relegate an arbitrary object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolput(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>, void (*<var>del</var>)(void *));</code></dt>
+<dt><code>void tcmpoolpush(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>, void (*<var>del</var>)(void *));</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
 <dd>`<var>ptr</var>' specifies the pointer to the object to be relegated.</dd>
 <dd>`<var>del</var>' specifies the pointer to the function to delete the object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
-<p>The function `tcmpoolputptr' is used in order to relegate an allocated region to a memory pool object.</p>
+<p>The function `tcmpoolpushptr' is used in order to relegate an allocated region to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolputptr(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>);</code></dt>
+<dt><code>void tcmpoolpushptr(TCMPOOL *<var>mpool</var>, void *<var>ptr</var>);</code></dt>
 <dd>`<var>ptr</var>' specifies the pointer to the region to be relegated.</dd>
 <dd>This function assures that the specified region is released when the memory pool object is deleted.</dd>
 </dl>
 
-<p>The function `tcmpoolputxstr' is used in order to relegate an extensible string object to a memory pool object.</p>
+<p>The function `tcmpoolpushxstr' is used in order to relegate an extensible string object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolputxstr(TCMPOOL *<var>mpool</var>, TCXSTR *<var>xstr</var>);</code></dt>
+<dt><code>void tcmpoolpushxstr(TCMPOOL *<var>mpool</var>, TCXSTR *<var>xstr</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
 <dd>`<var>xstr</var>' specifies the extensible string object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
-<p>The function `tcmpoolputlist' is used in order to relegate a list object to a memory pool object.</p>
+<p>The function `tcmpoolpushlist' is used in order to relegate a list object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolputlist(TCMPOOL *<var>mpool</var>, TCLIST *<var>list</var>);</code></dt>
+<dt><code>void tcmpoolpushlist(TCMPOOL *<var>mpool</var>, TCLIST *<var>list</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
 <dd>`<var>list</var>' specifies the list object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
-<p>The function `tcmpoolputmap' is used in order to relegate a map object to a memory pool object.</p>
+<p>The function `tcmpoolpushmap' is used in order to relegate a map object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolputmap(TCMPOOL *<var>mpool</var>, TCMAP *<var>map</var>);</code></dt>
+<dt><code>void tcmpoolpushmap(TCMPOOL *<var>mpool</var>, TCMAP *<var>map</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
 <dd>`<var>map</var>' specifies the map object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
 </dl>
 
-<p>The function `tcmpoolputtree' is used in order to relegate a tree object to a memory pool object.</p>
+<p>The function `tcmpoolpushtree' is used in order to relegate a tree object to a memory pool object.</p>
 
 <dl class="api">
-<dt><code>void tcmpoolputtree(TCMPOOL *<var>mpool</var>, TCTREE *<var>tree</var>);</code></dt>
+<dt><code>void tcmpoolpushtree(TCMPOOL *<var>mpool</var>, TCTREE *<var>tree</var>);</code></dt>
 <dd>`<var>mpool</var>' specifies the memory pool object.</dd>
 <dd>`<var>tree</var>' specifies the tree object.</dd>
 <dd>This function assures that the specified object is deleted when the memory pool object is deleted.</dd>
@@ -2707,24 +2707,6 @@
 <dd>This function restores only `&amp;amp;', `&amp;lt;', `&amp;gt;', and `&amp;quot;'.  Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.</dd>
 </dl>
 
-<p>The function `tcxmlbreak' is used in order to split an XML string into tags and text sections.</p>
-
-<dl class="api">
-<dt><code>TCLIST *tcxmlbreak(const char *<var>str</var>);</code></dt>
-<dd>`<var>str</var>' specifies the XML string.</dd>
-<dd>The return value is the list object whose elements are strings of tags or text sections.</dd>
-<dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Because this function does not check validation, it can handle also HTML and SGML.</dd>
-</dl>
-
-<p>The function `tcxmlattrs' is used in order to get the map of attributes of an XML tag.</p>
-
-<dl class="api">
-<dt><code>TCMAP *tcxmlattrs(const char *<var>str</var>);</code></dt>
-<dd>`<var>str</var>' specifies the pointer to the region of a tag string.</dd>
-<dd>The return value is the map object containing attribute names and their values which are unescaped.  You can get the name of the tag with the key of an empty string.</dd>
-<dd>Because the object of the return value is created with the function `tcmapnew', it should be deleted with the function `tcmapdel' when it is no longer in use.</dd>
-</dl>
-
 <h3 id="tcutilapi_example">コード例</h3>
 
 <p>拡張可能文字列と配列リストとハッシュマップを使ったコード例を以下に示します。</p>
@@ -2896,6 +2878,8 @@ int main(int argc, char **argv){
 <dd>ハッシュ値を算出する。デフォルトではMD5関数を用いる。</dd>
 <dt><code>tcucodec date [-ds <var>str</var>] [-jl <var>num</var>] [-wf] [-rf]</code></dt>
 <dd>時刻の書式変換を行う。デフォルトでは現在のUNIX時間を出力する。</dd>
+<dt><code>tcucodec tmpl [-var <var>name</var> <var>val</var>] [<var>file</var>]</code></dt>
+<dd>テンプレートの直列化を行う。</dd>
 <dt><code>tcucodec conf [-v|-i|-l|-p]</code></dt>
 <dd>各種の設定情報を出力する。</dd>
 </dl>
@@ -2920,6 +2904,7 @@ int main(int argc, char **argv){
 <li><code>-jl <var>num</var></code> : 時差を指定する。</li>
 <li><code>-wf</code> : 出力をW3CDTF形式にする。</li>
 <li><code>-rf</code> : 出力をRFC 1123形式にする。</li>
+<li><code>-var <var>name</var> <var>value</var></code> : テンプレート変数を指定する。</li>
 <li><code>-v</code> : Tokyo Cabinetのバージョン番号を表示する。</li>
 <li><code>-i</code> : Tokyo Cabinetのヘッダのインクルードオプションを表示する。</li>
 <li><code>-l</code> : Tokyo Cabinetのライブラリのリンクオプションを表示する。</li>
@@ -3270,7 +3255,7 @@ int main(int argc, char **argv){
 <dd>`<var>pbuf</var>' specifies the pointer to the region of the prefix.</dd>
 <dd>`<var>psiz</var>' specifies the size of the region of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -3281,7 +3266,7 @@ int main(int argc, char **argv){
 <dd>`<var>hdb</var>' specifies the hash database object.</dd>
 <dd>`<var>pstr</var>' specifies the string of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -3980,7 +3965,7 @@ int main(int argc, char **argv){
 <dd>`<var>eksiz</var>' specifies the size of the region of the ending key.</dd>
 <dd>`<var>einc</var>' specifies whether the ending border is inclusive or not.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the keys of the corresponding records.  This function does never fail and return an empty list even if no record corresponds.</dd>
+<dd>The return value is a list object of the keys of the corresponding records.  This function does never fail.  It returns an empty list even if no record corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
@@ -3994,7 +3979,7 @@ int main(int argc, char **argv){
 <dd>`<var>ekstr</var>' specifies the string of the key of the ending border.  If it is `NULL', the last record is specified.</dd>
 <dd>`<var>einc</var>' specifies whether the ending border is inclusive or not.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the keys of the corresponding records.  This function does never fail and return an empty list even if no record corresponds.</dd>
+<dd>The return value is a list object of the keys of the corresponding records.  This function does never fail.  It returns an empty list even if no record corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
@@ -4006,7 +3991,7 @@ int main(int argc, char **argv){
 <dd>`<var>pbuf</var>' specifies the pointer to the region of the prefix.</dd>
 <dd>`<var>psiz</var>' specifies the size of the region of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
@@ -4017,7 +4002,7 @@ int main(int argc, char **argv){
 <dd>`<var>bdb</var>' specifies the B+ tree database object.</dd>
 <dd>`<var>pstr</var>' specifies the string of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
@@ -4876,7 +4861,7 @@ int main(int argc, char **argv){
 <dd>`<var>upper</var>' specifies the upper limit of the range.  If it is `FDBIDMAX', the maximum ID is specified.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
 <dd>`<var>np</var>' specifies the pointer to the variable into which the number of elements of the return value is assigned.</dd>
-<dd>If successful, the return value is the pointer to an array of ID numbers of the corresponding records.  `NULL' is returned on failure.  This function does never fail and return an empty array even if no key corresponds.</dd>
+<dd>If successful, the return value is the pointer to an array of ID numbers of the corresponding records.  `NULL' is returned on failure.  This function does never fail.  It returns an empty array even if no key corresponds.</dd>
 <dd>Because the region of the return value is allocated with the `malloc' call, it should be released with the `free' call when it is no longer in use.</dd>
 </dl>
 
@@ -4890,7 +4875,7 @@ int main(int argc, char **argv){
 <dd>`<var>ubuf</var>' specifies the pointer to the region of the upper key.  If it is "max", the maximum ID number of existing records is specified.</dd>
 <dd>`<var>usiz</var>' specifies the size of the region of the upper key.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding decimal keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding decimal keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -4902,7 +4887,7 @@ int main(int argc, char **argv){
 <dd>`<var>lstr</var>' specifies the string of the lower key.  If it is "min", the minimum ID number of existing records is specified.</dd>
 <dd>`<var>ustr</var>' specifies the string of the upper key.  If it is "max", the maximum ID number of existing records is specified.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding decimal keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding decimal keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -4914,7 +4899,7 @@ int main(int argc, char **argv){
 <dd>`<var>ibuf</var>' specifies the pointer to the region of the interval notation.</dd>
 <dd>`<var>isiz</var>' specifies the size of the region of the interval notation.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding decimal keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding decimal keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -4925,7 +4910,7 @@ int main(int argc, char **argv){
 <dd>`<var>fdb</var>' specifies the fixed-length database object.</dd>
 <dd>`<var>istr</var>' specifies the pointer to the region of the interval notation string.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding decimal keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding decimal keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -5558,7 +5543,7 @@ int main(int argc, char **argv){
 <dd>`<var>pbuf</var>' specifies the pointer to the region of the prefix.</dd>
 <dd>`<var>psiz</var>' specifies the size of the region of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -5569,7 +5554,7 @@ int main(int argc, char **argv){
 <dd>`<var>tdb</var>' specifies the table database object.</dd>
 <dd>`<var>pstr</var>' specifies the string of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -5756,7 +5741,7 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>TCLIST *tctdbqrysearch(TDBQRY *<var>qry</var>);</code></dt>
 <dd>`<var>qry</var>' specifies the query object.</dd>
-<dd>The return value is a list object of the primary keys of the corresponding records.  This function does never fail and return an empty list even if no record corresponds.</dd>
+<dd>The return value is a list object of the primary keys of the corresponding records.  This function does never fail.  It returns an empty list even if no record corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.</dd>
 </dl>
 
@@ -6255,7 +6240,7 @@ int main(int argc, char **argv){
 <dd>`<var>pbuf</var>' specifies the pointer to the region of the prefix.</dd>
 <dd>`<var>psiz</var>' specifies the size of the region of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -6266,7 +6251,7 @@ int main(int argc, char **argv){
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
 <dd>`<var>pstr</var>' specifies the string of the prefix.</dd>
 <dd>`<var>max</var>' specifies the maximum number of keys to be fetched.  If it is negative, no limit is specified.</dd>
-<dd>The return value is a list object of the corresponding keys.  This function does never fail and return an empty list even if no key corresponds.</dd>
+<dd>The return value is a list object of the corresponding keys.  This function does never fail.  It returns an empty list even if no key corresponds.</dd>
 <dd>Because the object of the return value is created with the function `tclistnew', it should be deleted with the function `tclistdel' when it is no longer in use.  Note that this function may be very slow because every key in the database is scanned.</dd>
 </dl>
 
@@ -6721,7 +6706,7 @@ cp -f "$srcpath" "$destpath"
 <li>TDBQCNUMLT : 右辺の数値より小さい</li>
 <li>TDBQCNUMLE : 右辺の数値と同じかより小さい</li>
 <li>TDBQCNUMBT : 右辺のカンマ区切りの2つの数値の間である</li>
-<li>TDBQCNUMOREQ : 右辺のカンマ区切りの文字列のいずれかと一致する</li>
+<li>TDBQCNUMOREQ : 右辺のカンマ区切りの数値のいずれかと一致する</li>
 </ul>
 
 <p>順序指定の演算子には以下のものがあります。デフォルトは順序不定です。</p>

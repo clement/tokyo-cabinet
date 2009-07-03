@@ -11,11 +11,12 @@
 SHELL = /bin/sh
 
 # Targets
-MYBINS = tcutilex tchdbex tcbdbex tcfdbex tctdbex tcadbex
+MYBINS = tcutilex tchdbex tcbdbex tcfdbex tctdbex tcadbex tctchat.cgi
 
 # Building binaries
 CC = gcc
-CFLAGS = -ansi -Wall -pedantic -I. -I.. -Wall
+CFLAGS = -ansi -Wall -pedantic -I. -I..
+C99FLAGS = -std=c99 -Wall -pedantic -I. -I..
 LDFLAGS =
 LIBS = -L. -L.. -ltokyocabinet -lz -lpthread -lm -lc
 LDENV = LD_RUN_PATH=/lib:/usr/lib:$(HOME)/lib:/usr/local/lib:.:..
@@ -44,7 +45,7 @@ all : $(MYBINS)
 
 
 clean :
-	rm -rf $(MYBINS) *.exe *.o a.out check.out gmon.out leak.log casket* *~
+	rm -rf $(MYBINS) *.exe *.o a.out check.out gmon.out leak.log casket* *.tct *.idx.* *~
 
 
 .PHONY : all clean
@@ -78,6 +79,10 @@ tctdbex : tctdbex.o
 
 tcadbex : tcadbex.o
 	$(LDENV) $(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
+
+
+tctchat.cgi : tctchat.c
+	$(LDENV) $(CC) $(C99FLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 
 

@@ -131,6 +131,7 @@ int main(int argc, char **argv){
     }
   }
   if(tcadbsize(db) > 0){
+    if(wmode) tcadbtranbegin(db);
     switch(params.action){
     case ACTLIST:
     case ACTLISTVAL:
@@ -145,6 +146,7 @@ int main(int argc, char **argv){
       doerror(400, "no such action");
       break;
     }
+    if(wmode) tcadbtrancommit(db);
   } else {
     doerror(500, "the database file could not be opened");
   }
@@ -215,22 +217,7 @@ static void readparameters(TCMAP *params){
       }
       tclistdel(parts);
     } else {
-      TCLIST *pairs = tcstrsplit(buf, "&;");
-      int num = tclistnum(pairs);
-      for(int i = 0; i < num; i++){
-        char *key = tcstrdup(tclistval2(pairs, i));
-        char *val = strchr(key, '=');
-        if(val){
-          *(val++) = '\0';
-          char *dkey = tcurldecode(key, &len);
-          char *dval = tcurldecode(val, &len);
-          tcmapput2(params, dkey, dval);
-          tcfree(dval);
-          tcfree(dkey);
-        }
-        tcfree(key);
-      }
-      tclistdel(pairs);
+      tcwwwformdecode(buf, params);
     }
   }
   tcfree(buf);
@@ -413,8 +400,7 @@ static void sethtmlheader(PARAMS *params, TCXSTR *obuf, TCADB *db){
   XP("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n");
   XP("<meta http-equiv=\"Content-Style-Type\" content=\"text/css\" />\n");
   XP("<title>%@</title>\n", PAGETITLE);
-  XP("<style type=\"text/css\">\n");
-  XP("html { margin: 0em; padding: 0em; }\n");
+  XP("<style type=\"text/css\">html { margin: 0em; padding: 0em; }\n");
   XP("body { margin :0em; padding: 0.5em 1em; background: #eeeeee; color: #111111; }\n");
   XP("h1 { margin: 3px; padding: 0px; font-size: 125%%; }\n");
   XP("h1 a { color: #000000; }\n");

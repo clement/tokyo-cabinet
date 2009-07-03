@@ -39,6 +39,7 @@ static int runxml(int argc, char **argv);
 static int runucs(int argc, char **argv);
 static int runhash(int argc, char **argv);
 static int rundate(int argc, char **argv);
+static int runtmpl(int argc, char **argv);
 static int runconf(int argc, char **argv);
 static int procurl(const char *ibuf, int isiz, bool dec, bool br, const char *base);
 static int procbase(const char *ibuf, int isiz, bool dec);
@@ -54,6 +55,7 @@ static int procxml(const char *ibuf, int isiz, bool dec, bool br);
 static int procucs(const char *ibuf, int isiz, bool dec);
 static int prochash(const char *ibuf, int isiz, bool crc, int ch);
 static int procdate(const char *str, int jl, bool wf, bool rf);
+static int proctmpl(const char *ibuf, int isiz, TCMAP *vars);
 static int procconf(int mode);
 
 
@@ -88,6 +90,8 @@ int main(int argc, char **argv){
     rv = runhash(argc, argv);
   } else if(!strcmp(argv[1], "date")){
     rv = rundate(argc, argv);
+  } else if(!strcmp(argv[1], "tmpl")){
+    rv = runtmpl(argc, argv);
   } else if(!strcmp(argv[1], "conf")){
     rv = runconf(argc, argv);
   } else {
@@ -116,6 +120,7 @@ static void usage(void){
   fprintf(stderr, "  %s ucs [-d] [file]\n", g_progname);
   fprintf(stderr, "  %s hash [-crc] [-ch num] [file]\n", g_progname);
   fprintf(stderr, "  %s date [-ds str] [-jl num] [-wf] [-rf]\n", g_progname);
+  fprintf(stderr, "  %s tmpl [-var name val] [file]\n", g_progname);
   fprintf(stderr, "  %s conf [-v|-i|-l|-p]\n", g_progname);
   fprintf(stderr, "\n");
   exit(1);
@@ -635,6 +640,46 @@ static int rundate(int argc, char **argv){
 }
 
 
+/* parse arguments of tmpl command */
+static int runtmpl(int argc, char **argv){
+  char *path = NULL;
+  TCMAP *vars = tcmpoolmapnew(tcmpoolglobal());
+  for(int i = 2; i < argc; i++){
+    if(!path && argv[i][0] == '-'){
+      if(!strcmp(argv[i], "-var")){
+        if(++i >= argc) usage();
+        const char *name = argv[i];
+        if(++i >= argc) usage();
+        const char *value = argv[i];
+        tcmapput2(vars, name, value);
+      } else {
+        usage();
+      }
+    } else if(!path){
+      path = argv[i];
+    } else {
+      usage();
+    }
+  }
+  char *ibuf;
+  int isiz;
+  if(path && path[0] == '@'){
+    isiz = strlen(path) - 1;
+    ibuf = tcmemdup(path + 1, isiz);
+  } else {
+    ibuf = tcreadfile(path, -1, &isiz);
+  }
+  if(!ibuf){
+    eprintf("%s: cannot open", path ? path : "(stdin)");
+    return 1;
+  }
+  int rv = proctmpl(ibuf, isiz, vars);
+  if(path && path[0] == '@') printf("\n");
+  tcfree(ibuf);
+  return rv;
+}
+
+
 /* parse arguments of conf command */
 static int runconf(int argc, char **argv){
   int mode = 0;
@@ -1026,6 +1071,18 @@ static int procdate(const char *str, int jl, bool wf, bool rf){
   } else {
     printf("%lld\n", (long long int)t);
   }
+  return 0;
+}
+
+
+/* perform tmpl command */
+static int proctmpl(const char *ibuf, int isiz, TCMAP *vars){
+  TCTMPL *tmpl = tctmplnew();
+  tctmplload(tmpl, ibuf);
+  char *str = tctmpldump(tmpl, vars);
+  printf("%s", str);
+  tcfree(str);
+  tctmpldel(tmpl);
   return 0;
 }
 

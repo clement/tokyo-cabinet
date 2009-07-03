@@ -882,9 +882,11 @@ static int procmisc(int rnum){
       }
       list = tclistnew3("hop", "step", "jump", "touchdown", NULL);
       if(tclistnum(list) != 4) err = true;
+      tclistprintf(list, "%s:%010d:%7.3f", "game set", 123456789, 12345.6789);
       tclistdel(list);
       map = tcmapnew3("hop", "step", "jump", "touchdown", NULL);
       if(tcmaprnum(map) != 2) err = true;
+      tcmapprintf(map, "joker", "%s:%010d:%7.3f", "game set", 123456789, 12345.6789);
       tcmapdel(map);
       list = tcstrsplit(",a,b..c,d,", ",.");
       if(tclistnum(list) != 7) err = true;
@@ -986,6 +988,14 @@ static int procmisc(int rnum){
         vbuf = tctreeget2(tree, kbuf);
         if(*(double *)vbuf < 1.0) err = true;
       }
+      for(int j = 0; j < 10; j++){
+        char kbuf[RECBUFSIZ];
+        sprintf(kbuf, "%d", myrand(10));
+        tcmapprintf(map, kbuf, "%s:%f", kbuf, (double)i * j);
+        tctreeprintf(tree, kbuf, "%s:%f", kbuf, (double)i * j);
+      }
+      if(!tcmapget4(map, "ace", "dummy")) err = true;
+      if(!tctreeget4(tree, "ace", "dummy")) err = true;
       tctreedel(tree);
       tcmapdel(map);
     }
@@ -1154,6 +1164,15 @@ static int procmisc(int rnum){
     tcfree(dec);
     tcfree(buf);
     if(i % 10 == 1){
+      TCMAP *params = tcmapnew3("one", "=first=", "two", "&second&", "three", "#third#", NULL);
+      char *estr = tcwwwformencode(params);
+      TCMAP *nparams = tcmapnew2(1);
+      tcwwwformdecode(estr, nparams);
+      if(strcmp(estr, "one=%3Dfirst%3D&two=%26second%26&three=%23third%23") ||
+         tcmaprnum(nparams) != tcmaprnum(params) || !tcmapget2(nparams, "two")) err = true;
+      tcmapdel(nparams);
+      tcfree(estr);
+      tcmapdel(params);
       list = tcxmlbreak("<abc de=\"foo&amp;\" gh='&lt;bar&gt;'>xyz<br>\na<!--<mikio>--></abc>");
       for(int j = 0; j < tclistnum(list); j++){
         const char *elem = tclistval2(list, j);
@@ -1161,6 +1180,53 @@ static int procmisc(int rnum){
         tcmapdel(attrs);
       }
       tclistdel(list);
+    }
+    if(i % 100 == 1){
+      TCTMPL *tmpl = tctmplnew();
+      const char *str =
+        "{{ title XML }}{{UNKNOWN COMMAND}}{{CONF author 'Mikio Hirabayashi'}}\n"
+        "{{ FOREACH docs \\}}\n"
+        "{{ IF void }}===={{void}}{{ ELSE }}----{{void.void}}{{ END }}\n"
+        "{{ IF .id }}ID:{{ .id }}{{ END }}\n"
+        "{{ IF .title }}Title:{{ .title }}{{ END }}\n"
+        "{{ IF author }}Author:{{ author }}{{ END }}\n"
+        "{{ IF .coms }}--\n"
+        "{{ FOREACH .coms com }}{{ com.author MD5 }}: {{ com.body }}\n"
+        "{{ END \\}}\n"
+        "{{ END \\}}\n"
+        "{{ END \\}}\n";
+      tctmplsetsep(tmpl, "{{", "}}");
+      tctmplload(tmpl, str);
+      const char *cval = tctmplconf(tmpl, "author");
+      if(!cval || strcmp(cval, "Mikio Hirabayashi")) err = true;
+      TCMPOOL *mpool = tcmpoolnew();
+      TCMAP *vars = tcmpoolmapnew(mpool);
+      tcmapput2(vars, "title", "I LOVE YOU");
+      TCLIST *docs = tcmpoollistnew(mpool);
+      for(int j = 0; j < 3; j++){
+        TCMAP *doc = tcmpoolmapnew(mpool);
+        char vbuf[TCNUMBUFSIZ];
+        sprintf(vbuf, "%d", i + j);
+        tcmapput2(doc, "id", vbuf);
+        sprintf(vbuf, "[%08d]", i + j);
+        tcmapput2(doc, "title", vbuf);
+        TCLIST *coms = tcmpoollistnew(mpool);
+        for(int k = 0; k < 3; k++){
+          TCMAP *com = tcmpoolmapnew(mpool);
+          sprintf(vbuf, "u%d", k);
+          tcmapput2(com, "author", vbuf);
+          sprintf(vbuf, "this is the %dth pen.", (j + 1) * (k + 1) + i);
+          tcmapput2(com, "body", vbuf);
+          tclistpushmap(coms, com);
+        }
+        tcmapputlist(doc, "coms", coms);
+        tclistpushmap(docs, doc);
+      }
+      tcmapputlist(vars, "docs", docs);
+      char *res = tctmpldump(tmpl, vars);
+      tcfree(res);
+      tcmpooldel(mpool);
+      tctmpldel(tmpl);
     }
     if(i % 10 == 1){
       for(int16_t j = 1; j <= 0x2000; j *= 2){
@@ -1243,19 +1309,19 @@ static int procwicked(int rnum){
   double stime = tctime();
   TCMPOOL *mpool = tcmpoolglobal();
   TCXSTR *xstr = myrand(2) > 0 ? tcxstrnew() : tcxstrnew2("hello world");
-  tcmpoolputxstr(mpool, xstr);
+  tcmpoolpushxstr(mpool, xstr);
   TCLIST *list = myrand(2) > 0 ? tclistnew() : tclistnew2(myrand(rnum) + rnum / 2);
-  tcmpoolputlist(mpool, list);
+  tcmpoolpushlist(mpool, list);
   TCPTRLIST *ptrlist = myrand(2) > 0 ? tcptrlistnew() : tcptrlistnew2(myrand(rnum) + rnum / 2);
-  tcmpoolput(mpool, ptrlist, (void (*)(void*))tcptrlistdel);
+  tcmpoolpush(mpool, ptrlist, (void (*)(void*))tcptrlistdel);
   TCMAP *map = myrand(2) > 0 ? tcmapnew() : tcmapnew2(myrand(rnum) + rnum / 2);
-  tcmpoolputmap(mpool, map);
+  tcmpoolpushmap(mpool, map);
   TCTREE *tree = myrand(2) > 0 ? tctreenew() : tctreenew2(tccmpdecimal, NULL);
-  tcmpoolputtree(mpool, tree);
+  tcmpoolpushtree(mpool, tree);
   TCMDB *mdb = myrand(2) > 0 ? tcmdbnew() : tcmdbnew2(myrand(rnum) + rnum / 2);
-  tcmpoolput(mpool, mdb, (void (*)(void*))tcmdbdel);
+  tcmpoolpush(mpool, mdb, (void (*)(void*))tcmdbdel);
   TCNDB *ndb = myrand(2) > 0 ? tcndbnew() : tcndbnew2(tccmpdecimal, NULL);
-  tcmpoolput(mpool, ndb, (void (*)(void*))tcndbdel);
+  tcmpoolpush(mpool, ndb, (void (*)(void*))tcndbdel);
   for(int i = 1; i <= rnum; i++){
     char kbuf[RECBUFSIZ];
     int ksiz = sprintf(kbuf, "%d", myrand(i));

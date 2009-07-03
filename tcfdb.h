@@ -484,7 +484,7 @@ char *tcfdbiternext3(TCFDB *fdb);
    `np' specifies the pointer to the variable into which the number of elements of the return
    value is assigned.
    If successful, the return value is the pointer to an array of ID numbers of the corresponding
-   records.  `NULL' is returned on failure.  This function does never fail and return an empty
+   records.  `NULL' is returned on failure.  This function does never fail.  It returns an empty
    array even if no key corresponds.
    Because the region of the return value is allocated with the `malloc' call, it should be
    released with the `free' call when it is no longer in use. */
@@ -502,7 +502,7 @@ uint64_t *tcfdbrange(TCFDB *fdb, int64_t lower, int64_t upper, int max, int *np)
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
    The return value is a list object of the corresponding decimal keys.  This function does never
-   fail and return an empty list even if no key corresponds.
+   fail.  It returns an empty list even if no key corresponds.
    Because the object of the return value is created with the function `tclistnew', it should be
    deleted with the function `tclistdel' when it is no longer in use.  Note that this function
    may be very slow because every key in the database is scanned. */
@@ -518,7 +518,7 @@ TCLIST *tcfdbrange2(TCFDB *fdb, const void *lbuf, int lsiz, const void *ubuf, in
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
    The return value is a list object of the corresponding decimal keys.  This function does never
-   fail and return an empty list even if no key corresponds.
+   fail.  It returns an empty list even if no key corresponds.
    Because the object of the return value is created with the function `tclistnew', it should be
    deleted with the function `tclistdel' when it is no longer in use.  Note that this function
    may be very slow because every key in the database is scanned. */
@@ -532,7 +532,7 @@ TCLIST *tcfdbrange3(TCFDB *fdb, const char *lstr, const char *ustr, int max);
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
    The return value is a list object of the corresponding decimal keys.  This function does never
-   fail and return an empty list even if no key corresponds.
+   fail.  It returns an empty list even if no key corresponds.
    Because the object of the return value is created with the function `tclistnew', it should be
    deleted with the function `tclistdel' when it is no longer in use.  Note that this function
    may be very slow because every key in the database is scanned. */
@@ -545,7 +545,7 @@ TCLIST *tcfdbrange4(TCFDB *fdb, const void *ibuf, int isiz, int max);
    `max' specifies the maximum number of keys to be fetched.  If it is negative, no limit is
    specified.
    The return value is a list object of the corresponding decimal keys.  This function does never
-   fail and return an empty list even if no key corresponds.
+   fail.  It returns an empty list even if no key corresponds.
    Because the object of the return value is created with the function `tclistnew', it should be
    deleted with the function `tclistdel' when it is no longer in use.  Note that this function
    may be very slow because every key in the database is scanned. */

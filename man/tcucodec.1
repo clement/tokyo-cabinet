@@ -29,6 +29,11 @@ Perform quoted\-printable encoding and its decoding.
 Perform MIME encoding and its decoding.
 .RE
 .br
+\fBtcucodec hex \fR[\fB\-d\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
+.RS
+Perform hexadecimal encoding and its decoding.
+.RE
+.br
 \fBtcucodec pack \fR[\fB\-d\fR]\fB \fR[\fB\-bwt\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
 .RS
 Perform Packbits encoding and its decoding.
@@ -69,6 +74,11 @@ Calculate the hash value.  By default, use MD5 function.
 Process date string.  By default, print the current UNIX time.
 .RE
 .br
+\fBtcucodec tmpl \fR[\fB\-var \fIname\fB \fIvalue\fB\fR]\fB \fR[\fB\fIfile\fB\fR]\fB\fR
+.RS
+Perform template serialization.
+.RE
+.br
 \fBtcucodec conf \fR[\fB\-v\fR|\fB\-i\fR|\fB\-l\fR|\fB\-p\fR]\fB\fR
 .RS
 Print some configurations.
@@ -82,9 +92,9 @@ Options feature the following.
 .br
 \fB\-br\fR : break up URL or XML into elements.
 .br
-\fB\-rs\fR \fIbase\fR : specify the base URL and resolve the relative URL.
+\fB\-rs \fIbase\fR\fR : specify the base URL and resolve the relative URL.
 .br
-\fB\-en\fR \fIname\fR : specify the input encoding, which is UTF\-8 by default.
+\fB\-en \fIname\fR\fR : specify the input encoding, which is UTF\-8 by default.
 .br
 \fB\-q\fR : use quoted\-printable encoding, which is Base64 by default.
 .br
@@ -94,7 +104,7 @@ Options feature the following.
 .br
 \fB\-hd\fR : perform MIME parsing and output the headers.
 .br
-\fB\-part\fR \fInum\fR : perform MIME parsing and output the specified part.
+\fB\-part \fInum\fR\fR : perform MIME parsing and output the specified part.
 .br
 \fB\-bwt\fR : convert by BWT as preprocessing.
 .br
@@ -104,13 +114,15 @@ Options feature the following.
 .br
 \fB\-ch \fInum\fR\fR : use consistent hashing function.
 .br
-\fB\-ds\fR \fIstr\fR : specify the time..
+\fB\-ds \fIstr\fR\fR : specify the time.
 .br
-\fB\-jl\fR \fInum\fR : specify the jet lag.
+\fB\-jl \fInum\fR\fR : specify the jet lag.
 .br
 \fB\-wf\fR : format the output in W3CDTF.
 .br
 \fB\-rf\fR : format the output in RFC 1123 format.
+.br
+\fB\-var \fIname\fR \fIvalue\fR\fR : specify a template variable.
 .br
 \fB\-v\fR : show the version number of Tokyo Cabinet.
 .br
