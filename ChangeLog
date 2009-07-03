@@ -1,3 +1,15 @@
+2009-05-24  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcmapiterinit2, tcmdbiterinit2): new functions.
+
+	* tchdb.c (tchdbiterinit2, tchdbiterjumpimpl): new functions.
+
+	* tcfdb.c (tcfdbiterinit2, tcfdbiterjumpimpl): new functions.
+
+	* tctdb.c (tctdbiterinit2): new function.
+
+	- Release: 1.4.23
+
 2009-05-21  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcadb.c (tcadbmisc): "sync", "optimize", "vanish" commands were added.

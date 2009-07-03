@@ -1202,6 +1202,28 @@ bool tctdbputproc(TCTDB *tdb, const void *pkbuf, int pksiz, const void *cbuf, in
 }
 
 
+/* Move the iterator to the record corresponding a key of a table database object. */
+bool tctdbiterinit2(TCTDB *tdb, const void *pkbuf, int pksiz){
+  assert(tdb && pkbuf && pksiz >= 0);
+  if(!TDBLOCKMETHOD(tdb, true)) return false;
+  if(!tdb->open){
+    tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    TDBUNLOCKMETHOD(tdb);
+    return false;
+  }
+  bool rv = tchdbiterinit2(tdb->hdb, pkbuf, pksiz);
+  TDBUNLOCKMETHOD(tdb);
+  return rv;
+}
+
+
+/* Move the iterator to the record corresponding a key string of a table database object. */
+bool tctdbiterinit3(TCTDB *tdb, const char *kstr){
+  assert(tdb && kstr);
+  return tctdbiterinit2(tdb, kstr, strlen(kstr));
+}
+
+
 /* Process each record atomically of a table database object. */
 bool tctdbforeach(TCTDB *tdb, TCITER iter, void *op){
   assert(tdb && iter);

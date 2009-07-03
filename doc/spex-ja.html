@@ -1159,25 +1159,6 @@
 <dd>The iterator is used in order to access the key of every record stored in the tree object.</dd>
 </dl>
 
-<p>The function `tctreeiterinit2' is used in order to initialize the iterator of a tree object in front of records corresponding a key.</p>
-
-<dl class="api">
-<dt><code>void tctreeiterinit2(TCTREE *<var>tree</var>, const void *<var>kbuf</var>, int <var>ksiz</var>);</code></dt>
-<dd>`<var>tree</var>' specifies the tree object.</dd>
-<dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
-<dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
-<dd>The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.</dd>
-</dl>
-
-<p>The function `tctreeiterinit3' is used in order to initialize the iterator of a tree object in front of records corresponding a key string.</p>
-
-<dl class="api">
-<dt><code>void tctreeiterinit3(TCTREE *<var>tree</var>, const char *<var>kstr</var>);</code></dt>
-<dd>`<var>tree</var>' specifies the tree object.</dd>
-<dd>`<var>kstr</var>' specifies the string of the key.</dd>
-<dd>The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.</dd>
-</dl>
-
 <p>The function `tctreeiternext' is used in order to get the next key of the iterator of a tree object.</p>
 
 <dl class="api">
@@ -1716,25 +1697,6 @@
 <dt><code>void tcndbiterinit(TCNDB *<var>ndb</var>);</code></dt>
 <dd>`<var>ndb</var>' specifies the on-memory tree database object.</dd>
 <dd>The iterator is used in order to access the key of every record stored in the on-memory database.</dd>
-</dl>
-
-<p>The function `tcndbiterinit2' is used in order to initialize the iterator of an on-memory tree database object in front of a key.</p>
-
-<dl class="api">
-<dt><code>void tcndbiterinit2(TCNDB *<var>ndb</var>, const void *<var>kbuf</var>, int <var>ksiz</var>);</code></dt>
-<dd>`<var>ndb</var>' specifies the on-memory tree database object.</dd>
-<dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
-<dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
-<dd>The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.</dd>
-</dl>
-
-<p>The function `tcndbiterinit3' is used in order to initialize the iterator of an on-memory tree database object in front of a key string.</p>
-
-<dl class="api">
-<dt><code>void tcndbiterinit3(TCNDB *<var>ndb</var>, const char *<var>kstr</var>);</code></dt>
-<dd>`<var>ndb</var>' specifies the on-memory tree database object.</dd>
-<dd>`<var>kstr</var>' specifies the string of the key.</dd>
-<dd>The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.</dd>
 </dl>
 
 <p>The function `tcndbiternext' is used in order to get the next key of the iterator of an on-memory tree database object.</p>
@@ -6795,6 +6757,8 @@ cp -f "$srcpath" "$destpath"
 <p>ハッシュデーターベースかB+木データベースかを実行時に決定したい場合には、抽象データベースAPIを使うとよいでしょう。抽象データベースAPIはハッシュデータベースAPIとB+木データベースAPIの共通のインターフェイスで、関数 `<code>tcadbopen</code>' でデータベースを開く際のデータベース名で具体的にどの種類のデータベースを扱うかを指定することができます。ハッシュデータベースの名前には接尾辞として ".tch" をつけ、B+木データベースの名前には接尾辞として ".tcb" をつけることで区別されます。チューニングパラメータは、名前の後に "#" で区切って "name=value" の形式で指定します。例えば "casket.tch#bnum=1000000#apow=10" などとします。数値表現には "k"、"m"、"g" などの2進接頭辞を接尾させることもできます。また、データベース名の接尾辞に ".tcf" をつけると固定長データベースになります。連番のID番号をキーにして固定長のデータを管理する場合には最も効率が良くなります。</p>
 
 <p>抽象データベースAPIはオンメモリハッシュデータベースやオンメモリツリーデータベースとしても利用することができます。データベース名を "*" とするとオンメモリハッシュデータベースになり、"+" とするとオンメモリツリーデータベースになります。また、それらをキャッシュとして利用したい場合は、"*#capsiz=100m" などとするとよいでしょう。キャッシュの容量を100MBに限定して、それを越えた際には格納した順序が古いレコードから自動的に消していくようになります。オンメモリハッシュデータベースとオンメモリツリーデータベースの使い分けですが、パフォーマンスを求める場合には前者を用い、メモリ効率を求めたり前方一致検索を行いたい場合には後者を用いるとよいでしょう。</p>
+
+<p>DBMとして一般的でない機能は関数 `<code>tcadbmisc</code>' に隠蔽されています。この関数はサブ関数名を第1引数に指定し、それに応じて解釈の変わる引数リストを与えて実行します。サポートされるサブ関数は具象データベースの型によって異なります。複数のレコードを一度に扱える "putlist"、"outlist"、"getlist" は全ての具象データベースでサポートされています。その他にも様々な機能がありますが、作者の気まぐれで増えるのでここでは全てを説明できません。詳しくはソースコードをご覧ください。</p>
 
 <h3 id="tips_tcadbtable">抽象データベースによるテーブル操作</h3>
 

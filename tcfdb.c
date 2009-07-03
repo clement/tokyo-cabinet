@@ -102,6 +102,7 @@ static uint64_t *tcfdbrangeimpl(TCFDB *fdb, int64_t lower, int64_t upper, int ma
 static bool tcfdboptimizeimpl(TCFDB *fdb, int32_t width, int64_t limsiz);
 static bool tcfdbvanishimpl(TCFDB *fdb);
 static bool tcfdbcopyimpl(TCFDB *fdb, const char *path);
+static bool tcfdbiterjumpimpl(TCFDB *fdb, int64_t id);
 static bool tcfdbforeachimpl(TCFDB *fdb, TCITER iter, void *op);
 static bool tcfdblockmethod(TCFDB *fdb, bool wr);
 static bool tcfdbunlockmethod(TCFDB *fdb);
@@ -1290,6 +1291,45 @@ bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC p
 }
 
 
+/* Move the iterator to the record corresponding a key of a fixed-length database object. */
+bool tcfdbiterinit2(TCFDB *fdb, int64_t id){
+  assert(fdb);
+  if(!FDBLOCKMETHOD(fdb, true)) return false;
+  if(fdb->fd < 0){
+    tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  if(id == FDBIDMIN){
+    id = fdb->min;
+  } else if(id == FDBIDMAX){
+    id = fdb->max;
+  }
+  if(id < 1 || id > fdb->limid){
+    tcfdbsetecode(fdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    FDBUNLOCKMETHOD(fdb);
+    return false;
+  }
+  bool rv = tcfdbiterjumpimpl(fdb, id);
+  FDBUNLOCKMETHOD(fdb);
+  return rv;
+}
+
+
+/* Move the iterator to the decimal record of a fixed-length database object. */
+bool tcfdbiterinit3(TCFDB *fdb, const void *kbuf, int ksiz){
+  assert(fdb && kbuf && ksiz >= 0);
+  return tcfdbiterinit2(fdb, tcfdbkeytoid(kbuf, ksiz));
+}
+
+
+/* Move the iterator to the decimal string record of a fixed-length database object. */
+bool tcfdbiterinit4(TCFDB *fdb, const char *kstr){
+  assert(fdb && kstr);
+  return tcfdbiterinit2(fdb, tcfdbkeytoid(kstr, strlen(kstr)));
+}
+
+
 /* Process each record atomically of a fixed-length database object. */
 bool tcfdbforeach(TCFDB *fdb, TCITER iter, void *op){
   assert(fdb && iter);
@@ -2401,6 +2441,31 @@ static bool tcfdbcopyimpl(TCFDB *fdb, const char *path){
   }
   fdb->flags |= FDBFOPEN;
   return !err;
+}
+
+
+/* Move the iterator to the record corresponding a key of a fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   `id' specifies the ID number.
+   If successful, the return value is true, else, it is false. */
+static bool tcfdbiterjumpimpl(TCFDB *fdb, int64_t id){
+  assert(fdb && id >= 0);
+  if(id <= fdb->min){
+    fdb->iter = fdb->min;
+  } else {
+    int vsiz;
+    if(tcfdbgetimpl(fdb, id, &vsiz)){
+      fdb->iter = id;
+    } else {
+      uint64_t iter = tcfdbnextid(fdb, id);
+      if(iter > 0){
+        fdb->iter = iter;
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 

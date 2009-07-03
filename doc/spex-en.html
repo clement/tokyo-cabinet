@@ -1157,25 +1157,6 @@
 <dd>The iterator is used in order to access the key of every record stored in the tree object.</dd>
 </dl>
 
-<p>The function `tctreeiterinit2' is used in order to initialize the iterator of a tree object in front of records corresponding a key.</p>
-
-<dl class="api">
-<dt><code>void tctreeiterinit2(TCTREE *<var>tree</var>, const void *<var>kbuf</var>, int <var>ksiz</var>);</code></dt>
-<dd>`<var>tree</var>' specifies the tree object.</dd>
-<dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
-<dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
-<dd>The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.</dd>
-</dl>
-
-<p>The function `tctreeiterinit3' is used in order to initialize the iterator of a tree object in front of records corresponding a key string.</p>
-
-<dl class="api">
-<dt><code>void tctreeiterinit3(TCTREE *<var>tree</var>, const char *<var>kstr</var>);</code></dt>
-<dd>`<var>tree</var>' specifies the tree object.</dd>
-<dd>`<var>kstr</var>' specifies the string of the key.</dd>
-<dd>The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.</dd>
-</dl>
-
 <p>The function `tctreeiternext' is used in order to get the next key of the iterator of a tree object.</p>
 
 <dl class="api">
@@ -1714,25 +1695,6 @@
 <dt><code>void tcndbiterinit(TCNDB *<var>ndb</var>);</code></dt>
 <dd>`<var>ndb</var>' specifies the on-memory tree database object.</dd>
 <dd>The iterator is used in order to access the key of every record stored in the on-memory database.</dd>
-</dl>
-
-<p>The function `tcndbiterinit2' is used in order to initialize the iterator of an on-memory tree database object in front of a key.</p>
-
-<dl class="api">
-<dt><code>void tcndbiterinit2(TCNDB *<var>ndb</var>, const void *<var>kbuf</var>, int <var>ksiz</var>);</code></dt>
-<dd>`<var>ndb</var>' specifies the on-memory tree database object.</dd>
-<dd>`<var>kbuf</var>' specifies the pointer to the region of the key.</dd>
-<dd>`<var>ksiz</var>' specifies the size of the region of the key.</dd>
-<dd>The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.</dd>
-</dl>
-
-<p>The function `tcndbiterinit3' is used in order to initialize the iterator of an on-memory tree database object in front of a key string.</p>
-
-<dl class="api">
-<dt><code>void tcndbiterinit3(TCNDB *<var>ndb</var>, const char *<var>kstr</var>);</code></dt>
-<dd>`<var>ndb</var>' specifies the on-memory tree database object.</dd>
-<dd>`<var>kstr</var>' specifies the string of the key.</dd>
-<dd>The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.</dd>
 </dl>
 
 <p>The function `tcndbiternext' is used in order to get the next key of the iterator of an on-memory tree database object.</p>

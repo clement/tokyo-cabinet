@@ -2162,6 +2162,45 @@ const void *tcmapget3(TCMAP *map, const void *kbuf, int ksiz, int *sp){
 }
 
 
+/* Initialize the iterator of a map object at the record corresponding a key. */
+void tcmapiterinit2(TCMAP *map, const void *kbuf, int ksiz){
+  assert(map && kbuf && ksiz >= 0);
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
+  TCMAPHASH1(hash, kbuf, ksiz);
+  TCMAPREC *rec = map->buckets[hash%map->bnum];
+  TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
+  while(rec){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
+      rec = rec->left;
+    } else if(hash < rhash){
+      rec = rec->right;
+    } else {
+      char *dbuf = (char *)rec + sizeof(*rec);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
+      if(kcmp < 0){
+        rec = rec->left;
+      } else if(kcmp > 0){
+        rec = rec->right;
+      } else {
+        map->cur = rec;
+        return;
+      }
+    }
+  }
+}
+
+
+/* Initialize the iterator of a map object at the record corresponding a key string. */
+void tcmapiterinit3(TCMAP *map, const char *kstr){
+  assert(map && kstr);
+  tcmapiterinit2(map, kstr, strlen(kstr));
+}
+
+
 /* Get the value bound to the key fetched from the iterator of a map object. */
 const void *tcmapiterval(const void *kbuf, int *sp){
   assert(kbuf && sp);
@@ -2767,33 +2806,6 @@ void tctreeiterinit(TCTREE *tree){
     rec = rec->left;
   }
   tree->cur = rec;
-}
-
-
-/* Initialize the iterator of a tree object in front of records corresponding a key. */
-void tctreeiterinit2(TCTREE *tree, const void *kbuf, int ksiz){
-  assert(tree && kbuf && ksiz >= 0);
-  TCTREEREC *rec = tree->root;
-  while(rec){
-    char *dbuf = (char *)rec + sizeof(*rec);
-    int cv = tree->cmp(kbuf, ksiz, dbuf, rec->ksiz, tree->cmpop);
-    if(cv < 0){
-      tree->cur = rec;
-      rec = rec->left;
-    } else if(cv > 0){
-      rec = rec->right;
-    } else {
-      tree->cur = rec;
-      return;
-    }
-  }
-}
-
-
-/* Initialize the iterator of a tree object in front of records corresponding a key string. */
-void tctreeiterinit3(TCTREE *tree, const char *kstr){
-  assert(tree);
-  tctreeiterinit2(tree, kstr, strlen(kstr));
 }
 
 
@@ -3440,6 +3452,33 @@ const void *tctreeget3(const TCTREE *tree, const void *kbuf, int ksiz, int *sp){
 }
 
 
+/* Initialize the iterator of a tree object in front of records corresponding a key. */
+void tctreeiterinit2(TCTREE *tree, const void *kbuf, int ksiz){
+  assert(tree && kbuf && ksiz >= 0);
+  TCTREEREC *rec = tree->root;
+  while(rec){
+    char *dbuf = (char *)rec + sizeof(*rec);
+    int cv = tree->cmp(kbuf, ksiz, dbuf, rec->ksiz, tree->cmpop);
+    if(cv < 0){
+      tree->cur = rec;
+      rec = rec->left;
+    } else if(cv > 0){
+      rec = rec->right;
+    } else {
+      tree->cur = rec;
+      return;
+    }
+  }
+}
+
+
+/* Initialize the iterator of a tree object in front of records corresponding a key string. */
+void tctreeiterinit3(TCTREE *tree, const char *kstr){
+  assert(tree);
+  tctreeiterinit2(tree, kstr, strlen(kstr));
+}
+
+
 /* Get the value bound to the key fetched from the iterator of a tree object. */
 const void *tctreeiterval(const void *kbuf, int *sp){
   assert(kbuf && sp);
@@ -3969,6 +4008,35 @@ void *tcmdbget3(TCMDB *mdb, const void *kbuf, int ksiz, int *sp){
 }
 
 
+/* Initialize the iterator of an on-memory map database object in front of a key. */
+void tcmdbiterinit2(TCMDB *mdb, const void *kbuf, int ksiz){
+  if(pthread_mutex_lock(mdb->imtx) != 0) return;
+  unsigned int mi;
+  TCMDBHASH(mi, kbuf, ksiz);
+  if(pthread_rwlock_rdlock((pthread_rwlock_t *)mdb->mmtxs + mi) != 0){
+    pthread_mutex_unlock(mdb->imtx);
+    return;
+  }
+  int vsiz;
+  if(tcmapget(mdb->maps[mi], kbuf, ksiz, &vsiz)){
+    for(int i = 0; i < TCMDBMNUM; i++){
+      tcmapiterinit(mdb->maps[i]);
+    }
+    tcmapiterinit2(mdb->maps[mi], kbuf, ksiz);
+    mdb->iter = mi;
+  }
+  pthread_rwlock_unlock((pthread_rwlock_t *)mdb->mmtxs + mi);
+  pthread_mutex_unlock(mdb->imtx);
+}
+
+
+/* Initialize the iterator of an on-memory map database object in front of a key string. */
+void tcmdbiterinit3(TCMDB *mdb, const char *kstr){
+  assert(mdb && kstr);
+  tcmdbiterinit2(mdb, kstr, strlen(kstr));
+}
+
+
 /* Process each record atomically of an on-memory hash database object. */
 void tcmdbforeach(TCMDB *mdb, TCITER iter, void *op){
   assert(mdb && iter);
@@ -4155,22 +4223,6 @@ void tcndbiterinit(TCNDB *ndb){
 }
 
 
-/* Initialize the iterator of an on-memory tree database object in front of a key. */
-void tcndbiterinit2(TCNDB *ndb, const void *kbuf, int ksiz){
-  assert(ndb && kbuf && ksiz >= 0);
-  if(pthread_mutex_lock((pthread_mutex_t *)ndb->mmtx) != 0) return;
-  tctreeiterinit2(ndb->tree, kbuf, ksiz);
-  pthread_mutex_unlock((pthread_mutex_t *)ndb->mmtx);
-}
-
-
-/* Initialize the iterator of an on-memory tree database object in front of a key string. */
-void tcndbiterinit3(TCNDB *ndb, const char *kstr){
-  assert(ndb && kstr);
-  tcndbiterinit2(ndb, kstr, strlen(kstr));
-}
-
-
 /* Get the next key of the iterator of an on-memory tree database object. */
 void *tcndbiternext(TCNDB *ndb, int *sp){
   assert(ndb && sp);
@@ -4344,6 +4396,22 @@ void *tcndbget3(TCNDB *ndb, const void *kbuf, int ksiz, int *sp){
   }
   pthread_mutex_unlock((pthread_mutex_t *)ndb->mmtx);
   return rv;
+}
+
+
+/* Initialize the iterator of an on-memory tree database object in front of a key. */
+void tcndbiterinit2(TCNDB *ndb, const void *kbuf, int ksiz){
+  assert(ndb && kbuf && ksiz >= 0);
+  if(pthread_mutex_lock((pthread_mutex_t *)ndb->mmtx) != 0) return;
+  tctreeiterinit2(ndb->tree, kbuf, ksiz);
+  pthread_mutex_unlock((pthread_mutex_t *)ndb->mmtx);
+}
+
+
+/* Initialize the iterator of an on-memory tree database object in front of a key string. */
+void tcndbiterinit3(TCNDB *ndb, const char *kstr){
+  assert(ndb && kstr);
+  tcndbiterinit2(ndb, kstr, strlen(kstr));
 }
 
 

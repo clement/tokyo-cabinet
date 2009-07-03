@@ -179,6 +179,7 @@ static bool tchdboptimizeimpl(TCHDB *hdb, int64_t bnum, int8_t apow, int8_t fpow
 static bool tchdbvanishimpl(TCHDB *hdb);
 static bool tchdbcopyimpl(TCHDB *hdb, const char *path);
 static bool tchdbdefragimpl(TCHDB *hdb, int64_t step);
+static bool tchdbiterjumpimpl(TCHDB *hdb, const char *kbuf, int ksiz);
 static bool tchdbforeachimpl(TCHDB *hdb, TCITER iter, void *op);
 static bool tchdblockmethod(TCHDB *hdb, bool wr);
 static bool tchdbunlockmethod(TCHDB *hdb);
@@ -1708,6 +1709,32 @@ char *tchdbgetnext3(TCHDB *hdb, const char *kbuf, int ksiz, int *sp, const char 
   char *rv = tchdbgetnextimpl(hdb, kbuf, ksiz, sp, vbp, vsp);
   HDBUNLOCKMETHOD(hdb);
   return rv;
+}
+
+
+/* Move the iterator to the record corresponding a key of a hash database object. */
+bool tchdbiterinit2(TCHDB *hdb, const void *kbuf, int ksiz){
+  assert(hdb && kbuf && ksiz >= 0);
+  if(!HDBLOCKMETHOD(hdb, true)) return false;
+  if(hdb->fd < 0){
+    tchdbsetecode(hdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    HDBUNLOCKMETHOD(hdb);
+    return false;
+  }
+  if(hdb->async && !tchdbflushdrp(hdb)){
+    HDBUNLOCKMETHOD(hdb);
+    return false;
+  }
+  bool rv = tchdbiterjumpimpl(hdb, kbuf, ksiz);
+  HDBUNLOCKMETHOD(hdb);
+  return rv;
+}
+
+
+/* Move the iterator to the record corresponding a key string of a hash database object. */
+bool tchdbiterinit3(TCHDB *hdb, const char *kstr){
+  assert(hdb && kstr);
+  return tchdbiterinit2(hdb, kstr, strlen(kstr));
 }
 
 
@@ -4668,6 +4695,49 @@ static bool tchdbdefragimpl(TCHDB *hdb, int64_t step){
     }
   }
   return true;
+}
+
+
+/* Move the iterator to the record corresponding a key of a hash database object.
+   `hdb' specifies the hash database object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   If successful, the return value is true, else, it is false. */
+static bool tchdbiterjumpimpl(TCHDB *hdb, const char *kbuf, int ksiz){
+  assert(hdb && kbuf && ksiz);
+  uint8_t hash;
+  uint64_t bidx = tchdbbidx(hdb, kbuf, ksiz, &hash);
+  off_t off = tchdbgetbucket(hdb, bidx);
+  TCHREC rec;
+  char rbuf[HDBIOBUFSIZ];
+  while(off > 0){
+    rec.off = off;
+    if(!tchdbreadrec(hdb, &rec, rbuf)) return false;
+    if(hash > rec.hash){
+      off = rec.left;
+    } else if(hash < rec.hash){
+      off = rec.right;
+    } else {
+      if(!rec.kbuf && !tchdbreadrecbody(hdb, &rec)) return false;
+      int kcmp = tcreckeycmp(kbuf, ksiz, rec.kbuf, rec.ksiz);
+      if(kcmp > 0){
+        off = rec.left;
+        TCFREE(rec.bbuf);
+        rec.kbuf = NULL;
+        rec.bbuf = NULL;
+      } else if(kcmp < 0){
+        off = rec.right;
+        TCFREE(rec.bbuf);
+        rec.kbuf = NULL;
+        rec.bbuf = NULL;
+      } else {
+        hdb->iter = off;
+        return true;
+      }
+    }
+  }
+  tchdbsetecode(hdb, TCENOREC, __FILE__, __LINE__, __func__);
+  return false;
 }
 
 

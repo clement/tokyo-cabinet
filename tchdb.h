@@ -828,6 +828,23 @@ char *tchdbgetnext2(TCHDB *hdb, const char *kstr);
 char *tchdbgetnext3(TCHDB *hdb, const char *kbuf, int ksiz, int *sp, const char **vbp, int *vsp);
 
 
+/* Move the iterator to the record corresponding a key of a hash database object.
+   `hdb' specifies the hash database object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   If successful, the return value is true, else, it is false.  False is returned if there is
+   no record corresponding the condition. */
+bool tchdbiterinit2(TCHDB *hdb, const void *kbuf, int ksiz);
+
+
+/* Move the iterator to the record corresponding a key string of a hash database object.
+   `hdb' specifies the hash database object.
+   `kstr' specifies the string of the key.
+   If successful, the return value is true, else, it is false.  False is returned if there is
+   no record corresponding the condition. */
+bool tchdbiterinit3(TCHDB *hdb, const char *kstr);
+
+
 /* Process each record atomically of a hash database object.
    `hdb' specifies the hash database object.
    `iter' specifies the pointer to the iterator function called for each record.  It receives

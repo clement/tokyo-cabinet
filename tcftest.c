@@ -1507,10 +1507,17 @@ static int procwicked(const char *path, int rnum, bool mt, int omode){
       break;
     case 12:
       iputchar('C');
-      if(myrand(rnum / 50) == 0){
-        if(!tcfdbiterinit(fdb)){
-          eprint(fdb, "tcfdbiterinit");
-          err = true;
+      if(myrand(rnum / 128) == 0){
+        if(myrand(2) == 0){
+          if(!tcfdbiterinit(fdb)){
+            eprint(fdb, "tcfdbiterinit");
+            err = true;
+          }
+        } else {
+          if(!tcfdbiterinit2(fdb, myrand(rnum) + 1) && tcfdbecode(fdb) != TCENOREC){
+            eprint(fdb, "tcfdbiterinit2");
+            err = true;
+          }
         }
       }
       for(int j = myrand(rnum) / 1000 + 1; j >= 0; j--){

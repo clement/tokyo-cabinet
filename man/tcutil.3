@@ -1624,41 +1624,6 @@ The iterator is used in order to access the key of every record stored in the tr
 .RE
 .RE
 .PP
-The function `tctreeiterinit2' is used in order to initialize the iterator of a tree object in front of records corresponding a key.
-.PP
-.RS
-.br
-\fBvoid tctreeiterinit2(TCTREE *\fItree\fB, const void *\fIkbuf\fB, int \fIksiz\fB);\fR
-.RS
-`\fItree\fR' specifies the tree object.
-.RE
-.RS
-`\fIkbuf\fR' specifies the pointer to the region of the key.
-.RE
-.RS
-`\fIksiz\fR' specifies the size of the region of the key.
-.RE
-.RS
-The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.
-.RE
-.RE
-.PP
-The function `tctreeiterinit3' is used in order to initialize the iterator of a tree object in front of records corresponding a key string.
-.PP
-.RS
-.br
-\fBvoid tctreeiterinit3(TCTREE *\fItree\fB, const char *\fIkstr\fB);\fR
-.RS
-`\fItree\fR' specifies the tree object.
-.RE
-.RS
-`\fIkstr\fR' specifies the string of the key.
-.RE
-.RS
-The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.
-.RE
-.RE
-.PP
 The function `tctreeiternext' is used in order to get the next key of the iterator of a tree object.
 .PP
 .RS
@@ -2674,41 +2639,6 @@ The function `tcndbiterinit' is used in order to initialize the iterator of an o
 .RE
 .RS
 The iterator is used in order to access the key of every record stored in the on\-memory database.
-.RE
-.RE
-.PP
-The function `tcndbiterinit2' is used in order to initialize the iterator of an on\-memory tree database object in front of a key.
-.PP
-.RS
-.br
-\fBvoid tcndbiterinit2(TCNDB *\fIndb\fB, const void *\fIkbuf\fB, int \fIksiz\fB);\fR
-.RS
-`\fIndb\fR' specifies the on\-memory tree database object.
-.RE
-.RS
-`\fIkbuf\fR' specifies the pointer to the region of the key.
-.RE
-.RS
-`\fIksiz\fR' specifies the size of the region of the key.
-.RE
-.RS
-The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.
-.RE
-.RE
-.PP
-The function `tcndbiterinit3' is used in order to initialize the iterator of an on\-memory tree database object in front of a key string.
-.PP
-.RS
-.br
-\fBvoid tcndbiterinit3(TCNDB *\fIndb\fB, const char *\fIkstr\fB);\fR
-.RS
-`\fIndb\fR' specifies the on\-memory tree database object.
-.RE
-.RS
-`\fIkstr\fR' specifies the string of the key.
-.RE
-.RS
-The iterator is set to the first record corresponding the key or the next substitute if completely matching record does not exist.
 .RE
 .RE
 .PP

@@ -801,6 +801,37 @@ char *tcfdbopaque(TCFDB *fdb);
 bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC proc, void *op);
 
 
+/* Move the iterator to the record corresponding a key of a fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   `id' specifies the ID number.  It should be more than 0.  If it is `FDBIDMIN', the minimum ID
+   number of existing records is specified.  If it is `FDBIDMAX', the maximum ID number of
+   existing records is specified.
+   If successful, the return value is true, else, it is false.  False is returned if there is
+   no record corresponding the condition. */
+bool tcfdbiterinit2(TCFDB *fdb, int64_t id);
+
+
+/* Move the iterator to the decimal record of a fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   `kbuf' specifies the pointer to the region of the decimal key.  It should be more than 0.  If
+   it is "min", the minimum ID number of existing records is specified.  If it is "max", the
+   maximum ID number of existing records is specified.
+   `ksiz' specifies the size of the region of the key.
+   If successful, the return value is true, else, it is false.  False is returned if there is
+   no record corresponding the condition. */
+bool tcfdbiterinit3(TCFDB *fdb, const void *kbuf, int ksiz);
+
+
+/* Move the iterator to the decimal string record of a fixed-length database object.
+   `fdb' specifies the fixed-length database object.
+   `kstr' specifies the string of the decimal key.  It should be more than 0.  If it is "min",
+   the minimum ID number of existing records is specified.  If it is "max", the maximum ID number
+   of existing records is specified.
+   If successful, the return value is true, else, it is false.  False is returned if there is
+   no record corresponding the condition. */
+bool tcfdbiterinit4(TCFDB *fdb, const char *kstr);
+
+
 /* Process each record atomically of a fixed-length database object.
    `fdb' specifies the fixed-length database object.
    `iter' specifies the pointer to the iterator function called for each record.  It receives

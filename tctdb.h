@@ -896,6 +896,23 @@ bool tctdbputproc(TCTDB *tdb, const void *pkbuf, int pksiz, const void *cbuf, in
                   TCPDPROC proc, void *op);
 
 
+/* Move the iterator to the record corresponding a key of a table database object.
+   `tdb' specifies the table database object.
+   `pkbuf' specifies the pointer to the region of the primary key.
+   `pksiz' specifies the size of the region of the primary key.
+   If successful, the return value is true, else, it is false.  False is returned if there is
+   no record corresponding the condition. */
+bool tctdbiterinit2(TCTDB *tdb, const void *pkbuf, int pksiz);
+
+
+/* Move the iterator to the record corresponding a key string of a table database object.
+   `tdb' specifies the table database object.
+   `kstr' specifies the string of the primary key.
+   If successful, the return value is true, else, it is false.  False is returned if there is
+   no record corresponding the condition. */
+bool tctdbiterinit3(TCTDB *tdb, const char *kstr);
+
+
 /* Process each record atomically of a table database object.
    `tdb' specifies the table database object.
    `iter' specifies the pointer to the iterator function called for each record.  It receives

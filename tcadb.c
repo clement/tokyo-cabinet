@@ -1609,6 +1609,33 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
           TCFREE(vbuf);
         }
       }
+    } else if(!strcmp(name, "iterinit")){
+      rv = tclistnew2(1);
+      if(argc > 0){
+        const char *kbuf;
+        int ksiz;
+        TCLISTVAL(kbuf, args, 0, ksiz);
+        tcmdbiterinit2(adb->mdb, kbuf, ksiz);
+      } else {
+        tcmdbiterinit(adb->mdb);
+      }
+    } else if(!strcmp(name, "iternext")){
+      rv = tclistnew2(1);
+      int ksiz;
+      char *kbuf = tcmdbiternext(adb->mdb, &ksiz);
+      if(kbuf){
+        TCLISTPUSH(rv, kbuf, ksiz);
+        int vsiz;
+        char *vbuf = tcmdbget(adb->mdb, kbuf, ksiz, &vsiz);
+        if(vbuf){
+          TCLISTPUSH(rv, vbuf, vsiz);
+          TCFREE(vbuf);
+        }
+        TCFREE(kbuf);
+      } else {
+        tclistdel(rv);
+        rv = NULL;
+      }
     } else if(!strcmp(name, "sync")){
       rv = tclistnew2(1);
       if(!tcadbsync(adb)){
@@ -1720,6 +1747,33 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
           TCLISTPUSH(rv, vbuf, vsiz);
           TCFREE(vbuf);
         }
+      }
+    } else if(!strcmp(name, "iterinit")){
+      rv = tclistnew2(1);
+      if(argc > 0){
+        const char *kbuf;
+        int ksiz;
+        TCLISTVAL(kbuf, args, 0, ksiz);
+        tcndbiterinit2(adb->ndb, kbuf, ksiz);
+      } else {
+        tcndbiterinit(adb->ndb);
+      }
+    } else if(!strcmp(name, "iternext")){
+      rv = tclistnew2(1);
+      int ksiz;
+      char *kbuf = tcndbiternext(adb->ndb, &ksiz);
+      if(kbuf){
+        TCLISTPUSH(rv, kbuf, ksiz);
+        int vsiz;
+        char *vbuf = tcndbget(adb->ndb, kbuf, ksiz, &vsiz);
+        if(vbuf){
+          TCLISTPUSH(rv, vbuf, vsiz);
+          TCFREE(vbuf);
+        }
+        TCFREE(kbuf);
+      } else {
+        tclistdel(rv);
+        rv = NULL;
       }
     } else if(!strcmp(name, "sync")){
       rv = tclistnew2(1);
@@ -1853,6 +1907,38 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "iterinit")){
+      rv = tclistnew2(1);
+      bool err = false;
+      if(argc > 0){
+        const char *kbuf;
+        int ksiz;
+        TCLISTVAL(kbuf, args, 0, ksiz);
+        if(!tchdbiterinit2(adb->hdb, kbuf, ksiz)) err = true;
+      } else {
+        if(!tchdbiterinit(adb->hdb)) err = true;
+      }
+      if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "iternext")){
+      rv = tclistnew2(1);
+      int ksiz;
+      char *kbuf = tchdbiternext(adb->hdb, &ksiz);
+      if(kbuf){
+        TCLISTPUSH(rv, kbuf, ksiz);
+        int vsiz;
+        char *vbuf = tchdbget(adb->hdb, kbuf, ksiz, &vsiz);
+        if(vbuf){
+          TCLISTPUSH(rv, vbuf, vsiz);
+          TCFREE(vbuf);
+        }
+        TCFREE(kbuf);
+      } else {
         tclistdel(rv);
         rv = NULL;
       }
@@ -2007,6 +2093,35 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         tclistdel(rv);
         rv = NULL;
       }
+    } else if(!strcmp(name, "iterinit")){
+      rv = tclistnew2(1);
+      bool err = false;
+      if(argc > 0){
+        const char *kbuf;
+        int ksiz;
+        TCLISTVAL(kbuf, args, 0, ksiz);
+        if(!tcbdbcurjump(adb->cur, kbuf, ksiz)) err = true;
+      } else {
+        if(!tcbdbcurfirst(adb->cur)) err = true;
+      }
+      if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "iternext")){
+      rv = tclistnew2(1);
+      int ksiz;
+      const char *kbuf = tcbdbcurkey3(adb->cur, &ksiz);
+      if(kbuf){
+        TCLISTPUSH(rv, kbuf, ksiz);
+        int vsiz;
+        const char *vbuf = tcbdbcurval3(adb->cur, &vsiz);
+        if(vbuf) TCLISTPUSH(rv, vbuf, vsiz);
+        tcbdbcurnext(adb->cur);
+      } else {
+        tclistdel(rv);
+        rv = NULL;
+      }
     } else if(!strcmp(name, "sync")){
       rv = tclistnew2(1);
       if(!tcadbsync(adb)){
@@ -2146,6 +2261,38 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "iterinit")){
+      rv = tclistnew2(1);
+      bool err = false;
+      if(argc > 0){
+        const char *kbuf;
+        int ksiz;
+        TCLISTVAL(kbuf, args, 0, ksiz);
+        if(!tcfdbiterinit3(adb->fdb, kbuf, ksiz)) err = true;
+      } else {
+        if(!tcfdbiterinit(adb->fdb)) err = true;
+      }
+      if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "iternext")){
+      rv = tclistnew2(1);
+      int ksiz;
+      char *kbuf = tcfdbiternext2(adb->fdb, &ksiz);
+      if(kbuf){
+        TCLISTPUSH(rv, kbuf, ksiz);
+        int vsiz;
+        char *vbuf = tcfdbget2(adb->fdb, kbuf, ksiz, &vsiz);
+        if(vbuf){
+          TCLISTPUSH(rv, vbuf, vsiz);
+          TCFREE(vbuf);
+        }
+        TCFREE(kbuf);
+      } else {
         tclistdel(rv);
         rv = NULL;
       }
@@ -2296,6 +2443,38 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "iterinit")){
+      rv = tclistnew2(1);
+      bool err = false;
+      if(argc > 0){
+        const char *pkbuf;
+        int pksiz;
+        TCLISTVAL(pkbuf, args, 0, pksiz);
+        if(!tctdbiterinit2(adb->tdb, pkbuf, pksiz)) err = true;
+      } else {
+        if(!tctdbiterinit(adb->tdb)) err = true;
+      }
+      if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "iternext")){
+      rv = tclistnew2(1);
+      int pksiz;
+      char *pkbuf = tctdbiternext(adb->tdb, &pksiz);
+      if(pkbuf){
+        TCLISTPUSH(rv, pkbuf, pksiz);
+        int csiz;
+        char *cbuf = tctdbget2(adb->tdb, pkbuf, pksiz, &csiz);
+        if(cbuf){
+          TCLISTPUSH(rv, cbuf, csiz);
+          TCFREE(cbuf);
+        }
+        TCFREE(pkbuf);
+      } else {
         tclistdel(rv);
         rv = NULL;
       }

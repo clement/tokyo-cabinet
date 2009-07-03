@@ -1487,10 +1487,11 @@ static int procwicked(int rnum){
     case 39:
       iputchar('d');
       if(myrand(100) == 0){
-        tcmapiterinit(map);
         if(myrand(2) == 0){
+          tcmapiterinit(map);
           tctreeiterinit(tree);
         } else {
+          tcmapiterinit2(map, kbuf, ksiz);
           tctreeiterinit2(tree, kbuf, ksiz);
         }
       }
@@ -1589,7 +1590,6 @@ static int procwicked(int rnum){
       break;
     case 52:
       iputchar('q');
-
       if(myrand(2) == 0){
         tcmdbput3(mdb, kbuf, ksiz, vbuf, vsiz);
         tcndbput3(ndb, kbuf, ksiz, vbuf, vsiz);
@@ -1630,10 +1630,11 @@ static int procwicked(int rnum){
     case 57:
       iputchar('v');
       if(myrand(100) == 0){
-        tcmdbiterinit(mdb);
         if(myrand(2) == 0){
+          tcmdbiterinit(mdb);
           tcndbiterinit(ndb);
         } else {
+          tcmdbiterinit2(mdb, kbuf, ksiz);
           tcndbiterinit2(ndb, kbuf, ksiz);
         }
       }

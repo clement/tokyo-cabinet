@@ -913,6 +913,21 @@ bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
 const void *tcmapget3(TCMAP *map, const void *kbuf, int ksiz, int *sp);
 
 
+/* Initialize the iterator of a map object at the record corresponding a key.
+   `map' specifies the map object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   If there is no record corresponding the condition, the iterator is not modified. */
+void tcmapiterinit2(TCMAP *map, const void *kbuf, int ksiz);
+
+
+/* Initialize the iterator of a map object at the record corresponding a key string.
+   `map' specifies the map object.
+   `kstr' specifies the string of the key.
+   If there is no record corresponding the condition, the iterator is not modified. */
+void tcmapiterinit3(TCMAP *map, const char *kstr);
+
+
 /* Get the value bound to the key fetched from the iterator of a map object.
    `kbuf' specifies the pointer to the region of the iteration key.
    `sp' specifies the pointer to the variable into which the size of the region of the return
@@ -1141,23 +1156,6 @@ const char *tctreeget2(TCTREE *tree, const char *kstr);
 void tctreeiterinit(TCTREE *tree);
 
 
-/* Initialize the iterator of a tree object in front of records corresponding a key.
-   `tree' specifies the tree object.
-   `kbuf' specifies the pointer to the region of the key.
-   `ksiz' specifies the size of the region of the key.
-   The iterator is set to the first record corresponding the key or the next substitute if
-   completely matching record does not exist. */
-void tctreeiterinit2(TCTREE *tree, const void *kbuf, int ksiz);
-
-
-/* Initialize the iterator of a tree object in front of records corresponding a key string.
-   `tree' specifies the tree object.
-   `kstr' specifies the string of the key.
-   The iterator is set to the first record corresponding the key or the next substitute if
-   completely matching record does not exist. */
-void tctreeiterinit3(TCTREE *tree, const char *kstr);
-
-
 /* Get the next key of the iterator of a tree object.
    `tree' specifies the tree object.
    `sp' specifies the pointer to the variable into which the size of the region of the return
@@ -1314,6 +1312,23 @@ void tctreeputcat3(TCTREE *tree, const void *kbuf, int ksiz, const void *vbuf, i
    the return value can be treated as a character string.  The structure of the tree is not
    modifed by this function. */
 const void *tctreeget3(const TCTREE *tree, const void *kbuf, int ksiz, int *sp);
+
+
+/* Initialize the iterator of a tree object in front of records corresponding a key.
+   `tree' specifies the tree object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   The iterator is set to the first record corresponding the key or the next substitute if
+   completely matching record does not exist. */
+void tctreeiterinit2(TCTREE *tree, const void *kbuf, int ksiz);
+
+
+/* Initialize the iterator of a tree object in front of records corresponding a key string.
+   `tree' specifies the tree object.
+   `kstr' specifies the string of the key.
+   The iterator is set to the first record corresponding the key or the next substitute if
+   completely matching record does not exist. */
+void tctreeiterinit3(TCTREE *tree, const char *kstr);
 
 
 /* Get the value bound to the key fetched from the iterator of a tree object.
@@ -1696,6 +1711,21 @@ bool tcmdbputproc(TCMDB *mdb, const void *kbuf, int ksiz, const void *vbuf, int 
 void *tcmdbget3(TCMDB *mdb, const void *kbuf, int ksiz, int *sp);
 
 
+/* Initialize the iterator of an on-memory map database object in front of a key.
+   `mdb' specifies the on-memory map database object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   If there is no record corresponding the condition, the iterator is not modified. */
+void tcmdbiterinit2(TCMDB *mdb, const void *kbuf, int ksiz);
+
+
+/* Initialize the iterator of an on-memory map database object in front of a key string.
+   `mdb' specifies the on-memory map database object.
+   `kstr' specifies the string of the key.
+   If there is no record corresponding the condition, the iterator is not modified. */
+void tcmdbiterinit3(TCMDB *mdb, const char *kstr);
+
+
 /* Process each record atomically of an on-memory hash database object.
    `iter' specifies the pointer to the iterator function called for each record.  It receives
    five parameters.  The first parameter is the pointer to the region of the key.  The second
@@ -1862,23 +1892,6 @@ int tcndbvsiz2(TCNDB *ndb, const char *kstr);
    The iterator is used in order to access the key of every record stored in the on-memory
    database. */
 void tcndbiterinit(TCNDB *ndb);
-
-
-/* Initialize the iterator of an on-memory tree database object in front of a key.
-   `ndb' specifies the on-memory tree database object.
-   `kbuf' specifies the pointer to the region of the key.
-   `ksiz' specifies the size of the region of the key.
-   The iterator is set to the first record corresponding the key or the next substitute if
-   completely matching record does not exist. */
-void tcndbiterinit2(TCNDB *ndb, const void *kbuf, int ksiz);
-
-
-/* Initialize the iterator of an on-memory tree database object in front of a key string.
-   `ndb' specifies the on-memory tree database object.
-   `kstr' specifies the string of the key.
-   The iterator is set to the first record corresponding the key or the next substitute if
-   completely matching record does not exist. */
-void tcndbiterinit3(TCNDB *ndb, const char *kstr);
 
 
 /* Get the next key of the iterator of an on-memory tree database object.
@@ -2050,6 +2063,23 @@ bool tcndbputproc(TCNDB *ndb, const void *kbuf, int ksiz, const void *vbuf, int 
    is allocated with the `malloc' call, it should be released with the `free' call when it is no
    longer in use.  The structure of the tree is not modifed by this function. */
 void *tcndbget3(TCNDB *ndb, const void *kbuf, int ksiz, int *sp);
+
+
+/* Initialize the iterator of an on-memory tree database object in front of a key.
+   `ndb' specifies the on-memory tree database object.
+   `kbuf' specifies the pointer to the region of the key.
+   `ksiz' specifies the size of the region of the key.
+   The iterator is set to the first record corresponding the key or the next substitute if
+   completely matching record does not exist. */
+void tcndbiterinit2(TCNDB *ndb, const void *kbuf, int ksiz);
+
+
+/* Initialize the iterator of an on-memory tree database object in front of a key string.
+   `ndb' specifies the on-memory tree database object.
+   `kstr' specifies the string of the key.
+   The iterator is set to the first record corresponding the key or the next substitute if
+   completely matching record does not exist. */
+void tcndbiterinit3(TCNDB *ndb, const char *kstr);
 
 
 /* Process each record atomically of an on-memory tree database object.
@@ -3311,8 +3341,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.22"
-#define _TC_LIBVER     813
+#define _TC_VERSION    "1.4.23"
+#define _TC_LIBVER     814
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

@@ -1730,10 +1730,17 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
       break;
     case 14:
       iputchar('E');
-      if(myrand(rnum / 50) == 0){
-        if(!tctdbiterinit(tdb)){
-          eprint(tdb, "tctdbiterinit");
-          err = true;
+      if(myrand(rnum / 128) == 0){
+        if(myrand(2) == 0){
+          if(!tctdbiterinit(tdb)){
+            eprint(tdb, "tctdbiterinit");
+            err = true;
+          }
+        } else {
+          if(!tctdbiterinit2(tdb, pkbuf, pksiz) && tctdbecode(tdb) != TCENOREC){
+            eprint(tdb, "tctdbiterinit2");
+            err = true;
+          }
         }
       }
       for(int j = myrand(rnum) / 1000 + 1; j >= 0; j--){

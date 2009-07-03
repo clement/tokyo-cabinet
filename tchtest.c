@@ -2027,6 +2027,29 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
       int cvsiz;
       nbuf = tchdbgetnext3(hdb, cbuf, csiz, &nsiz, &cvbuf, &cvsiz);
     }
+    if(myrand(10) == 0){
+      if(!tchdbiterinit2(hdb, cbuf, csiz)){
+        eprint(hdb, "tchdbiterinit2");
+        err = true;
+      }
+      int ksiz;
+      char *kbuf = tchdbiternext(hdb, &ksiz);
+      if(kbuf){
+        tcfree(kbuf);
+      } else {
+        eprint(hdb, "tchdbiternext");
+        err = true;
+      }
+      for(int i = 0; i < 5; i++){
+        kbuf = tchdbiternext(hdb, &ksiz);
+        if(kbuf){
+          tcfree(kbuf);
+        } else if(tchdbecode(hdb) != TCENOREC){
+          eprint(hdb, "tchdbiternext");
+          err = true;
+        }
+      }
+    }
     tcfree(cbuf);
     cbuf = nbuf;
     csiz = nsiz;
