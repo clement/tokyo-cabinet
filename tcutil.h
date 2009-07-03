@@ -567,8 +567,8 @@ void tclistinvert(TCLIST *list);
 
 
 typedef struct _TCMAPREC {               /* type of structure for an element of a map */
-  uint32_t ksiz;                         /* size of the region of the key */
-  uint32_t vsiz;                         /* size of the region of the value */
+  int32_t ksiz;                          /* size of the region of the key */
+  int32_t vsiz;                          /* size of the region of the value */
   struct _TCMAPREC *left;                /* pointer to the left child */
   struct _TCMAPREC *right;               /* pointer to the right child */
   struct _TCMAPREC *prev;                /* pointer to the previous element */
@@ -972,8 +972,8 @@ void *tcmaploadone(const void *ptr, int size, const void *kbuf, int ksiz, int *s
 
 
 typedef struct _TCTREEREC {              /* type of structure for an element of a tree */
-  uint32_t ksiz;                         /* size of the region of the key */
-  uint32_t vsiz;                         /* size of the region of the value */
+  int32_t ksiz;                          /* size of the region of the key */
+  int32_t vsiz;                          /* size of the region of the value */
   struct _TCTREEREC *left;               /* pointer to the left child */
   struct _TCTREEREC *right;              /* pointer to the right child */
 } TCTREEREC;
@@ -3311,8 +3311,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.19"
-#define _TC_LIBVER     810
+#define _TC_VERSION    "1.4.20"
+#define _TC_LIBVER     811
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

@@ -1,3 +1,11 @@
+2009-05-08  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.h: signedness of some members of TCMAP and TCTREE were changed.
+
+	* tcutil.c (tchexdecode): a bug related to handling space characters was fixed.
+
+	- Release: 1.4.20
+
 2009-04-30  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tctdb.c (tctdbidxhash, tctdbqryproc2, tctdbqrysearchout2): new functions.

@@ -6996,7 +6996,7 @@ char *tchexdecode(const char *str, int *sp){
   TCMALLOC(buf, len + 1);
   char *wp = buf;
   for(int i = 0; i < len; i += 2){
-    while(str[i] >= '0' && str[i] <= '0'){
+    while(str[i] >= '\0' && str[i] <= ' '){
       i++;
     }
     int num = 0;
