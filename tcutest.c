@@ -30,6 +30,7 @@ int main(int argc, char **argv);
 static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
+static void sysprint(void);
 static int myrand(int range);
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
@@ -119,6 +120,20 @@ static void iprintf(const char *format, ...){
 static void iputchar(int c){
   putchar(c);
   fflush(stdout);
+}
+
+
+/* print system information */
+static void sysprint(void){
+  TCMAP *info = tcsysinfo();
+  if(info){
+    tcmapiterinit(info);
+    const char *kbuf;
+    while((kbuf = tcmapiternext2(info)) != NULL){
+      iprintf("sys_%s: %s\n", kbuf, tcmapiterval2(kbuf));
+    }
+    tcmapdel(info);
+  }
 }
 
 
@@ -443,6 +458,7 @@ static int procxstr(int rnum){
     }
   }
   iprintf("size: %u\n", tcxstrsize(xstr));
+  sysprint();
   tcxstrdel(xstr);
   iprintf("time: %.3f\n", tctime() - stime);
   iprintf("ok\n\n");
@@ -479,6 +495,7 @@ static int proclist(int rnum, int anum, bool rd){
     }
   }
   iprintf("record number: %u\n", tclistnum(list));
+  sysprint();
   tclistdel(list);
   iprintf("time: %.3f\n", tctime() - stime);
   iprintf("ok\n\n");
@@ -554,6 +571,7 @@ static int procmap(int rnum, int bnum, bool rd, bool tr, bool rnd, int dmode){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcmaprnum(map));
   iprintf("size: %llu\n", (unsigned long long)tcmapmsiz(map));
+  sysprint();
   tcmapdel(map);
   iprintf("time: %.3f\n", tctime() - stime);
   iprintf("ok\n\n");
@@ -629,6 +647,7 @@ static int proctree(int rnum, bool rd, bool tr, bool rnd, int dmode){
   }
   iprintf("record number: %llu\n", (unsigned long long)tctreernum(tree));
   iprintf("size: %llu\n", (unsigned long long)tctreemsiz(tree));
+  sysprint();
   tctreedel(tree);
   iprintf("time: %.3f\n", tctime() - stime);
   iprintf("ok\n\n");
@@ -704,6 +723,7 @@ static int procmdb(int rnum, int bnum, bool rd, bool tr, bool rnd, int dmode){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcmdbrnum(mdb));
   iprintf("size: %llu\n", (unsigned long long)tcmdbmsiz(mdb));
+  sysprint();
   tcmdbdel(mdb);
   iprintf("time: %.3f\n", tctime() - stime);
   iprintf("ok\n\n");
@@ -779,6 +799,7 @@ static int procndb(int rnum, bool rd, bool tr, bool rnd, int dmode){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcndbrnum(ndb));
   iprintf("size: %llu\n", (unsigned long long)tcndbmsiz(ndb));
+  sysprint();
   tcndbdel(ndb);
   iprintf("time: %.3f\n", tctime() - stime);
   iprintf("ok\n\n");

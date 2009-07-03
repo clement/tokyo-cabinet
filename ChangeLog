@@ -1,3 +1,15 @@
+2009-04-23  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tcutil.c (tcmapput, tcmapout, tcmapget): memory usage was reduced.
+
+	* tcutil.c (tcsysinfo): new function.
+
+	* tcutil.c (tcatoix): "strtold" was replaced by own implementation.
+
+	* tctdb.c (tctdbqryidxfetch): new function.
+
+	- Release: 1.4.17
+
 2009-04-20  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcbdb.c (tcbdbcuroutimpl): shift mechanism of cursors on deleted leaves was added.

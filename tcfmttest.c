@@ -73,6 +73,7 @@ static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCFDB *fdb, const char *func);
 static void mprint(TCFDB *fdb);
+static void sysprint(void);
 static int myrand(int range);
 static int myrandnd(int range);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
@@ -176,6 +177,20 @@ static void mprint(TCFDB *fdb){
   iprintf("cnt_writerec: %lld\n", (long long)fdb->cnt_writerec);
   iprintf("cnt_readrec: %lld\n", (long long)fdb->cnt_readrec);
   iprintf("cnt_truncfile: %lld\n", (long long)fdb->cnt_truncfile);
+}
+
+
+/* print system information */
+static void sysprint(void){
+  TCMAP *info = tcsysinfo();
+  if(info){
+    tcmapiterinit(info);
+    const char *kbuf;
+    while((kbuf = tcmapiternext2(info)) != NULL){
+      iprintf("sys_%s: %s\n", kbuf, tcmapiterval2(kbuf));
+    }
+    tcmapdel(info);
+  }
 }
 
 
@@ -465,6 +480,7 @@ static int procwrite(const char *path, int tnum, int rnum, int width, int64_t li
   iprintf("record number: %llu\n", (unsigned long long)tcfdbrnum(fdb));
   iprintf("size: %llu\n", (unsigned long long)tcfdbfsiz(fdb));
   mprint(fdb);
+  sysprint();
   if(!tcfdbclose(fdb)){
     eprint(fdb, "tcfdbclose");
     err = true;
@@ -529,6 +545,7 @@ static int procread(const char *path, int tnum, int omode, bool wb, bool rnd){
   iprintf("record number: %llu\n", (unsigned long long)tcfdbrnum(fdb));
   iprintf("size: %llu\n", (unsigned long long)tcfdbfsiz(fdb));
   mprint(fdb);
+  sysprint();
   if(!tcfdbclose(fdb)){
     eprint(fdb, "tcfdbclose");
     err = true;
@@ -591,6 +608,7 @@ static int procremove(const char *path, int tnum, int omode, bool rnd){
   iprintf("record number: %llu\n", (unsigned long long)tcfdbrnum(fdb));
   iprintf("size: %llu\n", (unsigned long long)tcfdbfsiz(fdb));
   mprint(fdb);
+  sysprint();
   if(!tcfdbclose(fdb)){
     eprint(fdb, "tcfdbclose");
     err = true;
@@ -703,6 +721,7 @@ static int procwicked(const char *path, int tnum, int rnum, int omode, bool nc){
   iprintf("record number: %llu\n", (unsigned long long)tcfdbrnum(fdb));
   iprintf("size: %llu\n", (unsigned long long)tcfdbfsiz(fdb));
   mprint(fdb);
+  sysprint();
   if(!tcfdbclose(fdb)){
     eprint(fdb, "tcfdbclose");
     err = true;
@@ -772,6 +791,7 @@ static int proctypical(const char *path, int tnum, int rnum, int width, int64_t 
   iprintf("record number: %llu\n", (unsigned long long)tcfdbrnum(fdb));
   iprintf("size: %llu\n", (unsigned long long)tcfdbfsiz(fdb));
   mprint(fdb);
+  sysprint();
   if(!tcfdbclose(fdb)){
     eprint(fdb, "tcfdbclose");
     err = true;

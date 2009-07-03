@@ -79,6 +79,7 @@ static bool tctdbtranabortimpl(TCTDB *tdb);
 static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type);
 static int64_t tctdbgenuidimpl(TCTDB *tdb, int64_t inc);
 static TCLIST *tctdbqrysearchimpl(TDBQRY *qry);
+static TCMAP *tctdbqryidxfetch(TDBQRY *qry, TDBCOND *cond, TDBIDX *idx);
 static bool tctdbqryonecondmatch(TDBQRY *qry, TDBCOND *cond, const char *pkbuf, int pksiz);
 static bool tctdbqryallcondmatch(TDBQRY *qry, const char *pkbuf, int pksiz);
 static bool tctdbqrycondmatch(int op, const char *expr, int esiz, const char *vbuf, int vsiz);
@@ -2002,6 +2003,8 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
   bool isord = oname != NULL;
   TDBCOND *mcond = NULL;
   TDBIDX *midx = NULL;
+  TDBCOND *ncond = NULL;
+  TDBIDX *nidx = NULL;
   TDBCOND *scond = NULL;
   TDBIDX *sidx = NULL;
   for(int i = 0; i < cnum; i++){
@@ -2016,8 +2019,13 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           case TDBQCSTREQ:
           case TDBQCSTRBW:
           case TDBQCSTROREQ:
-            mcond = cond;
-            midx = idx;
+            if(!mcond){
+              mcond = cond;
+              midx = idx;
+            } else if(!ncond){
+              ncond = cond;
+              nidx = idx;
+            }
             break;
           default:
             if(!scond){
@@ -2036,8 +2044,13 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           case TDBQCNUMLE:
           case TDBQCNUMBT:
           case TDBQCNUMOREQ:
-            mcond = cond;
-            midx = idx;
+            if(!mcond){
+              mcond = cond;
+              midx = idx;
+            } else if(!ncond){
+              ncond = cond;
+              nidx = idx;
+            }
             break;
           default:
             if(!scond){
@@ -2048,7 +2061,6 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           }
           break;
         }
-        if(mcond) break;
       }
     }
   }
@@ -2056,6 +2068,13 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
     res = tclistnew();
     mcond->alive = false;
     acnum--;
+    TCMAP *nmap = NULL;
+    if(ncond){
+      ncond->alive = false;
+      acnum--;
+      nmap = tctdbqryidxfetch(qry, ncond, nidx);
+      max = tclmin(max, tcmaprnum(nmap));
+    }
     const char *expr = mcond->expr;
     int esiz = mcond->esiz;
     TDBCOND *ucond = NULL;
@@ -2072,7 +2091,7 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
     BDBCUR *cur;
     const char *kbuf, *pv;
     char numbuf[TCNUMBUFSIZ];
-    int knum, ksiz, tnum;
+    int knum, ksiz, nsiz, tnum;
     int64_t xnum, lower, upper;
     bool all;
     switch(mcond->op){
@@ -2087,12 +2106,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
         if(!all && max < INT_MAX) tcxstrprintf(hint, "limited matching: %d\n", max);
         for(int i = 0; (all || TCLISTNUM(res) < max) && i < knum; i++){
           TCLISTVAL(kbuf, keys, i, ksiz);
-          if(acnum < 1){
-            TCLISTPUSH(res, kbuf, ksiz);
-          } else if(ucond){
-            if(tctdbqryonecondmatch(qry, ucond, kbuf, ksiz)) TCLISTPUSH(res, kbuf, ksiz);
-          } else if(tctdbqryallcondmatch(qry, kbuf, ksiz)){
-            TCLISTPUSH(res, kbuf, ksiz);
+          if(!nmap || tcmapget(nmap, kbuf, ksiz, &nsiz)){
+            if(acnum < 1){
+              TCLISTPUSH(res, kbuf, ksiz);
+            } else if(ucond){
+              if(tctdbqryonecondmatch(qry, ucond, kbuf, ksiz)) TCLISTPUSH(res, kbuf, ksiz);
+            } else if(tctdbqryallcondmatch(qry, kbuf, ksiz)){
+              TCLISTPUSH(res, kbuf, ksiz);
+            }
           }
         }
         tclistdel(keys);
@@ -2108,12 +2129,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
         if(ksiz >= esiz && !memcmp(kbuf, expr, esiz)){
           int vsiz;
           const char *vbuf = tcbdbcurval3(cur, &vsiz);
-          if(acnum < 1){
-            TCLISTPUSH(res, vbuf, vsiz);
-          } else if(ucond){
-            if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
-          } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
-            TCLISTPUSH(res, vbuf, vsiz);
+          if(!nmap || tcmapget(nmap, vbuf, vsiz, &nsiz)){
+            if(acnum < 1){
+              TCLISTPUSH(res, vbuf, vsiz);
+            } else if(ucond){
+              if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
+            } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
+              TCLISTPUSH(res, vbuf, vsiz);
+            }
           }
         } else {
           break;
@@ -2154,12 +2177,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           knum = TCLISTNUM(keys);
           for(int j = 0; (all || TCLISTNUM(res) < max) && j < knum; j++){
             TCLISTVAL(kbuf, keys, j, ksiz);
-            if(acnum < 1){
-              TCLISTPUSH(res, kbuf, ksiz);
-            } else if(ucond){
-              if(tctdbqryonecondmatch(qry, ucond, kbuf, ksiz)) TCLISTPUSH(res, kbuf, ksiz);
-            } else if(tctdbqryallcondmatch(qry, kbuf, ksiz)){
-              TCLISTPUSH(res, kbuf, ksiz);
+            if(!nmap || tcmapget(nmap, kbuf, ksiz, &nsiz)){
+              if(acnum < 1){
+                TCLISTPUSH(res, kbuf, ksiz);
+              } else if(ucond){
+                if(tctdbqryonecondmatch(qry, ucond, kbuf, ksiz)) TCLISTPUSH(res, kbuf, ksiz);
+              } else if(tctdbqryallcondmatch(qry, kbuf, ksiz)){
+                TCLISTPUSH(res, kbuf, ksiz);
+              }
             }
           }
           tclistdel(keys);
@@ -2180,12 +2205,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
         if(tcatoi(kbuf) == xnum){
           int vsiz;
           const char *vbuf = tcbdbcurval3(cur, &vsiz);
-          if(acnum < 1){
-            TCLISTPUSH(res, vbuf, vsiz);
-          } else if(ucond){
-            if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
-          } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
-            TCLISTPUSH(res, vbuf, vsiz);
+          if(!nmap || tcmapget(nmap, vbuf, vsiz, &nsiz)){
+            if(acnum < 1){
+              TCLISTPUSH(res, vbuf, vsiz);
+            } else if(ucond){
+              if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
+            } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
+              TCLISTPUSH(res, vbuf, vsiz);
+            }
           }
         } else {
           break;
@@ -2216,12 +2243,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           if(mcond->op == TDBQCNUMGE || tcatoi(kbuf) > xnum){
             int vsiz;
             const char *vbuf = tcbdbcurval3(cur, &vsiz);
-            if(acnum < 1){
-              TCLISTPUSH(res, vbuf, vsiz);
-            } else if(ucond){
-              if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
-            } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
-              TCLISTPUSH(res, vbuf, vsiz);
+            if(!nmap || tcmapget(nmap, vbuf, vsiz, &nsiz)){
+              if(acnum < 1){
+                TCLISTPUSH(res, vbuf, vsiz);
+              } else if(ucond){
+                if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
+              } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
+                TCLISTPUSH(res, vbuf, vsiz);
+              }
             }
           }
           tcbdbcurprev(cur);
@@ -2240,12 +2269,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           if(mcond->op == TDBQCNUMGE || tcatoi(kbuf) > xnum){
             int vsiz;
             const char *vbuf = tcbdbcurval3(cur, &vsiz);
-            if(acnum < 1){
-              TCLISTPUSH(res, vbuf, vsiz);
-            } else if(ucond){
-              if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
-            } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
-              TCLISTPUSH(res, vbuf, vsiz);
+            if(!nmap || tcmapget(nmap, vbuf, vsiz, &nsiz)){
+              if(acnum < 1){
+                TCLISTPUSH(res, vbuf, vsiz);
+              } else if(ucond){
+                if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
+              } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
+                TCLISTPUSH(res, vbuf, vsiz);
+              }
             }
           }
           tcbdbcurnext(cur);
@@ -2268,12 +2299,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           if(mcond->op == TDBQCNUMLE || tcatoi(kbuf) < xnum){
             int vsiz;
             const char *vbuf = tcbdbcurval3(cur, &vsiz);
-            if(acnum < 1){
-              TCLISTPUSH(res, vbuf, vsiz);
-            } else if(ucond){
-              if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
-            } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
-              TCLISTPUSH(res, vbuf, vsiz);
+            if(!nmap || tcmapget(nmap, vbuf, vsiz, &nsiz)){
+              if(acnum < 1){
+                TCLISTPUSH(res, vbuf, vsiz);
+              } else if(ucond){
+                if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
+              } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
+                TCLISTPUSH(res, vbuf, vsiz);
+              }
             }
           }
           tcbdbcurnext(cur);
@@ -2292,12 +2325,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           if(mcond->op == TDBQCNUMLE || tcatoi(kbuf) < xnum){
             int vsiz;
             const char *vbuf = tcbdbcurval3(cur, &vsiz);
-            if(acnum < 1){
-              TCLISTPUSH(res, vbuf, vsiz);
-            } else if(ucond){
-              if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
-            } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
-              TCLISTPUSH(res, vbuf, vsiz);
+            if(!nmap || tcmapget(nmap, vbuf, vsiz, &nsiz)){
+              if(acnum < 1){
+                TCLISTPUSH(res, vbuf, vsiz);
+              } else if(ucond){
+                if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
+              } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
+                TCLISTPUSH(res, vbuf, vsiz);
+              }
             }
           }
           tcbdbcurprev(cur);
@@ -2337,12 +2372,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
         if(tcatoi(kbuf) > upper) break;
         int vsiz;
         const char *vbuf = tcbdbcurval3(cur, &vsiz);
-        if(acnum < 1){
-          TCLISTPUSH(res, vbuf, vsiz);
-        } else if(ucond){
-          if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
-        } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
-          TCLISTPUSH(res, vbuf, vsiz);
+        if(!nmap || tcmapget(nmap, vbuf, vsiz, &nsiz)){
+          if(acnum < 1){
+            TCLISTPUSH(res, vbuf, vsiz);
+          } else if(ucond){
+            if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
+          } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
+            TCLISTPUSH(res, vbuf, vsiz);
+          }
         }
         tcbdbcurnext(cur);
       }
@@ -2383,12 +2420,14 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
           if(tcatoi(kbuf) == xnum){
             int vsiz;
             const char *vbuf = tcbdbcurval3(cur, &vsiz);
-            if(acnum < 1){
-              TCLISTPUSH(res, vbuf, vsiz);
-            } else if(ucond){
-              if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
-            } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
-              TCLISTPUSH(res, vbuf, vsiz);
+            if(!nmap || tcmapget(nmap, vbuf, vsiz, &nsiz)){
+              if(acnum < 1){
+                TCLISTPUSH(res, vbuf, vsiz);
+              } else if(ucond){
+                if(tctdbqryonecondmatch(qry, ucond, vbuf, vsiz)) TCLISTPUSH(res, vbuf, vsiz);
+              } else if(tctdbqryallcondmatch(qry, vbuf, vsiz)){
+                TCLISTPUSH(res, vbuf, vsiz);
+              }
             }
           } else {
             break;
@@ -2400,6 +2439,7 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
       tcbdbcurdel(cur);
       break;
     }
+    if(nmap) tcmapdel(nmap);
   }
   if(!res && scond){
     res = tclistnew();
@@ -2770,6 +2810,192 @@ static TCLIST *tctdbqrysearchimpl(TDBQRY *qry){
   }
   qry->count = TCLISTNUM(res);
   return res;
+}
+
+
+/* Fetch record keys from an index matching to a condition.
+   `qry' specifies the query object.
+   `cond' specifies a condition object.
+   `idx' specifies an index object.
+   The return value is a map object containing primary keys of the corresponding records. */
+static TCMAP *tctdbqryidxfetch(TDBQRY *qry, TDBCOND *cond, TDBIDX *idx){
+  assert(qry && cond && idx);
+  TCTDB *tdb = qry->tdb;
+  TCHDB *hdb = tdb->hdb;
+  TCXSTR *hint = qry->hint;
+  const char *expr = cond->expr;
+  int esiz = cond->esiz;
+  TCMAP *nmap = tcmapnew2(tclmin(TDBDEFBNUM, tchdbrnum(hdb)) / 4 + 1);
+  TCLIST *keys, *tokens;
+  BDBCUR *cur;
+  const char *kbuf, *pv;
+  char numbuf[TCNUMBUFSIZ];
+  int knum, ksiz, tnum;
+  int64_t xnum, lower, upper;
+  switch(cond->op){
+  case TDBQCSTREQ:
+    tcxstrprintf(hint, "using an auxiliary index: \"%s\" one (STREQ)\n", cond->name);
+    keys = tcbdbget4(idx->db, expr, esiz);
+    if(keys){
+      knum = TCLISTNUM(keys);
+      for(int i = 0; i < knum; i++){
+        TCLISTVAL(kbuf, keys, i, ksiz);
+        tcmapputkeep(nmap, kbuf, ksiz, "", 0);
+      }
+      tclistdel(keys);
+    }
+    break;
+  case TDBQCSTRBW:
+    tcxstrprintf(hint, "using an auxiliary index: \"%s\" asc (STRBW)\n", cond->name);
+    cur = tcbdbcurnew(idx->db);
+    tcbdbcurjump(cur, expr, esiz);
+    while((kbuf = tcbdbcurkey3(cur, &ksiz)) != NULL){
+      if(ksiz >= esiz && !memcmp(kbuf, expr, esiz)){
+        int vsiz;
+        const char *vbuf = tcbdbcurval3(cur, &vsiz);
+        tcmapputkeep(nmap, vbuf, vsiz, "", 0);
+      } else {
+        break;
+      }
+      tcbdbcurnext(cur);
+    }
+    tcbdbcurdel(cur);
+    break;
+  case TDBQCSTROREQ:
+    tcxstrprintf(hint, "using an auxiliary index: \"%s\" skip (STROREQ)\n", cond->name);
+    tokens = tcstrsplit(expr, " ,");
+    tnum = TCLISTNUM(tokens);
+    for(int i = 0; i < tnum; i++){
+      const char *token;
+      int tsiz;
+      TCLISTVAL(token, tokens, i, tsiz);
+      keys = tcbdbget4(idx->db, token, tsiz);
+      if(keys){
+        knum = TCLISTNUM(keys);
+        for(int j = 0; j < knum; j++){
+          TCLISTVAL(kbuf, keys, j, ksiz);
+          tcmapputkeep(nmap, kbuf, ksiz, "", 0);
+        }
+        tclistdel(keys);
+      }
+    }
+    tclistdel(tokens);
+    break;
+  case TDBQCNUMEQ:
+    tcxstrprintf(hint, "using an auxiliary index: \"%s\" asc (NUMEQ)\n", cond->name);
+    xnum = tcatoi(expr);
+    cur = tcbdbcurnew(idx->db);
+    ksiz = sprintf(numbuf, "\x01%lld", (long long)xnum);
+    tcbdbcurjump(cur, numbuf, ksiz);
+    while((kbuf = tcbdbcurkey3(cur, &ksiz)) != NULL){
+      if(tcatoi(kbuf) == xnum){
+        int vsiz;
+        const char *vbuf = tcbdbcurval3(cur, &vsiz);
+        tcmapputkeep(nmap, vbuf, vsiz, "", 0);
+      } else {
+        break;
+      }
+      tcbdbcurnext(cur);
+    }
+    tcbdbcurdel(cur);
+    break;
+  case TDBQCNUMGT:
+  case TDBQCNUMGE:
+    tcxstrprintf(hint, "using an auxiliary index: \"%s\" asc (NUMGT/NUMGE)\n", cond->name);
+    xnum = tcatoi(expr);
+    cur = tcbdbcurnew(idx->db);
+    ksiz = sprintf(numbuf, "\x01%lld", (long long)xnum);
+    tcbdbcurjump(cur, numbuf, ksiz);
+    while((kbuf = tcbdbcurkey3(cur, &ksiz)) != NULL){
+      if(cond->op == TDBQCNUMGE || tcatoi(kbuf) > xnum){
+        int vsiz;
+        const char *vbuf = tcbdbcurval3(cur, &vsiz);
+        tcmapputkeep(nmap, vbuf, vsiz, "", 0);
+      }
+      tcbdbcurnext(cur);
+    }
+    tcbdbcurdel(cur);
+    break;
+  case TDBQCNUMLT:
+  case TDBQCNUMLE:
+    tcxstrprintf(hint, "using an auxiliary index: \"%s\" desc (NUMLT/NUMLE)\n", cond->name);
+    xnum = tcatoi(expr);
+    cur = tcbdbcurnew(idx->db);
+    ksiz = sprintf(numbuf, "\x7f%lld", (long long)xnum);
+    tcbdbcurjumpback(cur, numbuf, ksiz);
+    while((kbuf = tcbdbcurkey3(cur, &ksiz)) != NULL){
+      if(cond->op == TDBQCNUMLE || tcatoi(kbuf) < xnum){
+        int vsiz;
+        const char *vbuf = tcbdbcurval3(cur, &vsiz);
+        tcmapputkeep(nmap, vbuf, vsiz, "", 0);
+      }
+      tcbdbcurprev(cur);
+    }
+    tcbdbcurdel(cur);
+    break;
+  case TDBQCNUMBT:
+    tcxstrprintf(hint, "using an auxiliary index: \"%s\" asc (NUMBT)\n", cond->name);
+    xnum = tcatoi(expr);
+    while(*expr == ' ' || *expr == ','){
+      expr++;
+    }
+    pv = expr;
+    while(*pv != '\0' && *pv != ' ' && *pv != ','){
+      pv++;
+    }
+    if(*pv != ' ' && *pv != ',') pv = " ";
+    pv++;
+    while(*pv == ' ' || *pv == ','){
+      pv++;
+    }
+    lower = tcatoi(expr);
+    upper = tcatoi(pv);
+    if(lower > upper){
+      int64_t swap = lower;
+      lower = upper;
+      upper = swap;
+    }
+    cur = tcbdbcurnew(idx->db);
+    ksiz = sprintf(numbuf, "\x01%lld", (long long)lower);
+    tcbdbcurjump(cur, numbuf, ksiz);
+    while((kbuf = tcbdbcurkey3(cur, &ksiz)) != NULL){
+      if(tcatoi(kbuf) > upper) break;
+      int vsiz;
+      const char *vbuf = tcbdbcurval3(cur, &vsiz);
+      tcmapputkeep(nmap, vbuf, vsiz, "", 0);
+      tcbdbcurnext(cur);
+    }
+    tcbdbcurdel(cur);
+    break;
+  case TDBQCNUMOREQ:
+    tcxstrprintf(hint, "using an auxiliary index: \"%s\" skip (NUMOREQ)\n", cond->name);
+    cur = tcbdbcurnew(idx->db);
+    tokens = tcstrsplit(expr, " ,");
+    tnum = TCLISTNUM(tokens);
+    for(int i = 0; i < tnum; i++){
+      const char *token;
+      int tsiz;
+      TCLISTVAL(token, tokens, i, tsiz);
+      xnum = tcatoi(token);
+      ksiz = sprintf(numbuf, "\x01%lld", (long long)xnum);
+      tcbdbcurjump(cur, numbuf, ksiz);
+      while((kbuf = tcbdbcurkey3(cur, &ksiz)) != NULL){
+        if(tcatoi(kbuf) == xnum){
+          int vsiz;
+          const char *vbuf = tcbdbcurval3(cur, &vsiz);
+          tcmapputkeep(nmap, vbuf, vsiz, "", 0);
+        } else {
+          break;
+        }
+        tcbdbcurnext(cur);
+      }
+    }
+    tclistdel(tokens);
+    tcbdbcurdel(cur);
+    break;
+  }
+  tcxstrprintf(hint, "auxiliary result set size: %lld\n", (long long)tcmaprnum(nmap));
+  return nmap;
 }
 
 

@@ -938,10 +938,12 @@ void tclistinvert(TCLIST *list){
  *************************************************************************************************/
 
 
-#define TCMAPBNUM      4093              // allocation unit number of a map
+#define TCMAPKMAXSIZ   0xfffff           // maximum size of each key
+#define TCMAPDEFBNUM   4093              // default bucket number
 #define TCMAPZMMINSIZ  131072            // minimum memory size to use nullified region
 #define TCMAPCSUNIT    52                // small allocation unit size of map concatenation
 #define TCMAPCBUNIT    252               // big allocation unit size of map concatenation
+#define TCMAPTINYBNUM  31                // bucket number of a tiny map
 
 /* get the first hash value */
 #define TCMAPHASH1(TC_res, TC_kbuf, TC_ksiz) \
@@ -970,7 +972,7 @@ void tclistinvert(TCLIST *list){
 
 /* Create a map object. */
 TCMAP *tcmapnew(void){
-  return tcmapnew2(TCMAPBNUM);
+  return tcmapnew2(TCMAPDEFBNUM);
 }
 
 
@@ -998,7 +1000,7 @@ TCMAP *tcmapnew2(uint32_t bnum){
 
 /* Create a map object with initial string elements. */
 TCMAP *tcmapnew3(const char *str, ...){
-  TCMAP *map = tcmapnew2(31);
+  TCMAP *map = tcmapnew2(TCMAPTINYBNUM);
   if(str){
     va_list ap;
     va_start(ap, str);
@@ -1021,11 +1023,12 @@ TCMAP *tcmapnew3(const char *str, ...){
 /* Copy a map object. */
 TCMAP *tcmapdup(const TCMAP *map){
   assert(map);
-  TCMAP *nmap = tcmapnew2(tclmax(tclmax(map->bnum, map->rnum), TCMAPBNUM));
+  TCMAP *nmap = tcmapnew2(tclmax(tclmax(map->bnum, map->rnum), TCMAPDEFBNUM));
   TCMAPREC *rec = map->first;
   while(rec){
     char *dbuf = (char *)rec + sizeof(*rec);
-    tcmapput(nmap, dbuf, rec->ksiz, dbuf + rec->ksiz + TCALIGNPAD(rec->ksiz), rec->vsiz);
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    tcmapput(nmap, dbuf, rksiz, dbuf + rksiz + TCALIGNPAD(rksiz), rec->vsiz);
     rec = rec->next;
   }
   return nmap;
@@ -1053,22 +1056,26 @@ void tcmapdel(TCMAP *map){
 /* Store a record into a map object. */
 void tcmapput(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int vsiz){
   assert(map && kbuf && ksiz >= 0 && vbuf && vsiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1104,11 +1111,10 @@ void tcmapput(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int vsiz
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
   dbuf[ksiz+psiz+vsiz] = '\0';
   rec->vsiz = vsiz;
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -1131,22 +1137,26 @@ void tcmapput2(TCMAP *map, const char *kstr, const char *vstr){
 /* Store a new record into a map object. */
 bool tcmapputkeep(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int vsiz){
   assert(map && kbuf && ksiz >= 0 && vbuf && vsiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1164,11 +1174,10 @@ bool tcmapputkeep(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
   dbuf[ksiz+psiz+vsiz] = '\0';
   rec->vsiz = vsiz;
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -1192,22 +1201,26 @@ bool tcmapputkeep2(TCMAP *map, const char *kstr, const char *vstr){
 /* Concatenate a value at the end of the value of the existing record in a map object. */
 void tcmapputcat(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int vsiz){
   assert(map && kbuf && ksiz >= 0 && vbuf && vsiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1247,11 +1260,10 @@ void tcmapputcat(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int v
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
   dbuf[ksiz+psiz+vsiz] = '\0';
   rec->vsiz = vsiz;
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -1274,22 +1286,26 @@ void tcmapputcat2(TCMAP *map, const char *kstr, const char *vstr){
 /* Remove a record of a map object. */
 bool tcmapout(TCMAP *map, const void *kbuf, int ksiz){
   assert(map && kbuf && ksiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1298,7 +1314,7 @@ bool tcmapout(TCMAP *map, const void *kbuf, int ksiz){
         rec = rec->right;
       } else {
         map->rnum--;
-        map->msiz -= rec->ksiz + rec->vsiz;
+        map->msiz -= rksiz + rec->vsiz;
         if(rec->prev) rec->prev->next = rec->next;
         if(rec->next) rec->next->prev = rec->prev;
         if(rec == map->first) map->first = rec->next;
@@ -1337,25 +1353,29 @@ bool tcmapout2(TCMAP *map, const char *kstr){
 /* Retrieve a record in a map object. */
 const void *tcmapget(const TCMAP *map, const void *kbuf, int ksiz, int *sp){
   assert(map && kbuf && ksiz >= 0 && sp);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   TCMAPREC *rec = map->buckets[hash%map->bnum];
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         rec = rec->left;
       } else if(kcmp > 0){
         rec = rec->right;
       } else {
         *sp = rec->vsiz;
-        return dbuf + rec->ksiz + TCALIGNPAD(rec->ksiz);
+        return dbuf + rksiz + TCALIGNPAD(rksiz);
       }
     }
   }
@@ -1367,24 +1387,28 @@ const void *tcmapget(const TCMAP *map, const void *kbuf, int ksiz, int *sp){
 const char *tcmapget2(const TCMAP *map, const char *kstr){
   assert(map && kstr);
   int ksiz = strlen(kstr);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kstr, ksiz);
   TCMAPREC *rec = map->buckets[hash%map->bnum];
   TCMAPHASH2(hash, kstr, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kstr, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kstr, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         rec = rec->left;
       } else if(kcmp > 0){
         rec = rec->right;
       } else {
-        return dbuf + rec->ksiz + TCALIGNPAD(rec->ksiz);
+        return dbuf + rksiz + TCALIGNPAD(rksiz);
       }
     }
   }
@@ -1395,18 +1419,22 @@ const char *tcmapget2(const TCMAP *map, const char *kstr){
 /* Move a record to the edge of a map object. */
 bool tcmapmove(TCMAP *map, const void *kbuf, int ksiz, bool head){
   assert(map && kbuf && ksiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   TCMAPREC *rec = map->buckets[hash%map->bnum];
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         rec = rec->left;
       } else if(kcmp > 0){
@@ -1460,7 +1488,7 @@ const void *tcmapiternext(TCMAP *map, int *sp){
   if(!map->cur) return NULL;
   rec = map->cur;
   map->cur = rec->next;
-  *sp = rec->ksiz;
+  *sp = rec->ksiz & TCMAPKMAXSIZ;
   return (char *)rec + sizeof(*rec);
 }
 
@@ -1498,7 +1526,7 @@ TCLIST *tcmapkeys(const TCMAP *map){
   TCMAPREC *rec = map->first;
   while(rec){
     char *dbuf = (char *)rec + sizeof(*rec);
-    TCLISTPUSH(list, dbuf, rec->ksiz);
+    TCLISTPUSH(list, dbuf, rec->ksiz & TCMAPKMAXSIZ);
     rec = rec->next;
   }
   return list;
@@ -1512,7 +1540,8 @@ TCLIST *tcmapvals(const TCMAP *map){
   TCMAPREC *rec = map->first;
   while(rec){
     char *dbuf = (char *)rec + sizeof(*rec);
-    TCLISTPUSH(list, dbuf + rec->ksiz + TCALIGNPAD(rec->ksiz), rec->vsiz);
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    TCLISTPUSH(list, dbuf + rksiz + TCALIGNPAD(rksiz), rec->vsiz);
     rec = rec->next;
   }
   return list;
@@ -1522,22 +1551,26 @@ TCLIST *tcmapvals(const TCMAP *map){
 /* Add an integer to a record in a map object. */
 int tcmapaddint(TCMAP *map, const void *kbuf, int ksiz, int num){
   assert(map && kbuf && ksiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1556,11 +1589,10 @@ int tcmapaddint(TCMAP *map, const void *kbuf, int ksiz, int num){
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   memcpy(dbuf + ksiz + psiz, &num, sizeof(num));
   dbuf[ksiz+psiz+sizeof(num)] = '\0';
   rec->vsiz = sizeof(num);
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -1577,22 +1609,26 @@ int tcmapaddint(TCMAP *map, const void *kbuf, int ksiz, int num){
 /* Add a real number to a record in a map object. */
 double tcmapadddouble(TCMAP *map, const void *kbuf, int ksiz, double num){
   assert(map && kbuf && ksiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1611,11 +1647,10 @@ double tcmapadddouble(TCMAP *map, const void *kbuf, int ksiz, double num){
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   memcpy(dbuf + ksiz + psiz, &num, sizeof(num));
   dbuf[ksiz+psiz+sizeof(num)] = '\0';
   rec->vsiz = sizeof(num);
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -1670,7 +1705,7 @@ void *tcmapdump(const TCMAP *map, int *sp){
   int tsiz = 0;
   TCMAPREC *rec = map->first;
   while(rec){
-    tsiz += rec->ksiz + rec->vsiz + sizeof(int) * 2;
+    tsiz += (rec->ksiz & TCMAPKMAXSIZ) + rec->vsiz + sizeof(int) * 2;
     rec = rec->next;
   }
   char *buf;
@@ -1679,7 +1714,7 @@ void *tcmapdump(const TCMAP *map, int *sp){
   rec = map->first;
   while(rec){
     const char *kbuf = (char *)rec + sizeof(*rec);
-    int ksiz = rec->ksiz;
+    int ksiz = rec->ksiz & TCMAPKMAXSIZ;
     const char *vbuf = kbuf + ksiz + TCALIGNPAD(ksiz);
     int vsiz = rec->vsiz;
     int step;
@@ -1701,7 +1736,7 @@ void *tcmapdump(const TCMAP *map, int *sp){
 /* Create a map object from a serialized byte array. */
 TCMAP *tcmapload(const void *ptr, int size){
   assert(ptr && size >= 0);
-  TCMAP *map = tcmapnew2(tclmin(size / 6 + 1, TCMAPBNUM));
+  TCMAP *map = tcmapnew2(tclmin(size / 6 + 1, TCMAPDEFBNUM));
   const char *rp = ptr;
   const char *ep = (char *)ptr + size;
   while(rp < ep){
@@ -1728,22 +1763,26 @@ TCMAP *tcmapload(const void *ptr, int size){
 /* Store a record and make it semivolatile in a map object. */
 void tcmapput3(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsiz){
   assert(map && kbuf && ksiz >= 0 && vbuf && vsiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1788,11 +1827,10 @@ void tcmapput3(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsi
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
   dbuf[ksiz+psiz+vsiz] = '\0';
   rec->vsiz = vsiz;
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -1809,22 +1847,26 @@ void tcmapput3(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsi
 void tcmapput4(TCMAP *map, const void *kbuf, int ksiz,
                const void *fvbuf, int fvsiz, const void *lvbuf, int lvsiz){
   assert(map && kbuf && ksiz >= 0 && fvbuf && fvsiz >= 0 && lvbuf && lvsiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1864,13 +1906,12 @@ void tcmapput4(TCMAP *map, const void *kbuf, int ksiz,
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   ksiz += psiz;
   memcpy(dbuf + ksiz, fvbuf, fvsiz);
   memcpy(dbuf + ksiz + fvsiz, lvbuf, lvsiz);
   dbuf[ksiz+vsiz] = '\0';
   rec->vsiz = vsiz;
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -1886,22 +1927,26 @@ void tcmapput4(TCMAP *map, const void *kbuf, int ksiz,
 /* Concatenate a value at the existing record and make it semivolatile in a map object. */
 void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int vsiz){
   assert(map && kbuf && ksiz >= 0 && vbuf && vsiz >= 0);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1950,11 +1995,10 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
   dbuf[ksiz+psiz+vsiz] = '\0';
   rec->vsiz = vsiz;
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -1971,22 +2015,26 @@ void tcmapputcat3(TCMAP *map, const void *kbuf, int ksiz, const void *vbuf, int 
 bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
   assert(map && kbuf && ksiz >= 0 && proc);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   int bidx = hash % map->bnum;
   TCMAPREC *rec = map->buckets[bidx];
   TCMAPREC **entp = map->buckets + bidx;
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       entp = &(rec->left);
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       entp = &(rec->right);
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         entp = &(rec->left);
         rec = rec->left;
@@ -1999,7 +2047,7 @@ bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int 
         char *nvbuf = proc(dbuf + ksiz + psiz, rec->vsiz, &nvsiz, op);
         if(nvbuf == (void *)-1){
           map->rnum--;
-          map->msiz -= rec->ksiz + rec->vsiz;
+          map->msiz -= rksiz + rec->vsiz;
           if(rec->prev) rec->prev->next = rec->next;
           if(rec->next) rec->next->prev = rec->prev;
           if(rec == map->first) map->first = rec->next;
@@ -2055,11 +2103,10 @@ bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int 
   char *dbuf = (char *)rec + sizeof(*rec);
   memcpy(dbuf, kbuf, ksiz);
   dbuf[ksiz] = '\0';
-  rec->ksiz = ksiz;
+  rec->ksiz = ksiz | hash;
   memcpy(dbuf + ksiz + psiz, vbuf, vsiz);
   dbuf[ksiz+psiz+vsiz] = '\0';
   rec->vsiz = vsiz;
-  rec->hash = hash;
   rec->left = NULL;
   rec->right = NULL;
   rec->prev = map->last;
@@ -2076,18 +2123,22 @@ bool tcmapputproc(TCMAP *map, const void *kbuf, int ksiz, const char *vbuf, int 
 /* Retrieve a semivolatile record in a map object. */
 const void *tcmapget3(TCMAP *map, const void *kbuf, int ksiz, int *sp){
   assert(map && kbuf && ksiz >= 0 && sp);
-  unsigned int hash;
+  if(ksiz > TCMAPKMAXSIZ) ksiz = TCMAPKMAXSIZ;
+  uint32_t hash;
   TCMAPHASH1(hash, kbuf, ksiz);
   TCMAPREC *rec = map->buckets[hash%map->bnum];
   TCMAPHASH2(hash, kbuf, ksiz);
+  hash &= ~TCMAPKMAXSIZ;
   while(rec){
-    if(hash > rec->hash){
+    uint32_t rhash = rec->ksiz & ~TCMAPKMAXSIZ;
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    if(hash > rhash){
       rec = rec->left;
-    } else if(hash < rec->hash){
+    } else if(hash < rhash){
       rec = rec->right;
     } else {
       char *dbuf = (char *)rec + sizeof(*rec);
-      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rec->ksiz);
+      int kcmp = TCKEYCMP(kbuf, ksiz, dbuf, rksiz);
       if(kcmp < 0){
         rec = rec->left;
       } else if(kcmp > 0){
@@ -2103,7 +2154,7 @@ const void *tcmapget3(TCMAP *map, const void *kbuf, int ksiz, int *sp){
           map->last = rec;
         }
         *sp = rec->vsiz;
-        return dbuf + rec->ksiz + TCALIGNPAD(rec->ksiz);
+        return dbuf + rksiz + TCALIGNPAD(rksiz);
       }
     }
   }
@@ -2115,8 +2166,9 @@ const void *tcmapget3(TCMAP *map, const void *kbuf, int ksiz, int *sp){
 const void *tcmapiterval(const void *kbuf, int *sp){
   assert(kbuf && sp);
   TCMAPREC *rec = (TCMAPREC *)((char *)kbuf - sizeof(*rec));
+  uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
   *sp = rec->vsiz;
-  return (char *)kbuf + rec->ksiz + TCALIGNPAD(rec->ksiz);
+  return (char *)kbuf + rksiz + TCALIGNPAD(rksiz);
 }
 
 
@@ -2124,7 +2176,8 @@ const void *tcmapiterval(const void *kbuf, int *sp){
 const char *tcmapiterval2(const char *kstr){
   assert(kstr);
   TCMAPREC *rec = (TCMAPREC *)(kstr - sizeof(*rec));
-  return kstr + rec->ksiz + TCALIGNPAD(rec->ksiz);
+  uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+  return kstr + rksiz + TCALIGNPAD(rksiz);
 }
 
 
@@ -2152,7 +2205,8 @@ const char **tcmapvals2(const TCMAP *map, int *np){
   int anum = 0;
   TCMAPREC *rec = map->first;
   while(rec){
-    ary[(anum++)] = (char *)rec + sizeof(*rec) + rec->ksiz + TCALIGNPAD(rec->ksiz);
+    uint32_t rksiz = rec->ksiz & TCMAPKMAXSIZ;
+    ary[(anum++)] = (char *)rec + sizeof(*rec) + rksiz + TCALIGNPAD(rksiz);
     rec = rec->next;
   }
   *np = anum;
@@ -3505,7 +3559,7 @@ void *tctreeloadone(const void *ptr, int size, const void *kbuf, int ksiz, int *
 
 
 #define TCMDBMNUM      8                 // number of internal maps
-#define TCMDBBNUM      65536             // allocation unit number of a map
+#define TCMDBDEFBNUM   65536             // default bucket number
 
 /* get the first hash value */
 #define TCMDBHASH(TC_res, TC_kbuf, TC_ksiz) \
@@ -3521,14 +3575,14 @@ void *tctreeloadone(const void *ptr, int size, const void *kbuf, int ksiz, int *
 
 /* Create an on-memory hash database object. */
 TCMDB *tcmdbnew(void){
-  return tcmdbnew2(TCMDBBNUM);
+  return tcmdbnew2(TCMDBDEFBNUM);
 }
 
 
 /* Create an on-memory hash database with specifying the number of the buckets. */
 TCMDB *tcmdbnew2(uint32_t bnum){
   TCMDB *mdb;
-  if(bnum < 1) bnum = TCMDBBNUM;
+  if(bnum < 1) bnum = TCMDBDEFBNUM;
   bnum = bnum / TCMDBMNUM + 17;
   TCMALLOC(mdb, sizeof(*mdb));
   TCMALLOC(mdb->mmtxs, sizeof(pthread_rwlock_t) * TCMDBMNUM);
@@ -4941,27 +4995,50 @@ int64_t tcatoi(const char *str){
 /* Convert a string with a metric prefix to an integer. */
 int64_t tcatoix(const char *str){
   assert(str);
-  char *end;
-  long double val = strtold(str, &end);
-  int inf = isinf(val);
-  if(inf != 0) return inf > 0 ? INT64_MAX : INT64_MIN;
-  if(!isnormal(val)) return 0;
-  if(*end == 'k' || *end == 'K'){
-    val *= 1LL << 10;
-  } else if(*end == 'm' || *end == 'M'){
-    val *= 1LL << 20;
-  } else if(*end == 'g' || *end == 'G'){
-    val *= 1LL << 30;
-  } else if(*end == 't' || *end == 'T'){
-    val *= 1LL << 40;
-  } else if(*end == 'p' || *end == 'P'){
-    val *= 1LL << 50;
-  } else if(*end == 'e' || *end == 'E'){
-    val *= 1LL << 60;
+  while(*str > '\0' && *str <= ' '){
+    str++;
   }
-  if(val > INT64_MAX) return INT64_MAX;
-  if(val < INT64_MIN) return INT64_MIN;
-  return val;
+  int sign = 1;
+  if(*str == '-'){
+    str++;
+    sign = -1;
+  }
+  long double num = 0;
+  while(*str != '\0'){
+    if(*str < '0' || *str > '9') break;
+    num = num * 10 + *str - '0';
+    str++;
+  }
+  if(*str == '.'){
+    str++;
+    long double base = 10;
+    while(*str != '\0'){
+      if(*str < '0' || *str > '9') break;
+      num += (*str - '0') / base;
+      str++;
+      base *= 10;
+    }
+  }
+  num *= sign;
+  while(*str > '\0' && *str <= ' '){
+    str++;
+  }
+  if(*str == 'k' || *str == 'K'){
+    num *= 1LL << 10;
+  } else if(*str == 'm' || *str == 'M'){
+    num *= 1LL << 20;
+  } else if(*str == 'g' || *str == 'G'){
+    num *= 1LL << 30;
+  } else if(*str == 't' || *str == 'T'){
+    num *= 1LL << 40;
+  } else if(*str == 'p' || *str == 'P'){
+    num *= 1LL << 50;
+  } else if(*str == 'e' || *str == 'E'){
+    num *= 1LL << 60;
+  }
+  if(num > INT64_MAX) return INT64_MAX;
+  if(num < INT64_MIN) return INT64_MIN;
+  return num;
 }
 
 
@@ -4972,34 +5049,33 @@ double tcatof(const char *str){
     str++;
   }
   int sign = 1;
-  int64_t inum = 0;
   if(*str == '-'){
     str++;
     sign = -1;
   }
   if(tcstrifwm(str, "inf")) return HUGE_VAL * sign;
   if(tcstrifwm(str, "nan")) return nan("");
+  long double num = 0;
   while(*str != '\0'){
     if(*str < '0' || *str > '9') break;
-    inum = inum * 10 + *str - '0';
+    num = num * 10 + *str - '0';
     str++;
   }
-  long double dnum = inum;
   if(*str == '.'){
     str++;
     long double base = 10;
     while(*str != '\0'){
       if(*str < '0' || *str > '9') break;
-      dnum += (*str - '0') / base;
+      num += (*str - '0') / base;
       str++;
       base *= 10;
     }
   }
   if(*str == 'e' || *str == 'E'){
     str++;
-    dnum *= pow(10, tcatoi(str));
+    num *= pow(10, tcatoi(str));
   }
-  return dnum * sign;
+  return num * sign;
 }
 
 
@@ -5605,7 +5681,7 @@ TCLIST *tcstrsplit2(const void *ptr, int size){
 /* Create a map object by splitting a string. */
 TCMAP *tcstrsplit3(const char *str, const char *delims){
   assert(str && delims);
-  TCMAP *map = tcmapnew2(31);
+  TCMAP *map = tcmapnew2(TCMAPTINYBNUM);
   const char *kbuf = NULL;
   int ksiz = 0;
   while(true){
@@ -5630,7 +5706,7 @@ TCMAP *tcstrsplit3(const char *str, const char *delims){
 /* Create a map object by splitting a region by zero code. */
 TCMAP *tcstrsplit4(const void *ptr, int size){
   assert(ptr && size >= 0);
-  TCMAP *map = tcmapnew2(tclmin(size / 6 + 1, TCMAPBNUM));
+  TCMAP *map = tcmapnew2(tclmin(size / 6 + 1, TCMAPDEFBNUM));
   const char *kbuf = NULL;
   int ksiz = 0;
   while(size >= 0){
@@ -5772,6 +5848,42 @@ bool tcsleep(double sec){
     req = rem;
   }
   return true;
+}
+
+
+/* Get the current system information. */
+TCMAP *tcsysinfo(void){
+#if defined(_SYS_LINUX_)
+  char path[1024];
+  sprintf(path, "/proc/%d/status", (int)getpid());
+  TCLIST *lines = tcreadfilelines(path);
+  if(!lines) return NULL;
+  int ln = tclistnum(lines);
+  TCMAP *info = tcmapnew2(ln + 1);
+  char numbuf[TCNUMBUFSIZ];
+  for(int i = 0; i < ln; i++){
+    const char *line = TCLISTVALPTR(lines, i);
+    const char *rp = strchr(line, ':');
+    if(!rp) continue;
+    rp++;
+    while(*rp > '\0' && *rp <= ' '){
+      rp++;
+    }
+    if(tcstrifwm(line, "VmSize:")){
+      int64_t size = tcatoix(rp);
+      sprintf(numbuf, "%lld", (long long)size);
+      tcmapput2(info, "size", numbuf);
+    } else if(tcstrifwm(line, "VmRSS:")){
+      int64_t size = tcatoix(rp);
+      sprintf(numbuf, "%lld", (long long)size);
+      tcmapput2(info, "rss", numbuf);
+    }
+  }
+  tclistdel(lines);
+  return info;
+#else
+  return NULL;
+#endif
 }
 
 
@@ -6079,7 +6191,6 @@ int tcsystem(const char **args, int anum){
  *************************************************************************************************/
 
 
-#define TCURLELBNUM    31                // bucket number of URL elements
 #define TCENCBUFSIZ    32                // size of a buffer for encoding name
 #define TCXMLATBNUM    31                // bucket number of XML attributes
 
@@ -6156,7 +6267,7 @@ char *tcurldecode(const char *str, int *sp){
 /* Break up a URL into elements. */
 TCMAP *tcurlbreak(const char *str){
   assert(str);
-  TCMAP *map = tcmapnew2(TCURLELBNUM);
+  TCMAP *map = tcmapnew2(TCMAPTINYBNUM);
   char *trim = tcstrdup(str);
   tcstrtrim(trim);
   const char *rp = trim;

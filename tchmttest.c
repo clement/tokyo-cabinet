@@ -79,6 +79,7 @@ static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCHDB *hdb, const char *func);
 static void mprint(TCHDB *hdb);
+static void sysprint(void);
 static int myrand(int range);
 static int myrandnd(int range);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
@@ -201,6 +202,20 @@ static void mprint(TCHDB *hdb){
   iprintf("cnt_deferdrp: %lld\n", (long long)hdb->cnt_deferdrp);
   iprintf("cnt_flushdrp: %lld\n", (long long)hdb->cnt_flushdrp);
   iprintf("cnt_adjrecc: %lld\n", (long long)hdb->cnt_adjrecc);
+}
+
+
+/* print system information */
+static void sysprint(void){
+  TCMAP *info = tcsysinfo();
+  if(info){
+    tcmapiterinit(info);
+    const char *kbuf;
+    while((kbuf = tcmapiternext2(info)) != NULL){
+      iprintf("sys_%s: %s\n", kbuf, tcmapiterval2(kbuf));
+    }
+    tcmapdel(info);
+  }
 }
 
 
@@ -641,6 +656,7 @@ static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, i
   iprintf("record number: %llu\n", (unsigned long long)tchdbrnum(hdb));
   iprintf("size: %llu\n", (unsigned long long)tchdbfsiz(hdb));
   mprint(hdb);
+  sysprint();
   if(!tchdbclose(hdb)){
     eprint(hdb, "tchdbclose");
     err = true;
@@ -718,6 +734,7 @@ static int procread(const char *path, int tnum, int rcnum, int xmsiz, int omode,
   iprintf("record number: %llu\n", (unsigned long long)tchdbrnum(hdb));
   iprintf("size: %llu\n", (unsigned long long)tchdbfsiz(hdb));
   mprint(hdb);
+  sysprint();
   if(!tchdbclose(hdb)){
     eprint(hdb, "tchdbclose");
     err = true;
@@ -792,6 +809,7 @@ static int procremove(const char *path, int tnum, int rcnum, int xmsiz, int omod
   iprintf("record number: %llu\n", (unsigned long long)tchdbrnum(hdb));
   iprintf("size: %llu\n", (unsigned long long)tchdbfsiz(hdb));
   mprint(hdb);
+  sysprint();
   if(!tchdbclose(hdb)){
     eprint(hdb, "tchdbclose");
     err = true;
@@ -915,6 +933,7 @@ static int procwicked(const char *path, int tnum, int rnum, int opts, int omode,
   iprintf("record number: %llu\n", (unsigned long long)tchdbrnum(hdb));
   iprintf("size: %llu\n", (unsigned long long)tchdbfsiz(hdb));
   mprint(hdb);
+  sysprint();
   if(!tchdbclose(hdb)){
     eprint(hdb, "tchdbclose");
     err = true;
@@ -996,6 +1015,7 @@ static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow,
   iprintf("record number: %llu\n", (unsigned long long)tchdbrnum(hdb));
   iprintf("size: %llu\n", (unsigned long long)tchdbfsiz(hdb));
   mprint(hdb);
+  sysprint();
   if(!tchdbclose(hdb)){
     eprint(hdb, "tchdbclose");
     err = true;
@@ -1069,6 +1089,7 @@ static int procrace(const char *path, int tnum, int rnum, int bnum, int apow, in
   iprintf("record number: %llu\n", (unsigned long long)tchdbrnum(hdb));
   iprintf("size: %llu\n", (unsigned long long)tchdbfsiz(hdb));
   mprint(hdb);
+  sysprint();
   if(!tchdbclose(hdb)){
     eprint(hdb, "tchdbclose");
     err = true;

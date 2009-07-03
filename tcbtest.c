@@ -34,6 +34,7 @@ static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCBDB *bdb, const char *func);
 static void mprint(TCBDB *bdb);
+static void sysprint(void);
 static int myrand(int range);
 static void *pdprocfunc(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
@@ -174,6 +175,20 @@ static void mprint(TCBDB *bdb){
   iprintf("cnt_deferdrp: %lld\n", (long long)bdb->hdb->cnt_deferdrp);
   iprintf("cnt_flushdrp: %lld\n", (long long)bdb->hdb->cnt_flushdrp);
   iprintf("cnt_adjrecc: %lld\n", (long long)bdb->hdb->cnt_adjrecc);
+}
+
+
+/* print system information */
+static void sysprint(void){
+  TCMAP *info = tcsysinfo();
+  if(info){
+    tcmapiterinit(info);
+    const char *kbuf;
+    while((kbuf = tcmapiternext2(info)) != NULL){
+      iprintf("sys_%s: %s\n", kbuf, tcmapiterval2(kbuf));
+    }
+    tcmapdel(info);
+  }
 }
 
 
@@ -793,6 +808,7 @@ static int procwrite(const char *path, int rnum, int lmemb, int nmemb, int bnum,
   iprintf("record number: %llu\n", (unsigned long long)tcbdbrnum(bdb));
   iprintf("size: %llu\n", (unsigned long long)tcbdbfsiz(bdb));
   mprint(bdb);
+  sysprint();
   if(!tcbdbclose(bdb)){
     eprint(bdb, "tcbdbclose");
     err = true;
@@ -881,6 +897,7 @@ static int procread(const char *path, bool mt, TCCMP cmp, int lcnum, int ncnum, 
   iprintf("record number: %llu\n", (unsigned long long)tcbdbrnum(bdb));
   iprintf("size: %llu\n", (unsigned long long)tcbdbfsiz(bdb));
   mprint(bdb);
+  sysprint();
   if(!tcbdbclose(bdb)){
     eprint(bdb, "tcbdbclose");
     err = true;
@@ -956,6 +973,7 @@ static int procremove(const char *path, bool mt, TCCMP cmp, int lcnum, int ncnum
   iprintf("record number: %llu\n", (unsigned long long)tcbdbrnum(bdb));
   iprintf("size: %llu\n", (unsigned long long)tcbdbfsiz(bdb));
   mprint(bdb);
+  sysprint();
   if(!tcbdbclose(bdb)){
     eprint(bdb, "tcbdbclose");
     err = true;
@@ -1146,6 +1164,7 @@ static int procrcat(const char *path, int rnum,
   iprintf("record number: %llu\n", (unsigned long long)tcbdbrnum(bdb));
   iprintf("size: %llu\n", (unsigned long long)tcbdbfsiz(bdb));
   mprint(bdb);
+  sysprint();
   if(!tcbdbclose(bdb)){
     eprint(bdb, "tcbdbclose");
     err = true;
@@ -1270,6 +1289,7 @@ static int procqueue(const char *path, int rnum, int lmemb, int nmemb, int bnum,
   iprintf("record number: %llu\n", (unsigned long long)tcbdbrnum(bdb));
   iprintf("size: %llu\n", (unsigned long long)tcbdbfsiz(bdb));
   mprint(bdb);
+  sysprint();
   if(!tcbdbclose(bdb)){
     eprint(bdb, "tcbdbclose");
     err = true;
@@ -2081,6 +2101,7 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
   iprintf("record number: %llu\n", (unsigned long long)tcbdbrnum(bdb));
   iprintf("size: %llu\n", (unsigned long long)tcbdbfsiz(bdb));
   mprint(bdb);
+  sysprint();
   if(!tcbdbclose(bdb)){
     eprint(bdb, "tcbdbclose");
     err = true;
@@ -2466,6 +2487,7 @@ static int procwicked(const char *path, int rnum, bool mt, int opts, int omode){
   iprintf("record number: %llu\n", (unsigned long long)tcbdbrnum(bdb));
   iprintf("size: %llu\n", (unsigned long long)tcbdbfsiz(bdb));
   mprint(bdb);
+  sysprint();
   tcmapdel(map);
   if(!tcbdbclose(bdb)){
     eprint(bdb, "tcbdbclose");

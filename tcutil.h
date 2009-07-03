@@ -567,9 +567,8 @@ void tclistinvert(TCLIST *list);
 
 
 typedef struct _TCMAPREC {               /* type of structure for an element of a map */
-  int ksiz;                              /* size of the region of the key */
-  int vsiz;                              /* size of the region of the value */
-  unsigned int hash;                     /* second hash value */
+  uint32_t ksiz;                         /* size of the region of the key */
+  uint32_t vsiz;                         /* size of the region of the value */
   struct _TCMAPREC *left;                /* pointer to the left child */
   struct _TCMAPREC *right;               /* pointer to the right child */
   struct _TCMAPREC *prev;                /* pointer to the previous element */
@@ -973,8 +972,8 @@ void *tcmaploadone(const void *ptr, int size, const void *kbuf, int ksiz, int *s
 
 
 typedef struct _TCTREEREC {              /* type of structure for an element of a tree */
-  int ksiz;                              /* size of the region of the key */
-  int vsiz;                              /* size of the region of the value */
+  uint32_t ksiz;                         /* size of the region of the key */
+  uint32_t vsiz;                         /* size of the region of the value */
   struct _TCTREEREC *left;               /* pointer to the left child */
   struct _TCTREEREC *right;              /* pointer to the right child */
 } TCTREEREC;
@@ -2602,6 +2601,15 @@ void *tcstrjoin4(const TCMAP *map, int *sp);
 bool tcsleep(double sec);
 
 
+/* Get the current system information.
+   The return value is a map object of the current system information or `NULL' on failure.  The
+   key "size" specifies the process size in bytes.  The "rss" specifies the resident set size in
+   bytes.
+   Because the object of the return value is created with the function `tcmapnew', it should be
+   deleted with the function `tcmapdel' when it is no longer in use. */
+TCMAP *tcsysinfo(void);
+
+
 
 /*************************************************************************************************
  * filesystem utilities
@@ -3296,8 +3304,8 @@ typedef struct {                         /* type of structure for a bit stream o
 
 #include <stdio.h>
 
-#define _TC_VERSION    "1.4.16"
-#define _TC_LIBVER     807
+#define _TC_VERSION    "1.4.17"
+#define _TC_LIBVER     808
 #define _TC_FORMATVER  "1.0"
 
 enum {                                   /* enumeration for error codes */

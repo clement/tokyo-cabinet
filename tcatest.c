@@ -32,6 +32,7 @@ static void usage(void);
 static void iprintf(const char *format, ...);
 static void iputchar(int c);
 static void eprint(TCADB *adb, const char *func);
+static void sysprint(void);
 static int myrand(int range);
 static void *pdprocfunccmp(const void *vbuf, int vsiz, int *sp, void *op);
 static bool iterfunc(const void *kbuf, int ksiz, const void *vbuf, int vsiz, void *op);
@@ -118,6 +119,20 @@ static void iputchar(int c){
 static void eprint(TCADB *adb, const char *func){
   const char *path = tcadbpath(adb);
   fprintf(stderr, "%s: %s: %s: error\n", g_progname, path ? path : "-", func);
+}
+
+
+/* print system information */
+static void sysprint(void){
+  TCMAP *info = tcsysinfo();
+  if(info){
+    tcmapiterinit(info);
+    const char *kbuf;
+    while((kbuf = tcmapiternext2(info)) != NULL){
+      iprintf("sys_%s: %s\n", kbuf, tcmapiterval2(kbuf));
+    }
+    tcmapdel(info);
+  }
 }
 
 
@@ -336,6 +351,7 @@ static int procwrite(const char *name, int rnum){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
+  sysprint();
   if(!tcadbclose(adb)){
     eprint(adb, "tcadbclose");
     err = true;
@@ -376,6 +392,7 @@ static int procread(const char *name){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
+  sysprint();
   if(!tcadbclose(adb)){
     eprint(adb, "tcadbclose");
     err = true;
@@ -413,6 +430,7 @@ static int procremove(const char *name){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
+  sysprint();
   if(!tcadbclose(adb)){
     eprint(adb, "tcadbclose");
     err = true;
@@ -451,6 +469,7 @@ static int procrcat(const char *name, int rnum){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
+  sysprint();
   if(!tcadbclose(adb)){
     eprint(adb, "tcadbclose");
     err = true;
@@ -901,6 +920,7 @@ static int procmisc(const char *name, int rnum){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
+  sysprint();
   if(!tcadbclose(adb)){
     eprint(adb, "tcadbclose");
     err = true;
@@ -1089,6 +1109,7 @@ static int procwicked(const char *name, int rnum){
   }
   iprintf("record number: %llu\n", (unsigned long long)tcadbrnum(adb));
   iprintf("size: %llu\n", (unsigned long long)tcadbsize(adb));
+  sysprint();
   tcmapdel(map);
   if(!tcadbclose(adb)){
     eprint(adb, "tcadbclose");
