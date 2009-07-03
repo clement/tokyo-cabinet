@@ -9,17 +9,17 @@ The command `\fBtcbmttest\fR' is a utility for facility test and performance tes
 .PP
 .RS
 .br
-\fBtcbmttest write \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtcbmttest write \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Store records with keys of 8 bytes.  They change as `00000001', `00000002'...
 .RE
 .br
-\fBtcbmttest read \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-wb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB\fR
+\fBtcbmttest read \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-wb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB\fR
 .RS
 Retrieve all records of the database above.
 .RE
 .br
-\fBtcbmttest remove \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB\fR
+\fBtcbmttest remove \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fItnum\fB\fR
 .RS
 Remove all records of the database above.
 .RE
@@ -29,9 +29,14 @@ Remove all records of the database above.
 Perform updating operations selected at random.
 .RE
 .br
-\fBtcbmttest typical \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-nc\fR]\fB \fR[\fB\-rr \fInum\fB\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtcbmttest typical \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-nc\fR]\fB \fR[\fB\-rr \fInum\fB\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Perform typical operations selected at random.
+.RE
+.br
+\fBtcbmttest race \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fIpath\fB \fItnum\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
+.RS
+Perform race condition test.
 .RE
 .RE
 .PP
@@ -48,6 +53,10 @@ Options feature the following.
 .br
 \fB\-tx\fR : enable the option `BDBTEXCODEC'.
 .br
+\fB\-xm \fInum\fR\fR : specify the size of the extra mapped memory.
+.br
+\fB\-df \fInum\fR\fR : specify the unit step number of auto defragmentation.
+.br
 \fB\-nl\fR : enable the option `BDBNOLCK'.
 .br
 \fB\-nb\fR : enable the option `BDBLCKNB'.
@@ -58,7 +67,7 @@ Options feature the following.
 .br
 \fB\-nc\fR : omit the comparison test.
 .br
-\fB\-rr \fInum\fR\fR : specifiy the ratio of reading operation by percentage.
+\fB\-rr \fInum\fR\fR : specify the ratio of reading operation by percentage.
 .br
 .RE
 .PP

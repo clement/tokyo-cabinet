@@ -97,6 +97,7 @@ static int tdbcmpsortkeynumdesc(const TDBSORTKEY *a, const TDBSORTKEY *b);
 static uint16_t tctdbidxhash(const char *pkbuf, int pksiz);
 static bool tctdbidxput(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols);
 static bool tctdbidxout(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols);
+static bool tctdbdefragimpl(TCTDB *tdb, int64_t step);
 static bool tctdbforeachimpl(TCTDB *tdb, TCITER iter, void *op);
 static int tctdbqryprocoutcb(const void *pkbuf, int pksiz, TCMAP *cols, void *op);
 static bool tctdblockmethod(TCTDB *tdb, bool wr);
@@ -213,6 +214,17 @@ bool tctdbsetxmsiz(TCTDB *tdb, int64_t xmsiz){
     return false;
   }
   return tchdbsetxmsiz(tdb->hdb, xmsiz);
+}
+
+
+/* Set the unit step number of auto defragmentation of a table database object. */
+bool tctdbsetdfunit(TCTDB *tdb, int32_t dfunit){
+  assert(tdb);
+  if(tdb->open){
+    tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  return tchdbsetdfunit(tdb->hdb, dfunit);
 }
 
 
@@ -1123,6 +1135,28 @@ bool tctdbsetcodecfunc(TCTDB *tdb, TCCODEC enc, void *encop, TCCODEC dec, void *
 }
 
 
+/* Get the unit step number of auto defragmentation of a table database object. */
+uint32_t tctdbdfunit(TCTDB *tdb){
+  assert(tdb);
+  return tchdbdfunit(tdb->hdb);
+}
+
+
+/* Perform dynamic defragmentation of a table database object. */
+bool tctdbdefrag(TCTDB *tdb, int64_t step){
+  assert(tdb);
+  if(!TDBLOCKMETHOD(tdb, false)) return false;
+  if(!tdb->open || !tdb->wmode){
+    tctdbsetecode(tdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    TDBUNLOCKMETHOD(tdb);
+    return false;
+  }
+  bool rv = tctdbdefragimpl(tdb, step);
+  TDBUNLOCKMETHOD(tdb);
+  return rv;
+}
+
+
 /* Store a record into a table database object with a duplication handler. */
 bool tctdbputproc(TCTDB *tdb, const void *pkbuf, int pksiz, const void *cbuf, int csiz,
                   TCPDPROC proc, void *op){
@@ -1474,6 +1508,7 @@ static bool tctdbopenimpl(TCTDB *tdb, const char *path, int omode){
       if(tdb->mmtx) tcbdbsetmutex(bdb);
       if(enc && dec) tcbdbsetcodecfunc(bdb, enc, encop, dec, decop);
       tcbdbsetcache(bdb, tdb->lcnum, tdb->ncnum);
+      tcbdbsetdfunit(bdb, tchdbdfunit(tdb->hdb));
       tcbdbsetlsmax(bdb, TDBIDXLSMAX);
       if(tcbdbopen(bdb, ipath, bomode)){
         idxs[inum].name = tcstrdup(name);
@@ -2022,6 +2057,7 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
     if(enc && dec) tcbdbsetcodecfunc(idx->db, enc, encop, dec, decop);
     tcbdbtune(idx->db, TDBIDXLMEMB, TDBIDXNMEMB, bbnum, -1, -1, bopts);
     tcbdbsetcache(idx->db, tdb->lcnum, tdb->ncnum);
+    tcbdbsetdfunit(idx->db, tchdbdfunit(tdb->hdb));
     tcbdbsetlsmax(idx->db, TDBIDXLSMAX);
     if(!tcbdbopen(idx->db, TCXSTRPTR(pbuf), bomode)){
       tctdbsetecode(tdb, tcbdbecode(idx->db), __FILE__, __LINE__, __func__);
@@ -2039,6 +2075,7 @@ static bool tctdbsetindeximpl(TCTDB *tdb, const char *name, int type){
     if(enc && dec) tcbdbsetcodecfunc(idx->db, enc, encop, dec, decop);
     tcbdbtune(idx->db, TDBIDXLMEMB, TDBIDXNMEMB, bbnum, -1, -1, bopts);
     tcbdbsetcache(idx->db, tdb->lcnum, tdb->ncnum);
+    tcbdbsetdfunit(idx->db, tchdbdfunit(tdb->hdb));
     tcbdbsetlsmax(idx->db, TDBIDXLSMAX);
     if(!tcbdbopen(idx->db, TCXSTRPTR(pbuf), bomode)){
       tctdbsetecode(tdb, tcbdbecode(idx->db), __FILE__, __LINE__, __func__);
@@ -3762,6 +3799,32 @@ static bool tctdbidxout(TCTDB *tdb, const void *pkbuf, int pksiz, TCMAP *cols){
         tctdbsetecode(tdb, TCEMISC, __FILE__, __LINE__, __func__);
         err = true;
       }
+    }
+  }
+  return !err;
+}
+
+
+/* Perform dynamic defragmentation of a table database object.
+   `tdb' specifies the table database object.
+   `step' specifie the number of steps.
+   If successful, the return value is true, else, it is false. */
+static bool tctdbdefragimpl(TCTDB *tdb, int64_t step){
+  bool err = false;
+  TCHDB *hdb = tdb->hdb;
+  TDBIDX *idxs = tdb->idxs;
+  int inum = tdb->inum;
+  if(!tchdbdefrag(hdb, step)) err = true;
+  for(int i = 0; i < inum; i++){
+    TDBIDX *idx = idxs + i;
+    switch(idx->type){
+    case TDBITLEXICAL:
+    case TDBITDECIMAL:
+      if(!tcbdbdefrag(idx->db, step)){
+        tctdbsetecode(tdb, tcbdbecode(idx->db), __FILE__, __LINE__, __func__);
+        err = true;
+      }
+      break;
     }
   }
   return !err;

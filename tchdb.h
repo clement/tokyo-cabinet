@@ -61,7 +61,7 @@ typedef struct {                         /* type of structure for a hash databas
   uint64_t rnum;                         /* number of the records */
   uint64_t fsiz;                         /* size of the database file */
   uint64_t frec;                         /* offset of the first record */
-  uint64_t lrec;                         /* offset of the last record */
+  uint64_t dfcur;                        /* offset of the cursor for defragmentation */
   uint64_t iter;                         /* offset of the iterator */
   char *map;                             /* pointer to the mapped memory */
   uint64_t msiz;                         /* size of the mapped memory */
@@ -90,6 +90,8 @@ typedef struct {                         /* type of structure for a hash databas
   bool fatal;                            /* whether a fatal error occured */
   uint64_t inode;                        /* inode number */
   time_t mtime;                          /* modification time */
+  uint32_t dfunit;                       /* unit step number of auto defragmentation */
+  uint32_t dfcnt;                        /* counter of auto defragmentation */
   bool tran;                             /* whether in the transaction */
   int walfd;                             /* file descriptor of write ahead logging */
   uint64_t walend;                       /* end offset of write ahead logging */
@@ -108,6 +110,9 @@ typedef struct {                         /* type of structure for a hash databas
   int64_t cnt_deferdrp;                  /* tesing counter for DRP defer times */
   int64_t cnt_flushdrp;                  /* tesing counter for DRP flush times */
   int64_t cnt_adjrecc;                   /* tesing counter for record cache adjust times */
+  int64_t cnt_defrag;                    /* tesing counter for defragmentation times */
+  int64_t cnt_shiftrec;                  /* tesing counter for record shift times */
+  int64_t cnt_trunc;                     /* tesing counter for truncation times */
 } TCHDB;
 
 enum {                                   /* enumeration for additional flags */
@@ -209,6 +214,15 @@ bool tchdbsetcache(TCHDB *hdb, int32_t rcnum);
    If successful, the return value is true, else, it is false.
    Note that the mapping parameters should be set before the database is opened. */
 bool tchdbsetxmsiz(TCHDB *hdb, int64_t xmsiz);
+
+
+/* Set the unit step number of auto defragmentation of a hash database object.
+   `hdb' specifies the hash database object which is not opened.
+   `dfunit' specifie the unit step number.  If it is not more than 0, the auto defragmentation
+   is disabled.  It is disabled by default.
+   If successful, the return value is true, else, it is false.
+   Note that the defragmentation parameters should be set before the database is opened. */
+bool tchdbsetdfunit(TCHDB *hdb, int32_t dfunit);
 
 
 /* Open a database file and connect a hash database object.
@@ -735,6 +749,20 @@ bool tchdbsetcodecfunc(TCHDB *hdb, TCCODEC enc, void *encop, TCCODEC dec, void *
 void tchdbcodecfunc(TCHDB *hdb, TCCODEC *ep, void **eop, TCCODEC *dp, void **dop);
 
 
+/* Get the unit step number of auto defragmentation of a hash database object.
+   `hdb' specifies the hash database object.
+   The return value is the unit step number of auto defragmentation. */
+uint32_t tchdbdfunit(TCHDB *hdb);
+
+
+/* Perform dynamic defragmentation of a hash database object.
+   `hdb' specifies the hash database object connected as a writer.
+   `step' specifie the number of steps.  If it is not more than 0, the whole file is defragmented
+   gradually without keeping a continuous lock.
+   If successful, the return value is true, else, it is false. */
+bool tchdbdefrag(TCHDB *hdb, int64_t step);
+
+
 /* Store a record into a hash database object with a duplication handler.
    `hdb' specifies the hash database object connected as a writer.
    `kbuf' specifies the pointer to the region of the key.
@@ -751,7 +779,9 @@ void tchdbcodecfunc(TCHDB *hdb, TCCODEC *ep, void **eop, TCCODEC *dp, void **dop
    not modified.  If it is `(void *)-1', the record is removed.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
-   If successful, the return value is true, else, it is false. */
+   If successful, the return value is true, else, it is false.
+   Note that the callback function can not perform any database operation because the function
+   is called in the critical section guarded by the same locks of database operations. */
 bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op);
 
@@ -808,7 +838,9 @@ char *tchdbgetnext3(TCHDB *hdb, const char *kbuf, int ksiz, int *sp, const char 
    or false to stop iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
-   If successful, the return value is true, else, it is false. */
+   If successful, the return value is true, else, it is false.
+   Note that the callback function can not perform any database operation because the function
+   is called in the critical section guarded by the same locks of database operations. */
 bool tchdbforeach(TCHDB *hdb, TCITER iter, void *op);
 
 

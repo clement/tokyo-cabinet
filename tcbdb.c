@@ -293,6 +293,17 @@ bool tcbdbsetxmsiz(TCBDB *bdb, int64_t xmsiz){
 }
 
 
+/* Set the unit step number of auto defragmentation of a B+ tree database object. */
+bool tcbdbsetdfunit(TCBDB *bdb, int32_t dfunit){
+  assert(bdb);
+  if(bdb->open){
+    tcbdbsetecode(bdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  return tchdbsetdfunit(bdb->hdb, dfunit);
+}
+
+
 /* Open a database file and connect a B+ tree database object. */
 bool tcbdbopen(TCBDB *bdb, const char *path, int omode){
   assert(bdb && path);
@@ -1569,6 +1580,28 @@ bool tcbdbsetcodecfunc(TCBDB *bdb, TCCODEC enc, void *encop, TCCODEC dec, void *
     return false;
   }
   bool rv = tchdbsetcodecfunc(bdb->hdb, enc, encop, dec, decop);
+  BDBUNLOCKMETHOD(bdb);
+  return rv;
+}
+
+
+/* Get the unit step number of auto defragmentation of a B+ tree database object. */
+uint32_t tcbdbdfunit(TCBDB *bdb){
+  assert(bdb);
+  return tchdbdfunit(bdb->hdb);
+}
+
+
+/* Perform dynamic defragmentation of a B+ tree database object. */
+bool tcbdbdefrag(TCBDB *bdb, int64_t step){
+  assert(bdb);
+  if(!BDBLOCKMETHOD(bdb, false)) return false;
+  if(!bdb->open || !bdb->wmode){
+    tcbdbsetecode(bdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    BDBUNLOCKMETHOD(bdb);
+    return false;
+  }
+  bool rv = tchdbdefrag(bdb->hdb, step);
   BDBUNLOCKMETHOD(bdb);
   return rv;
 }

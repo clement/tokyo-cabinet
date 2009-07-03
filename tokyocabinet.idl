@@ -79,6 +79,7 @@ module TokyoCabinet {
     boolean tune(in long long bnum, in long apow, in long fpow, in long opts);
     boolean setcache(in long rcnum);
     boolean setxmsiz(in long long xmsiz);
+    boolean setdfunit(in long dfunit);
     boolean open(in string path, in long omode);
     boolean close();
     boolean put(in string key, in string value);
@@ -123,6 +124,7 @@ module TokyoCabinet {
                  in long long bnum, in long apow, in long fpow, in long opts);
     boolean setcache(in long lcnum, in long ncnum);
     boolean setxmsiz(in long long xmsiz);
+    boolean setdfunit(in long dfunit);
     boolean open(in string path, in long omode);
     boolean close();
     boolean put(in string key, in string value);
@@ -228,6 +230,7 @@ module TokyoCabinet {
     boolean tune(in long long bnum, in long apow, in long fpow, in long opts);
     boolean setcache(in long rcnum, in long lcnum, in long ncnum);
     boolean setxmsiz(in long long xmsiz);
+    boolean setdfunit(in long dfunit);
     boolean open(in string path, in long omode);
     boolean close();
     boolean put(in string pkey, in Map cols);

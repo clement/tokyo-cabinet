@@ -235,8 +235,8 @@ check-hdb :
 	$(RUNENV) $(RUNCMD) ./tchtest remove -mt -rc 50 -xm 500000 casket
 	$(RUNENV) $(RUNCMD) ./tchtest write -as -tb -rc 50 -xm 500000 casket 50000 50000 5 5
 	$(RUNENV) $(RUNCMD) ./tchtest read -nl -rc 50 -xm 500000 casket
-	$(RUNENV) $(RUNCMD) ./tchtest remove -rc 50 -xm 500000 casket
-	$(RUNENV) $(RUNCMD) ./tchtest rcat -pn 500 -xm 50000 casket 50000 5000 5 5
+	$(RUNENV) $(RUNCMD) ./tchtest remove -rc 50 -xm 500000 -df 5 casket
+	$(RUNENV) $(RUNCMD) ./tchtest rcat -pn 500 -xm 50000 -df 5 casket 50000 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tchtest rcat -tl -td -pn 5000 casket 50000 500 5 15
 	$(RUNENV) $(RUNCMD) ./tchtest rcat -nl -pn 500 -rl casket 5000 500 5 5
 	$(RUNENV) $(RUNCMD) ./tchtest rcat -tb -pn 500 casket 5000 500 5 5
@@ -252,17 +252,17 @@ check-hdb :
 	$(RUNENV) $(RUNCMD) ./tchtest wicked -mt -tb casket 5000
 	$(RUNENV) $(RUNCMD) ./tchtest wicked -tt casket 5000
 	$(RUNENV) $(RUNCMD) ./tchtest wicked -tx casket 5000
-	$(RUNENV) $(RUNCMD) ./tchmttest write -xm 500000 -tl casket 5 5000 500 5
-	$(RUNENV) $(RUNCMD) ./tchmttest read -xm 500000 casket 5
+	$(RUNENV) $(RUNCMD) ./tchmttest write -xm 500000 -df 5 -tl casket 5 5000 500 5
+	$(RUNENV) $(RUNCMD) ./tchmttest read -xm 500000 -df 5 casket 5
 	$(RUNENV) $(RUNCMD) ./tchmttest read -xm 500000 -rnd casket 5
 	$(RUNENV) $(RUNCMD) ./tchmttest remove -xm 500000 casket 5
 	$(RUNENV) $(RUNCMD) ./tchmttest wicked -nc casket 5 5000
 	$(RUNENV) $(RUNCMD) ./tchmttest wicked -tl -td casket 5 5000
 	$(RUNENV) $(RUNCMD) ./tchmttest wicked -tb casket 5 5000
-	$(RUNENV) $(RUNCMD) ./tchmttest typical casket 5 50000 5000
+	$(RUNENV) $(RUNCMD) ./tchmttest typical -df 5 casket 5 50000 5000
 	$(RUNENV) $(RUNCMD) ./tchmttest typical -rr 1000 casket 5 50000 5000
 	$(RUNENV) $(RUNCMD) ./tchmttest typical -tl -rc 50000 -nc casket 5 50000 5000
-	$(RUNENV) $(RUNCMD) ./tchmttest race casket 5 10000
+	$(RUNENV) $(RUNCMD) ./tchmttest race -df 5 casket 5 10000
 	$(RUNENV) $(RUNCMD) ./tchmgr create casket 3 1 1
 	$(RUNENV) $(RUNCMD) ./tchmgr inform casket
 	$(RUNENV) $(RUNCMD) ./tchmgr put casket one first
@@ -300,8 +300,8 @@ check-bdb :
 	$(RUNENV) $(RUNCMD) ./tcbtest remove -mt casket
 	$(RUNENV) $(RUNCMD) ./tcbtest write -tb -xm 50000 casket 50000 5 5 50000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbtest read -nl casket
-	$(RUNENV) $(RUNCMD) ./tcbtest remove casket
-	$(RUNENV) $(RUNCMD) ./tcbtest rcat -lc 5 -nc 5 -pn 500 casket 50000 5 5 5000 5 5
+	$(RUNENV) $(RUNCMD) ./tcbtest remove -df 5 casket
+	$(RUNENV) $(RUNCMD) ./tcbtest rcat -lc 5 -nc 5 -df 5 -pn 500 casket 50000 5 5 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbtest rcat -tl -td -pn 5000 casket 50000 5 5 500 5 15
 	$(RUNENV) $(RUNCMD) ./tcbtest rcat -nl -pn 5000 -rl casket 15000 5 5 500 5 5
 	$(RUNENV) $(RUNCMD) ./tcbtest rcat -ca 1000 -tb -pn 5000 casket 15000 5 5 500 5 5
@@ -329,17 +329,17 @@ check-bdb :
 	$(RUNENV) $(RUNCMD) ./tcbtest read -cj -lc 5 -nc 5 casket
 	$(RUNENV) $(RUNCMD) ./tcbtest remove -cj -lc 5 -nc 5 casket
 	$(RUNENV) $(RUNCMD) ./tcbmgr list -pv casket > check.out
-	$(RUNENV) $(RUNCMD) ./tcbmttest write -tl casket 5 5000 5 5 500 5
-	$(RUNENV) $(RUNCMD) ./tcbmttest read casket 5
+	$(RUNENV) $(RUNCMD) ./tcbmttest write -df 5 -tl casket 5 5000 5 5 500 5
+	$(RUNENV) $(RUNCMD) ./tcbmttest read -df 5 casket 5
 	$(RUNENV) $(RUNCMD) ./tcbmttest read -rnd casket 5
 	$(RUNENV) $(RUNCMD) ./tcbmttest remove casket 5
 	$(RUNENV) $(RUNCMD) ./tcbmttest wicked -nc casket 5 5000
 	$(RUNENV) $(RUNCMD) ./tcbmttest wicked -tl -td casket 5 5000
 	$(RUNENV) $(RUNCMD) ./tchmttest wicked -tb casket 5 5000
-	$(RUNENV) $(RUNCMD) ./tcbmttest typical casket 5 50000 5 5
+	$(RUNENV) $(RUNCMD) ./tcbmttest typical -df 5 casket 5 50000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical -rr 1000 casket 5 50000 5 5
 	$(RUNENV) $(RUNCMD) ./tcbmttest typical -tl -nc casket 5 50000 5 5
-	$(RUNENV) $(RUNCMD) ./tcbmttest race casket 5 10000
+	$(RUNENV) $(RUNCMD) ./tcbmttest race -df 5 casket 5 10000
 	$(RUNENV) $(RUNCMD) ./tcbmgr create casket 4 4 3 1 1
 	$(RUNENV) $(RUNCMD) ./tcbmgr inform casket
 	$(RUNENV) $(RUNCMD) ./tcbmgr put casket one first
@@ -424,8 +424,8 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tcttest write -mt -tl -td -rc 50 -lc 5 -nc 5 -xm 500000 \
 	  -is -in -it -if casket 5000 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tcttest read -mt -nb -rc 50 -lc 5 -nc 5 -xm 500000 casket
-	$(RUNENV) $(RUNCMD) ./tcttest remove -mt -rc 50 -lc 5 -nc 5 -xm 500000 casket
-	$(RUNENV) $(RUNCMD) ./tcttest rcat -pn 500 -xm 50000 -is casket 5000 5000 5 5
+	$(RUNENV) $(RUNCMD) ./tcttest remove -mt -rc 50 -lc 5 -nc 5 -xm 500000 -df 5 casket
+	$(RUNENV) $(RUNCMD) ./tcttest rcat -pn 500 -xm 50000 -df 5 -is casket 5000 5000 5 5
 	$(RUNENV) $(RUNCMD) ./tcttest rcat -tl -td -pn 5000 -is -in casket 5000 500 5 15
 	$(RUNENV) $(RUNCMD) ./tcttest rcat -nl -pn 500 -rl -is -in casket 5000 500 5 5
 	$(RUNENV) $(RUNCMD) ./tcttest rcat -tb -pn 500 -is -in casket 5000 500 5 5
@@ -441,13 +441,13 @@ check-tdb :
 	$(RUNENV) $(RUNCMD) ./tcttest wicked -mt -tb casket 5000
 	$(RUNENV) $(RUNCMD) ./tcttest wicked -tt casket 5000
 	$(RUNENV) $(RUNCMD) ./tcttest wicked -tx casket 5000
-	$(RUNENV) $(RUNCMD) ./tctmttest write -xm 500000 -tl -is -in casket 5 5000 500 5
-	$(RUNENV) $(RUNCMD) ./tctmttest read -xm 500000 casket 5
+	$(RUNENV) $(RUNCMD) ./tctmttest write -xm 500000 -df 5 -tl -is -in casket 5 5000 500 5
+	$(RUNENV) $(RUNCMD) ./tctmttest read -xm 500000 -df 5 casket 5
 	$(RUNENV) $(RUNCMD) ./tctmttest read -xm 500000 -rnd casket 5
 	$(RUNENV) $(RUNCMD) ./tctmttest remove -xm 500000 casket 5
 	$(RUNENV) $(RUNCMD) ./tctmttest wicked casket 5 5000
 	$(RUNENV) $(RUNCMD) ./tctmttest wicked -tl -td casket 5 5000
-	$(RUNENV) $(RUNCMD) ./tctmttest typical casket 5 5000 500
+	$(RUNENV) $(RUNCMD) ./tctmttest typical -df 5 casket 5 5000 500
 	$(RUNENV) $(RUNCMD) ./tctmttest typical -rr 1000 casket 5 5000 500
 	$(RUNENV) $(RUNCMD) ./tctmttest typical -tl -rc 50000 -lc 5 -nc 5 casket 5 5000 500
 	$(RUNENV) $(RUNCMD) ./tctmgr create casket 3 1 1

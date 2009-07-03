@@ -46,7 +46,8 @@ static int procput(const char *path, const char *kbuf, int ksiz, const char *vbu
 static int procout(const char *path, const char *kbuf, int ksiz, int omode);
 static int procget(const char *path, const char *kbuf, int ksiz, int omode, bool px, bool pz);
 static int proclist(const char *path, int omode, int max, bool pv, bool px, const char *fmstr);
-static int procoptimize(const char *path, int bnum, int apow, int fpow, int opts, int omode);
+static int procoptimize(const char *path, int bnum, int apow, int fpow, int opts, int omode,
+                        bool df);
 static int procimporttsv(const char *path, const char *file, int omode, bool sc);
 static int procversion(void);
 
@@ -95,8 +96,8 @@ static void usage(void){
   fprintf(stderr, "  %s out [-nl|-nb] [-sx] path key\n", g_progname);
   fprintf(stderr, "  %s get [-nl|-nb] [-sx] [-px] [-pz] path key\n", g_progname);
   fprintf(stderr, "  %s list [-nl|-nb] [-m num] [-pv] [-px] [-fm str] path\n", g_progname);
-  fprintf(stderr, "  %s optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] path"
-          " [bnum [apow [fpow]]]\n", g_progname);
+  fprintf(stderr, "  %s optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] [-df]"
+          " path [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "  %s importtsv [-nl|-nb] [-sc] path [file]\n", g_progname);
   fprintf(stderr, "  %s version\n", g_progname);
   fprintf(stderr, "\n");
@@ -413,6 +414,7 @@ static int runoptimize(int argc, char **argv){
   char *fstr = NULL;
   int opts = UINT8_MAX;
   int omode = 0;
+  bool df = false;
   for(int i = 2; i < argc; i++){
     if(!path && argv[i][0] == '-'){
       if(!strcmp(argv[i], "-tl")){
@@ -436,6 +438,8 @@ static int runoptimize(int argc, char **argv){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
         omode |= HDBOLCKNB;
+      } else if(!strcmp(argv[i], "-df")){
+        df = true;
       } else {
         usage();
       }
@@ -455,7 +459,7 @@ static int runoptimize(int argc, char **argv){
   int bnum = bstr ? tcatoix(bstr) : -1;
   int apow = astr ? tcatoix(astr) : -1;
   int fpow = fstr ? tcatoix(fstr) : -1;
-  int rv = procoptimize(path, bnum, apow, fpow, opts, omode);
+  int rv = procoptimize(path, bnum, apow, fpow, opts, omode, df);
   return rv;
 }
 
@@ -744,7 +748,8 @@ static int proclist(const char *path, int omode, int max, bool pv, bool px, cons
 
 
 /* perform optimize command */
-static int procoptimize(const char *path, int bnum, int apow, int fpow, int opts, int omode){
+static int procoptimize(const char *path, int bnum, int apow, int fpow, int opts, int omode,
+                        bool df){
   TCHDB *hdb = tchdbnew();
   if(g_dbgfd >= 0) tchdbsetdbgfd(hdb, g_dbgfd);
   if(!tchdbsetcodecfunc(hdb, _tc_recencode, NULL, _tc_recdecode, NULL)) printerr(hdb);
@@ -754,9 +759,16 @@ static int procoptimize(const char *path, int bnum, int apow, int fpow, int opts
     return 1;
   }
   bool err = false;
-  if(!tchdboptimize(hdb, bnum, apow, fpow, opts)){
-    printerr(hdb);
-    err = true;
+  if(df){
+    if(!tchdbdefrag(hdb, INT64_MAX)){
+      printerr(hdb);
+      err = true;
+    }
+  } else {
+    if(!tchdboptimize(hdb, bnum, apow, fpow, opts)){
+      printerr(hdb);
+      err = true;
+    }
   }
   if(!tchdbclose(hdb)){
     if(!err) printerr(hdb);

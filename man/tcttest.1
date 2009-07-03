@@ -9,22 +9,22 @@ The command `\fBtcttest\fR' is a utility for facility test and performance test.
 .PP
 .RS
 .br
-\fBtcttest write \fR[\fB\-mt\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-ip\fR]\fB \fR[\fB\-is\fR]\fB \fR[\fB\-in\fR]\fB \fR[\fB\-it\fR]\fB \fR[\fB\-if\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtcttest write \fR[\fB\-mt\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-ip\fR]\fB \fR[\fB\-is\fR]\fB \fR[\fB\-in\fR]\fB \fR[\fB\-it\fR]\fB \fR[\fB\-if\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Store records with columns "str", "num", "type", and "flag".
 .RE
 .br
-\fBtcttest read \fR[\fB\-mt\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB\fR
+\fBtcttest read \fR[\fB\-mt\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB\fR
 .RS
 Retrieve all records of the database above.
 .RE
 .br
-\fBtcttest remove \fR[\fB\-mt\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB\fR
+\fBtcttest remove \fR[\fB\-mt\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB\fR
 .RS
 Remove all records of the database above.
 .RE
 .br
-\fBtcttest rcat \fR[\fB\-mt\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-ip\fR]\fB \fR[\fB\-is\fR]\fB \fR[\fB\-in\fR]\fB \fR[\fB\-it\fR]\fB \fR[\fB\-if\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-pn \fInum\fB\fR]\fB \fR[\fB\-dai\fR|\fB\-dad\fR|\fB\-rl\fR|\fB\-ru\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtcttest rcat \fR[\fB\-mt\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-rc \fInum\fB\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-ip\fR]\fB \fR[\fB\-is\fR]\fB \fR[\fB\-in\fR]\fB \fR[\fB\-it\fR]\fB \fR[\fB\-if\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-pn \fInum\fB\fR]\fB \fR[\fB\-dai\fR|\fB\-dad\fR|\fB\-rl\fR|\fB\-ru\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Store records with partway duplicated keys using concatenate mode.
 .RE
@@ -62,6 +62,8 @@ Options feature the following.
 \fB\-nc \fInum\fR\fR : specify the number of cached non\-leaf pages.
 .br
 \fB\-xm \fInum\fR\fR : specify the size of the extra mapped memory.
+.br
+\fB\-df \fInum\fR\fR : specify the unit step number of auto defragmentation.
 .br
 \fB\-ip\fR : create the number index for the primary key.
 .br

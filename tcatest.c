@@ -126,7 +126,7 @@ static void iputchar(int c){
 
 /* print error message of abstract database */
 static void eprint(TCADB *adb, const char *func){
-  const char *path = tcadbpath(adb);
+  const char *path = adb ? tcadbpath(adb) : NULL;
   fprintf(stderr, "%s: %s: %s: error\n", g_progname, path ? path : "-", func);
 }
 
@@ -1252,6 +1252,10 @@ static int proccompare(const char *name, int tnum, int rnum){
     eprint(NULL, "tchdbsetxmsiz");
     err = true;
   }
+  if(!tchdbsetdfunit(hdb, 8)){
+    eprint(NULL, "tchdbsetdfunit");
+    err = true;
+  }
   sprintf(path, "%s.tch", name);
   int homode = HDBOWRITER | HDBOCREAT | HDBOTRUNC;
   if(myrand(100) == 1) homode |= HDBOTSYNC;
@@ -1266,6 +1270,14 @@ static int proccompare(const char *name, int tnum, int rnum){
   if(myrand(2) == 1) bopts |= BDBTBZIP;
   if(!tcbdbtune(bdb, 5, 5, rnum / 10, -1, -1, bopts)){
     eprint(NULL, "tcbdbtune");
+    err = true;
+  }
+  if(!tcbdbsetxmsiz(bdb, 4096)){
+    eprint(NULL, "tcbdbsetxmsiz");
+    err = true;
+  }
+  if(!tcbdbsetdfunit(bdb, 8)){
+    eprint(NULL, "tcbdbsetdfunit");
     err = true;
   }
   sprintf(path, "%s.tcb", name);
@@ -1284,7 +1296,7 @@ static int proccompare(const char *name, int tnum, int rnum){
   case 1:
     sprintf(path, "%s.adb.tcb#mode=wct#lmemb=256#nmemb=512", name);
     break;
-  case 3:
+  case 2:
     sprintf(path, "+");
     break;
   default:
@@ -1639,7 +1651,7 @@ static int proccompare(const char *name, int tnum, int rnum){
     char *vbuf = tcmdbget(mdb, kbuf, ksiz, &vsiz);
     int rsiz;
     char *rbuf = tcndbget(ndb, kbuf, ksiz, &rsiz);
-    if(!rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
+    if(!vbuf || !rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
       eprint(NULL, "tcndbget");
       err = true;
     }
@@ -1675,7 +1687,7 @@ static int proccompare(const char *name, int tnum, int rnum){
     char *vbuf = tchdbget(hdb, kbuf, ksiz, &vsiz);
     int rsiz;
     char *rbuf = tcmdbget(mdb, kbuf, ksiz, &rsiz);
-    if(!rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
+    if(!vbuf || !rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
       eprint(NULL, "(validation)");
       err = true;
     }
@@ -1698,7 +1710,7 @@ static int proccompare(const char *name, int tnum, int rnum){
     char *vbuf = tcbdbget(bdb, kbuf, ksiz, &vsiz);
     int rsiz;
     char *rbuf = tcndbget(ndb, kbuf, ksiz, &rsiz);
-    if(!rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
+    if(!vbuf || !rbuf || rsiz != vsiz || memcmp(rbuf, vbuf, rsiz)){
       eprint(NULL, "(validation)");
       err = true;
     }

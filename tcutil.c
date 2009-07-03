@@ -8553,7 +8553,7 @@ static int tcgammadecode(const char *ptr, int size, char *obuf){
       *(wp++) = c - 1;
     }
   }
-  return wp - obuf;;
+  return wp - obuf;
 }
 
 

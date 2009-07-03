@@ -4,32 +4,31 @@
 tcbtest \- test cases of the B+ tree database API
 
 .SH DESCRIPTION
-.PP
 The command `\fBtcbtest\fR' is a utility for facility test and performance test.  This command is used in the following format.  `\fIpath\fR' specifies the path of a database file.  `\fIrnum\fR' specifies the number of iterations.  `\fIlmemb\fR' specifies the number of members in each leaf page.  `\fInmemb\fR' specifies the number of members in each non\-leaf page.  `\fIbnum\fR' specifies the number of buckets.  `\fIapow\fR' specifies the power of the alignment.  `\fIfpow\fR' specifies the power of the free block pool.
 .PP
 .RS
 .br
-\fBtcbtest write \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-ls \fInum\fB\fR]\fB \fR[\fB\-ca \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtcbtest write \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-ls \fInum\fB\fR]\fB \fR[\fB\-ca \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Store records with keys of 8 bytes.  They change as `00000001', `00000002'...
 .RE
 .br
-\fBtcbtest read \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-wb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB\fR
+\fBtcbtest read \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-wb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB\fR
 .RS
 Retrieve all records of the database above.
 .RE
 .br
-\fBtcbtest remove \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB\fR
+\fBtcbtest remove \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-rnd\fR]\fB \fIpath\fB\fR
 .RS
 Remove all records of the database above.
 .RE
 .br
-\fBtcbtest rcat \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-ls \fInum\fB\fR]\fB \fR[\fB\-ca \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-pn \fInum\fB\fR]\fB \fR[\fB\-dai\fR|\fB\-dad\fR|\fB\-rl\fR|\fB\-ru\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtcbtest rcat \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-ls \fInum\fB\fR]\fB \fR[\fB\-ca \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-pn \fInum\fB\fR]\fB \fR[\fB\-dai\fR|\fB\-dad\fR|\fB\-rl\fR|\fB\-ru\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Store records with partway duplicated keys using concatenate mode.
 .RE
 .br
-\fBtcbtest queue \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-ls \fInum\fB\fR]\fB \fR[\fB\-ca \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtcbtest queue \fR[\fB\-mt\fR]\fB \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-lc \fInum\fB\fR]\fB \fR[\fB\-nc \fInum\fB\fR]\fB \fR[\fB\-xm \fInum\fB\fR]\fB \fR[\fB\-df \fInum\fB\fR]\fB \fR[\fB\-ls \fInum\fB\fR]\fB \fR[\fB\-ca \fInum\fB\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fIpath\fB \fIrnum\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Perform queueing and dequeueing.
 .RE
@@ -71,6 +70,8 @@ Options feature the following.
 \fB\-nc \fInum\fR\fR : specify the number of cached non\-leaf pages.
 .br
 \fB\-xm \fInum\fR\fR : specify the size of the extra mapped memory.
+.br
+\fB\-df \fInum\fR\fR : specify the unit step number of auto defragmentation.
 .br
 \fB\-ls \fInum\fR\fR : specify the maximum size of each leaf page.
 .br

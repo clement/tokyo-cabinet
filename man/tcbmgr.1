@@ -4,7 +4,6 @@
 tcbmgr \- the command line utility of the B+ tree database API
 
 .SH DESCRIPTION
-.PP
 The command `\fBtcbmgr\fR' is a utility for test and debugging of the B+ tree database API and its applications.  `\fIpath\fR' specifies the path of a database file.  `\fIlmemb\fR' specifies the number of members in each leaf page.  `\fInmemb\fR' specifies the number of members in each non\-leaf page.  `\fIbnum\fR' specifies the number of buckets.  `\fIapow\fR' specifies the power of the alignment.  `\fIfpow\fR' specifies the power of the free block pool.  `\fIkey\fR' specifies the key of a record.  `\fIvalue\fR' specifies the value of a record.  `\fIfile\fR' specifies the input file.
 .PP
 .RS
@@ -39,7 +38,7 @@ Print the value of a record.
 Print keys of all records, separated by line feeds.
 .RE
 .br
-\fBtcbmgr optimize \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-tz\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fIpath\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
+\fBtcbmgr optimize \fR[\fB\-cd\fR|\fB\-ci\fR|\fB\-cj\fR]\fB \fR[\fB\-tl\fR]\fB \fR[\fB\-td\fR|\fB\-tb\fR|\fB\-tt\fR|\fB\-tx\fR]\fB \fR[\fB\-tz\fR]\fB \fR[\fB\-nl\fR|\fB\-nb\fR]\fB \fR[\fB\-df\fR]\fB \fIpath\fB \fR[\fB\fIlmemb\fB \fR[\fB\fInmemb\fB \fR[\fB\fIbnum\fB \fR[\fB\fIapow\fB \fR[\fB\fIfpow\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR]\fB\fR
 .RS
 Optimize a database file.
 .RE
@@ -109,6 +108,8 @@ Options feature the following.
 \fB\-fm \fIstr\fR\fR : specify the prefix of keys.
 .br
 \fB\-tz\fR : enable the option `UINT8_MAX'.
+.br
+\fB\-df\fR : perform defragmentation only.
 .br
 \fB\-sc\fR : normalize keys as lower cases.
 .br

@@ -50,6 +50,8 @@
 #define HDBFBPMGFREQ   4096              // frequency to merge the free block pool
 #define HDBDRPUNIT     65536             // unit size of the delayed record pool
 #define HDBDRPLAT      2048              // latitude size of the delayed record pool
+#define HDBDFRSRAT     2                 // step ratio of auto defragmentation
+#define HDBFBMAXSIZ    (INT32_MAX/4)     // maximum size of a free block pool
 #define HDBCACHEOUT    128               // number of records in a process of cacheout
 #define HDBWALSUFFIX   "wal"             // suffix of write ahead logging file
 
@@ -140,11 +142,13 @@ static void tchdbfbpmerge(TCHDB *hdb);
 static void tchdbfbpinsert(TCHDB *hdb, uint64_t off, uint32_t rsiz);
 static bool tchdbfbpsearch(TCHDB *hdb, TCHREC *rec);
 static bool tchdbfbpsplice(TCHDB *hdb, TCHREC *rec, uint32_t nsiz);
+static void tchdbfbptrim(TCHDB *hdb, uint64_t base, uint64_t next, uint64_t off, uint32_t rsiz);
 static bool tchdbwritefb(TCHDB *hdb, uint64_t off, uint32_t rsiz);
 static bool tchdbwriterec(TCHDB *hdb, TCHREC *rec, uint64_t bidx, off_t entoff);
 static bool tchdbreadrec(TCHDB *hdb, TCHREC *rec, char *rbuf);
 static bool tchdbreadrecbody(TCHDB *hdb, TCHREC *rec);
 static bool tchdbremoverec(TCHDB *hdb, TCHREC *rec, char *rbuf, uint64_t bidx, off_t entoff);
+static bool tchdbshiftrec(TCHDB *hdb, TCHREC *rec, char *rbuf, off_t destoff);
 static int tcreckeycmp(const char *abuf, int asiz, const char *bbuf, int bsiz);
 static bool tchdbflushdrp(TCHDB *hdb);
 static void tchdbcacheadjust(TCHDB *hdb);
@@ -174,6 +178,7 @@ static bool tchdbiternextintoxstr(TCHDB *hdb, TCXSTR *kxstr, TCXSTR *vxstr);
 static bool tchdboptimizeimpl(TCHDB *hdb, int64_t bnum, int8_t apow, int8_t fpow, uint8_t opts);
 static bool tchdbvanishimpl(TCHDB *hdb);
 static bool tchdbcopyimpl(TCHDB *hdb, const char *path);
+static bool tchdbdefragimpl(TCHDB *hdb, int64_t step);
 static bool tchdbforeachimpl(TCHDB *hdb, TCITER iter, void *op);
 static bool tchdblockmethod(TCHDB *hdb, bool wr);
 static bool tchdbunlockmethod(TCHDB *hdb);
@@ -334,6 +339,18 @@ bool tchdbsetxmsiz(TCHDB *hdb, int64_t xmsiz){
 }
 
 
+/* Set the unit step number of auto defragmentation of a hash database object. */
+bool tchdbsetdfunit(TCHDB *hdb, int32_t dfunit){
+  assert(hdb);
+  if(hdb->fd >= 0){
+    tchdbsetecode(hdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    return false;
+  }
+  hdb->dfunit = (dfunit > 0) ? dfunit : 0;
+  return true;
+}
+
+
 /* Open a database file and connect a hash database object. */
 bool tchdbopen(TCHDB *hdb, const char *path, int omode){
   assert(hdb && path);
@@ -404,11 +421,15 @@ bool tchdbput(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz
     TCFREE(zbuf);
     HDBUNLOCKRECORD(hdb, bidx);
     HDBUNLOCKMETHOD(hdb);
+    if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+       !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
     return rv;
   }
   bool rv = tchdbputimpl(hdb, kbuf, ksiz, bidx, hash, vbuf, vsiz, HDBPDOVER);
   HDBUNLOCKRECORD(hdb, bidx);
   HDBUNLOCKMETHOD(hdb);
+  if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+     !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
   return rv;
 }
 
@@ -460,11 +481,15 @@ bool tchdbputkeep(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int 
     TCFREE(zbuf);
     HDBUNLOCKRECORD(hdb, bidx);
     HDBUNLOCKMETHOD(hdb);
+    if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+       !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
     return rv;
   }
   bool rv = tchdbputimpl(hdb, kbuf, ksiz, bidx, hash, vbuf, vsiz, HDBPDKEEP);
   HDBUNLOCKRECORD(hdb, bidx);
   HDBUNLOCKMETHOD(hdb);
+  if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+     !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
   return rv;
 }
 
@@ -532,11 +557,15 @@ bool tchdbputcat(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int v
     TCFREE(zbuf);
     HDBUNLOCKRECORD(hdb, bidx);
     HDBUNLOCKMETHOD(hdb);
+    if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+       !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
     return rv;
   }
   bool rv = tchdbputimpl(hdb, kbuf, ksiz, bidx, hash, vbuf, vsiz, HDBPDCAT);
   HDBUNLOCKRECORD(hdb, bidx);
   HDBUNLOCKMETHOD(hdb);
+  if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+     !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
   return rv;
 }
 
@@ -616,6 +645,8 @@ bool tchdbout(TCHDB *hdb, const void *kbuf, int ksiz){
   bool rv = tchdboutimpl(hdb, kbuf, ksiz, bidx, hash);
   HDBUNLOCKRECORD(hdb, bidx);
   HDBUNLOCKMETHOD(hdb);
+  if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+     !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
   return rv;
 }
 
@@ -878,11 +909,15 @@ int tchdbaddint(TCHDB *hdb, const void *kbuf, int ksiz, int num){
     TCFREE(zbuf);
     HDBUNLOCKRECORD(hdb, bidx);
     HDBUNLOCKMETHOD(hdb);
+    if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+       !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
     return rv ? num : INT_MIN;
   }
   bool rv = tchdbputimpl(hdb, kbuf, ksiz, bidx, hash, (char *)&num, sizeof(num), HDBPDADDINT);
   HDBUNLOCKRECORD(hdb, bidx);
   HDBUNLOCKMETHOD(hdb);
+  if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+     !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
   return rv ? num : INT_MIN;
 }
 
@@ -941,11 +976,15 @@ double tchdbadddouble(TCHDB *hdb, const void *kbuf, int ksiz, double num){
     TCFREE(zbuf);
     HDBUNLOCKRECORD(hdb, bidx);
     HDBUNLOCKMETHOD(hdb);
+    if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+       !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
     return rv ? num : nan("");
   }
   bool rv = tchdbputimpl(hdb, kbuf, ksiz, bidx, hash, (char *)&num, sizeof(num), HDBPDADDDBL);
   HDBUNLOCKRECORD(hdb, bidx);
   HDBUNLOCKMETHOD(hdb);
+  if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+     !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
   return rv ? num : nan("");
 }
 
@@ -1135,6 +1174,7 @@ bool tchdbtranabort(TCHDB *hdb){
   } else {
     tchdbloadmeta(hdb, hbuf);
   }
+  hdb->dfcur = hdb->frec;
   hdb->iter = 0;
   hdb->xfsiz = 0;
   hdb->fbpnum = 0;
@@ -1452,6 +1492,65 @@ bool tchdbsetcodecfunc(TCHDB *hdb, TCCODEC enc, void *encop, TCCODEC dec, void *
 }
 
 
+/* Get the unit step number of auto defragmentation of a hash database object. */
+uint32_t tchdbdfunit(TCHDB *hdb){
+  assert(hdb);
+  return hdb->dfunit;
+}
+
+
+/* Perform dynamic defragmentation of a hash database object. */
+bool tchdbdefrag(TCHDB *hdb, int64_t step){
+  assert(hdb);
+  if(step > 0){
+    if(!HDBLOCKMETHOD(hdb, true)) return false;
+    if(hdb->fd < 0 || !(hdb->omode & HDBOWRITER)){
+      tchdbsetecode(hdb, TCEINVALID, __FILE__, __LINE__, __func__);
+      HDBUNLOCKMETHOD(hdb);
+      return false;
+    }
+    if(hdb->async && !tchdbflushdrp(hdb)){
+      HDBUNLOCKMETHOD(hdb);
+      return false;
+    }
+    bool rv = tchdbdefragimpl(hdb, step);
+    HDBUNLOCKMETHOD(hdb);
+    return rv;
+  }
+  if(!HDBLOCKMETHOD(hdb, false)) return false;
+  if(hdb->fd < 0 || !(hdb->omode & HDBOWRITER)){
+    tchdbsetecode(hdb, TCEINVALID, __FILE__, __LINE__, __func__);
+    HDBUNLOCKMETHOD(hdb);
+    return false;
+  }
+  if(hdb->async && !tchdbflushdrp(hdb)){
+    HDBUNLOCKMETHOD(hdb);
+    return false;
+  }
+  bool err = false;
+  if(HDBLOCKALLRECORDS(hdb, true)){
+    hdb->dfcur = hdb->frec;
+    HDBUNLOCKALLRECORDS(hdb);
+  } else {
+    err = true;
+  }
+  bool stop = false;
+  while(!err && !stop){
+    if(HDBLOCKALLRECORDS(hdb, true)){
+      uint64_t cur = hdb->dfcur;
+      if(!tchdbdefragimpl(hdb, UINT8_MAX)) err = true;
+      if(hdb->dfcur <= cur) stop = true;
+      HDBUNLOCKALLRECORDS(hdb);
+      HDBTHREADYIELD(hdb);
+    } else {
+      err = true;
+    }
+  }
+  HDBUNLOCKMETHOD(hdb);
+  return !err;
+}
+
+
 /* Store a record into a hash database object with a duplication handler. */
 bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int vsiz,
                   TCPDPROC proc, void *op){
@@ -1526,6 +1625,8 @@ bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int 
     TCFREE(zbuf);
     HDBUNLOCKRECORD(hdb, bidx);
     HDBUNLOCKMETHOD(hdb);
+    if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+       !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
     return rv;
   }
   HDBPDPROCOP procop;
@@ -1548,6 +1649,8 @@ bool tchdbputproc(TCHDB *hdb, const void *kbuf, int ksiz, const void *vbuf, int 
   if(rbuf != stack) TCFREE(rbuf);
   HDBUNLOCKRECORD(hdb, bidx);
   HDBUNLOCKMETHOD(hdb);
+  if(hdb->dfunit > 0 && hdb->dfcnt > hdb->dfunit &&
+     !tchdbdefrag(hdb, hdb->dfunit * HDBDFRSRAT + 1)) rv = false;
   return rv;
 }
 
@@ -1887,6 +1990,7 @@ static void tchdbclear(TCHDB *hdb){
   hdb->rnum = 0;
   hdb->fsiz = 0;
   hdb->frec = 0;
+  hdb->dfcur = 0;
   hdb->iter = 0;
   hdb->map = NULL;
   hdb->msiz = 0;
@@ -1915,6 +2019,8 @@ static void tchdbclear(TCHDB *hdb){
   hdb->fatal = false;
   hdb->inode = 0;
   hdb->mtime = 0;
+  hdb->dfunit = 0;
+  hdb->dfcnt = 0;
   hdb->tran = false;
   hdb->walfd = -1;
   hdb->walend = 0;
@@ -1933,6 +2039,9 @@ static void tchdbclear(TCHDB *hdb){
   hdb->cnt_deferdrp = -1;
   hdb->cnt_flushdrp = -1;
   hdb->cnt_adjrecc = -1;
+  hdb->cnt_defrag = -1;
+  hdb->cnt_shiftrec = -1;
+  hdb->cnt_trunc = -1;
   TCDODEBUG(hdb->cnt_writerec = 0);
   TCDODEBUG(hdb->cnt_reuserec = 0);
   TCDODEBUG(hdb->cnt_moverec = 0);
@@ -1947,6 +2056,9 @@ static void tchdbclear(TCHDB *hdb){
   TCDODEBUG(hdb->cnt_deferdrp = 0);
   TCDODEBUG(hdb->cnt_flushdrp = 0);
   TCDODEBUG(hdb->cnt_adjrecc = 0);
+  TCDODEBUG(hdb->cnt_defrag = 0);
+  TCDODEBUG(hdb->cnt_shiftrec = 0);
+  TCDODEBUG(hdb->cnt_trunc = 0);
 }
 
 
@@ -2196,13 +2308,14 @@ static void tchdbfbpmerge(TCHDB *hdb){
   assert(hdb);
   TCDODEBUG(hdb->cnt_mergefbp++);
   tcfbpsortbyoff(hdb->fbpool, hdb->fbpnum);
-  HDBFB *wp = hdb->fbpool;;
+  HDBFB *wp = hdb->fbpool;
   HDBFB *cur = wp;
   HDBFB *end = wp + hdb->fbpnum - 1;
   while(cur < end){
     if(cur->off > 0){
       HDBFB *next = cur + 1;
       if(cur->off + cur->rsiz == next->off){
+        if(hdb->dfcur == next->off) hdb->dfcur += next->rsiz;
         if(hdb->iter == next->off) hdb->iter += next->rsiz;
         cur->rsiz += next->rsiz;
         next->off = 0;
@@ -2224,6 +2337,7 @@ static void tchdbfbpmerge(TCHDB *hdb){
 static void tchdbfbpinsert(TCHDB *hdb, uint64_t off, uint32_t rsiz){
   assert(hdb && off > 0 && rsiz > 0);
   TCDODEBUG(hdb->cnt_insertfbp++);
+  hdb->dfcnt++;
   if(hdb->fpow < 1) return;
   HDBFB *pv = hdb->fbpool;
   if(hdb->fbpnum >= hdb->fbpmax * HDBFBPALWRAT){
@@ -2347,11 +2461,10 @@ static bool tchdbfbpsplice(TCHDB *hdb, TCHREC *rec, uint32_t nsiz){
     HDBFB *ep = pv + hdb->fbpnum;
     while(pv < ep){
       if(pv->off == off && rsiz + pv->rsiz >= nsiz){
+        if(hdb->dfcur == pv->off) hdb->dfcur += pv->rsiz;
         if(hdb->iter == pv->off) hdb->iter += pv->rsiz;
         rec->rsiz += pv->rsiz;
-        ep--;
-        pv->off = ep->off;
-        pv->rsiz = ep->rsiz;
+        memmove(pv, pv + 1, sizeof(*pv) * ((ep - pv) - 1));
         hdb->fbpnum--;
         return true;
       }
@@ -2366,6 +2479,7 @@ static bool tchdbfbpsplice(TCHDB *hdb, TCHREC *rec, uint32_t nsiz){
     nrec.off = off;
     if(!tchdbreadrec(hdb, &nrec, nbuf)) return false;
     if(nrec.magic != HDBMAGICFB) break;
+    if(hdb->dfcur == off) hdb->dfcur += nrec.rsiz;
     if(hdb->iter == off) hdb->iter += nrec.rsiz;
     off += nrec.rsiz;
   }
@@ -2373,7 +2487,7 @@ static bool tchdbfbpsplice(TCHDB *hdb, TCHREC *rec, uint32_t nsiz){
   if(jsiz < nsiz) return false;
   rec->rsiz = jsiz;
   uint64_t base = rec->off;
-  HDBFB *wp = hdb->fbpool;;
+  HDBFB *wp = hdb->fbpool;
   HDBFB *cur = wp;
   HDBFB *end = wp + hdb->fbpnum;
   while(cur < end){
@@ -2393,6 +2507,51 @@ static bool tchdbfbpsplice(TCHDB *hdb, TCHREC *rec, uint32_t nsiz){
     }
   }
   return true;
+}
+
+
+/* Remove blocks of a region from the free block pool.
+   `hdb' specifies the hash database object.
+   `base' specifies the base offset of the region.
+   `next' specifies the offset of the next region.
+   `off' specifies the offset of the block.
+   `rsiz' specifies the size of the block. */
+static void tchdbfbptrim(TCHDB *hdb, uint64_t base, uint64_t next, uint64_t off, uint32_t rsiz){
+  assert(hdb && base > 0 && next > 0);
+  if(hdb->fpow < 1) return;
+  if(hdb->fbpnum < 1){
+    if(off > 0){
+      HDBFB *fbpool = hdb->fbpool;
+      fbpool->off = off;
+      fbpool->rsiz = rsiz;
+      hdb->fbpnum = 1;
+    }
+    return;
+  }
+  HDBFB *wp = hdb->fbpool;
+  HDBFB *cur = wp;
+  HDBFB *end = wp + hdb->fbpnum;
+  if(hdb->fbpnum >= hdb->fbpmax * HDBFBPALWRAT) cur++;
+  while(cur < end){
+    if(cur->rsiz >= rsiz && off > 0){
+      TCDODEBUG(hdb->cnt_insertfbp++);
+      wp->off = off;
+      wp->rsiz = rsiz;
+      wp++;
+      off = 0;
+    } else if(cur->off < base || cur->off >= next){
+      *(wp++) = *cur;
+    }
+    cur++;
+  }
+  if(off > 0){
+    TCDODEBUG(hdb->cnt_insertfbp++);
+    wp->off = off;
+    wp->rsiz = rsiz;
+    wp++;
+    off = 0;
+  }
+  hdb->fbpnum = wp - (HDBFB *)hdb->fbpool;
 }
 
 
@@ -2715,6 +2874,93 @@ static bool tchdbremoverec(TCHDB *hdb, TCHREC *rec, char *rbuf, uint64_t bidx, o
   memcpy(hdb->map + HDBRNUMOFF, &llnum, sizeof(llnum));
   HDBUNLOCKDB(hdb);
   return true;
+}
+
+
+/* Remove a record from the file.
+   `hdb' specifies the hash database object.
+   `rec' specifies the record object.
+   `rbuf' specifies the buffer for reading.
+   `destoff' specifies the offset of the destination.
+   The return value is true if successful, else, it is false. */
+static bool tchdbshiftrec(TCHDB *hdb, TCHREC *rec, char *rbuf, off_t destoff){
+  assert(hdb && rec && rbuf && destoff >= 0);
+  TCDODEBUG(hdb->cnt_shiftrec++);
+  if(!rec->vbuf && !tchdbreadrecbody(hdb, rec)) return false;
+  uint8_t hash;
+  uint64_t bidx = tchdbbidx(hdb, rec->kbuf, rec->ksiz, &hash);
+  off_t off = tchdbgetbucket(hdb, bidx);
+  if(rec->off == off){
+    bool err = false;
+    rec->off = destoff;
+    if(!tchdbwriterec(hdb, rec, bidx, 0)) err = true;
+    TCFREE(rec->bbuf);
+    rec->kbuf = NULL;
+    rec->vbuf = NULL;
+    rec->bbuf = NULL;
+    return !err;
+  }
+  TCHREC trec;
+  char tbuf[HDBIOBUFSIZ];
+  char *bbuf = rec->bbuf;
+  const char *kbuf = rec->kbuf;
+  int ksiz = rec->ksiz;
+  const char *vbuf = rec->vbuf;
+  int vsiz = rec->vsiz;
+  rec->kbuf = NULL;
+  rec->vbuf = NULL;
+  rec->bbuf = NULL;
+  off_t entoff = 0;
+  while(off > 0){
+    trec.off = off;
+    if(!tchdbreadrec(hdb, &trec, tbuf)){
+      TCFREE(bbuf);
+      return false;
+    }
+    if(hash > trec.hash){
+      off = trec.left;
+      entoff = trec.off + (sizeof(uint8_t) + sizeof(uint8_t));
+    } else if(hash < trec.hash){
+      off = trec.right;
+      entoff = trec.off + (sizeof(uint8_t) + sizeof(uint8_t)) +
+        (hdb->ba64 ? sizeof(uint64_t) : sizeof(uint32_t));
+    } else {
+      if(!trec.kbuf && !tchdbreadrecbody(hdb, &trec)){
+        TCFREE(bbuf);
+        return false;
+      }
+      int kcmp = tcreckeycmp(kbuf, ksiz, trec.kbuf, trec.ksiz);
+      if(kcmp > 0){
+        off = trec.left;
+        TCFREE(trec.bbuf);
+        trec.kbuf = NULL;
+        trec.bbuf = NULL;
+        entoff = trec.off + (sizeof(uint8_t) + sizeof(uint8_t));
+      } else if(kcmp < 0){
+        off = trec.right;
+        TCFREE(trec.bbuf);
+        trec.kbuf = NULL;
+        trec.bbuf = NULL;
+        entoff = trec.off + (sizeof(uint8_t) + sizeof(uint8_t)) +
+          (hdb->ba64 ? sizeof(uint64_t) : sizeof(uint32_t));
+      } else {
+        TCFREE(trec.bbuf);
+        trec.bbuf = NULL;
+        bool err = false;
+        rec->off = destoff;
+        rec->kbuf = kbuf;
+        rec->ksiz = ksiz;
+        rec->vbuf = vbuf;
+        rec->vsiz = vsiz;
+        if(!tchdbwriterec(hdb, rec, bidx, entoff)) err = true;
+        TCFREE(bbuf);
+        return !err;
+      }
+    }
+  }
+  TCFREE(bbuf);
+  tchdbsetecode(hdb, TCENOREC, __FILE__, __LINE__, __func__);
+  return false;
 }
 
 
@@ -3142,7 +3388,7 @@ static bool tchdbopenimpl(TCHDB *hdb, const char *path, int omode){
     close(fd);
     return false;
   }
-  hdb->fbpmax = 1 << hdb->fpow;;
+  hdb->fbpmax = 1 << hdb->fpow;
   if(omode & HDBOWRITER){
     TCMALLOC(hdb->fbpool, hdb->fbpmax * HDBFBPALWRAT * sizeof(HDBFB));
   } else {
@@ -3158,6 +3404,7 @@ static bool tchdbopenimpl(TCHDB *hdb, const char *path, int omode){
   hdb->path = tcstrdup(path);
   hdb->fd = fd;
   hdb->omode = omode;
+  hdb->dfcur = hdb->frec;
   hdb->iter = 0;
   hdb->map = map;
   hdb->msiz = msiz;
@@ -3177,6 +3424,7 @@ static bool tchdbopenimpl(TCHDB *hdb, const char *path, int omode){
   hdb->fatal = false;
   hdb->inode = (uint64_t)sbuf.st_ino;
   hdb->mtime = sbuf.st_mtime;
+  hdb->dfcnt = 0;
   hdb->tran = false;
   hdb->walfd = -1;
   hdb->walend = 0;
@@ -3224,7 +3472,7 @@ static bool tchdbcloseimpl(TCHDB *hdb){
     err = true;
   }
   hdb->map = NULL;
-  if(hdb->xfsiz > hdb->fsiz && ftruncate(hdb->fd, hdb->fsiz) == -1){
+  if((hdb->omode & HDBOWRITER) && ftruncate(hdb->fd, hdb->fsiz) == -1){
     tchdbsetecode(hdb, TCETRUNC, __FILE__, __LINE__, __func__);
     err = true;
   }
@@ -4333,6 +4581,96 @@ static bool tchdbcopyimpl(TCHDB *hdb, const char *path){
 }
 
 
+/* Perform dynamic defragmentation of a hash database object.
+   `hdb' specifies the hash database object connected.
+   `step' specifie the number of steps.
+   If successful, the return value is true, else, it is false. */
+static bool tchdbdefragimpl(TCHDB *hdb, int64_t step){
+  assert(hdb && step >= 0);
+  TCDODEBUG(hdb->cnt_defrag++);
+  hdb->dfcnt = 0;
+  TCHREC rec;
+  char rbuf[HDBIOBUFSIZ];
+  while(true){
+    if(hdb->dfcur >= hdb->fsiz){
+      hdb->dfcur = hdb->frec;
+      return true;
+    }
+    if(step-- < 1) return true;
+    rec.off = hdb->dfcur;
+    if(!tchdbreadrec(hdb, &rec, rbuf)) return false;
+    if(rec.magic == HDBMAGICFB) break;
+    hdb->dfcur += rec.rsiz;
+  }
+  uint32_t align = hdb->align;
+  uint64_t base = hdb->dfcur;
+  uint64_t dest = base;
+  uint64_t cur = base;
+  if(hdb->iter == cur) hdb->iter += rec.rsiz;
+  cur += rec.rsiz;
+  uint64_t fbsiz = cur - dest;
+  step++;
+  while(step > 0 && cur < hdb->fsiz){
+    rec.off = cur;
+    if(!tchdbreadrec(hdb, &rec, rbuf)) return false;
+    uint32_t rsiz = rec.rsiz;
+    if(rec.magic == HDBMAGICREC){
+      if(rec.psiz >= align){
+        int diff = rec.psiz - rec.psiz % align;
+        rec.psiz -= diff;
+        rec.rsiz -= diff;
+        fbsiz += diff;
+      }
+      if(!tchdbshiftrec(hdb, &rec, rbuf, dest)) return false;
+      if(hdb->iter == cur) hdb->iter = dest;
+      dest += rec.rsiz;
+      step--;
+    } else {
+      if(hdb->iter == cur) hdb->iter += rec.rsiz;
+      fbsiz += rec.rsiz;
+    }
+    cur += rsiz;
+  }
+  if(cur < hdb->fsiz){
+    if(fbsiz > HDBFBMAXSIZ){
+      tchdbfbptrim(hdb, base, cur, 0, 0);
+      uint64_t off = dest;
+      uint64_t size = fbsiz;
+      while(size > 0){
+        uint32_t rsiz = (size > HDBFBMAXSIZ) ? HDBFBMAXSIZ : size;
+        if(size - rsiz < HDBMINRUNIT) rsiz = size;
+        tchdbfbpinsert(hdb, off, rsiz);
+        if(!tchdbwritefb(hdb, off, rsiz)) return false;
+        off += rsiz;
+        size -= rsiz;
+      }
+    } else {
+      tchdbfbptrim(hdb, base, cur, dest, fbsiz);
+      if(!tchdbwritefb(hdb, dest, fbsiz)) return false;
+    }
+    hdb->dfcur = cur - fbsiz;
+  } else {
+    TCDODEBUG(hdb->cnt_trunc++);
+    if(hdb->tran && !tchdbwalwrite(hdb, dest, fbsiz)) return false;
+    tchdbfbptrim(hdb, base, cur, 0, 0);
+    hdb->dfcur = hdb->frec;
+    hdb->fsiz = dest;
+    uint64_t llnum = hdb->fsiz;
+    llnum = TCHTOILL(llnum);
+    memcpy(hdb->map + HDBFSIZOFF, &llnum, sizeof(llnum));
+    if(hdb->iter >= hdb->fsiz) hdb->iter = UINT64_MAX;
+    if(!hdb->tran){
+      if(ftruncate(hdb->fd, hdb->fsiz) == -1){
+        tchdbsetecode(hdb, TCETRUNC, __FILE__, __LINE__, __func__);
+        return false;
+      }
+      hdb->xfsiz = 0;
+    }
+  }
+  return true;
+}
+
+
 /* Process each record atomically of a hash database object.
    `hdb' specifies the hash database object.
    `func' specifies the pointer to the iterator function called for each record.
@@ -4576,6 +4914,7 @@ void tchdbprintmeta(TCHDB *hdb){
   wp += sprintf(wp, " rnum=%llu", (unsigned long long)hdb->rnum);
   wp += sprintf(wp, " fsiz=%llu", (unsigned long long)hdb->fsiz);
   wp += sprintf(wp, " frec=%llu", (unsigned long long)hdb->frec);
+  wp += sprintf(wp, " dfcur=%llu", (unsigned long long)hdb->dfcur);
   wp += sprintf(wp, " iter=%llu", (unsigned long long)hdb->iter);
   wp += sprintf(wp, " map=%p", (void *)hdb->map);
   wp += sprintf(wp, " msiz=%llu", (unsigned long long)hdb->msiz);
@@ -4597,6 +4936,8 @@ void tchdbprintmeta(TCHDB *hdb){
   wp += sprintf(wp, " fatal=%u", hdb->fatal);
   wp += sprintf(wp, " inode=%llu", (unsigned long long)(uint64_t)hdb->inode);
   wp += sprintf(wp, " mtime=%llu", (unsigned long long)(uint64_t)hdb->mtime);
+  wp += sprintf(wp, " dfunit=%u", hdb->dfunit);
+  wp += sprintf(wp, " dfcnt=%u", hdb->dfcnt);
   wp += sprintf(wp, " tran=%d", hdb->tran);
   wp += sprintf(wp, " walfd=%d", hdb->walfd);
   wp += sprintf(wp, " walend=%llu", (unsigned long long)hdb->walend);
@@ -4615,6 +4956,9 @@ void tchdbprintmeta(TCHDB *hdb){
   wp += sprintf(wp, " cnt_deferdrp=%lld", (long long)hdb->cnt_deferdrp);
   wp += sprintf(wp, " cnt_flushdrp=%lld", (long long)hdb->cnt_flushdrp);
   wp += sprintf(wp, " cnt_adjrecc=%lld", (long long)hdb->cnt_adjrecc);
+  wp += sprintf(wp, " cnt_defrag=%lld", (long long)hdb->cnt_defrag);
+  wp += sprintf(wp, " cnt_shiftrec=%lld", (long long)hdb->cnt_shiftrec);
+  wp += sprintf(wp, " cnt_trunc=%lld", (long long)hdb->cnt_trunc);
   *(wp++) = '\n';
   tcwrite(dbgfd, buf, wp - buf);
 }

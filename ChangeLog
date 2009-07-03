@@ -1,3 +1,19 @@
+2009-05-10  Mikio Hirabayashi  <mikio@users.sourceforge.net>
+
+	* tchdb.c (tchdbsetdfunit, tchdbdfunit, tchdbdefrag): new functions.
+
+	* tchdb.c (tchdbdefragimpl, tchdbfbptrim, tchdbshiftrec): new functions.
+
+	* tcbdb.c (tcbdbsetdfunit, tcbdbdfunit, tcbdbdefrag): new functions.
+
+	* tctdb.c (tctdbsetdfunit, tctdbdfunit, tctdbdefrag): new functions.
+
+	* tcadb.c (tcadbopen): "dfunit" parameter was added.
+
+	* tcadb.c (tcadbmisc): "defrag" command was added.
+
+	- Release: 1.4.21
+
 2009-05-08  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
 	* tcutil.h: signedness of some members of TCMAP and TCTREE were changed.
@@ -12,7 +28,7 @@
 
 	* tctdb.c (tctdbsearchimpl, tctdbidxput, tctdbidxout): the index format was modified.
 
-	* tcadb.c (tcadbmisc): the "out" option of the "search" command became non-atomic.
+	* tcadb.c (tcadbmisc): "out" option of "search" command became non-atomic.
 
 	- Release: 1.4.19
 
@@ -260,7 +276,7 @@
 
 2008-12-27  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
-	* tcadb.c (tcadbmisc): the return value of the "getlist" function was modified.
+	* tcadb.c (tcadbmisc): the return value of "getlist" function was modified.
 
 	- Release: 1.3.27
 
@@ -550,7 +566,7 @@
 
 2008-07-01  Mikio Hirabayashi  <mikio@users.sourceforge.net>
 
-	* tcutil.c (tcjetlag): missing of the "timezone" variable is now allowed.
+	* tcutil.c (tcjetlag): missing of "timezone" variable is now allowed.
 
 	- Release: 1.2.10
 

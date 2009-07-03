@@ -109,6 +109,7 @@ bool tcadbopen(TCADB *adb, const char *name){
   bool ttmode = false;
   int32_t rcnum = -1;
   int64_t xmsiz = -1;
+  int32_t dfunit = -1;
   int32_t lmemb = -1;
   int32_t nmemb = -1;
   int32_t lcnum = -1;
@@ -149,6 +150,8 @@ bool tcadbopen(TCADB *adb, const char *name){
       rcnum = tcatoix(pv);
     } else if(!tcstricmp(elem, "xmsiz")){
       xmsiz = tcatoix(pv);
+    } else if(!tcstricmp(elem, "dfunit")){
+      dfunit = tcatoix(pv);
     } else if(!tcstricmp(elem, "lmemb")){
       lmemb = tcatoix(pv);
     } else if(!tcstricmp(elem, "nmemb")){
@@ -201,6 +204,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     tchdbtune(hdb, bnum, apow, fpow, opts);
     tchdbsetcache(hdb, rcnum);
     if(xmsiz >= 0) tchdbsetxmsiz(hdb, xmsiz);
+    if(dfunit >= 0) tchdbsetdfunit(hdb, dfunit);
     int omode = owmode ? HDBOWRITER : HDBOREADER;
     if(ocmode) omode |= HDBOCREAT;
     if(otmode) omode |= HDBOTRUNC;
@@ -226,6 +230,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     tcbdbtune(bdb, lmemb, nmemb, bnum, apow, fpow, opts);
     tcbdbsetcache(bdb, lcnum, ncnum);
     if(xmsiz >= 0) tcbdbsetxmsiz(bdb, xmsiz);
+    if(dfunit >= 0) tcbdbsetdfunit(bdb, dfunit);
     if(capnum > 0) tcbdbsetcapnum(bdb, capnum);
     int omode = owmode ? BDBOWRITER : BDBOREADER;
     if(ocmode) omode |= BDBOCREAT;
@@ -271,6 +276,7 @@ bool tcadbopen(TCADB *adb, const char *name){
     tctdbtune(tdb, bnum, apow, fpow, opts);
     tctdbsetcache(tdb, rcnum, lcnum, ncnum);
     if(xmsiz >= 0) tctdbsetxmsiz(tdb, xmsiz);
+    if(dfunit >= 0) tctdbsetdfunit(tdb, dfunit);
     int omode = owmode ? TDBOWRITER : TDBOREADER;
     if(ocmode) omode |= TDBOCREAT;
     if(otmode) omode |= TDBOTRUNC;
@@ -1590,7 +1596,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         tcmdbout(adb->mdb, kbuf, ksiz);
       }
     } else if(!strcmp(name, "getlist")){
-      rv = tclistnew2(argc);
+      rv = tclistnew2(argc * 2);
       for(int i = 0; i < argc; i++){
         const char *kbuf;
         int ksiz;
@@ -1683,7 +1689,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         tcndbout(adb->ndb, kbuf, ksiz);
       }
     } else if(!strcmp(name, "getlist")){
-      rv = tclistnew2(argc);
+      rv = tclistnew2(argc * 2);
       for(int i = 0; i < argc; i++){
         const char *kbuf;
         int ksiz;
@@ -1792,7 +1798,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         rv = NULL;
       }
     } else if(!strcmp(name, "getlist")){
-      rv = tclistnew2(argc);
+      rv = tclistnew2(argc * 2);
       bool err = false;
       for(int i = 0; i < argc; i++){
         const char *kbuf;
@@ -1809,6 +1815,13 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "defrag")){
+      rv = tclistnew2(1);
+      int64_t step = argc > 0 ? tcatoi(TCLISTVALPTR(args, 0)) : -1;
+      if(!tchdbdefrag(adb->hdb, step)){
         tclistdel(rv);
         rv = NULL;
       }
@@ -1912,7 +1925,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         rv = NULL;
       }
     } else if(!strcmp(name, "getlist")){
-      rv = tclistnew2(argc);
+      rv = tclistnew2(argc * 2);
       bool err = false;
       for(int i = 0; i < argc; i++){
         const char *kbuf;
@@ -1934,6 +1947,13 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "defrag")){
+      rv = tclistnew2(1);
+      int64_t step = argc > 0 ? tcatoi(TCLISTVALPTR(args, 0)) : -1;
+      if(!tcbdbdefrag(adb->bdb, step)){
         tclistdel(rv);
         rv = NULL;
       }
@@ -2033,7 +2053,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         rv = NULL;
       }
     } else if(!strcmp(name, "getlist")){
-      rv = tclistnew2(argc);
+      rv = tclistnew2(argc * 2);
       bool err = false;
       for(int i = 0; i < argc; i++){
         const char *kbuf;
@@ -2164,7 +2184,7 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         rv = NULL;
       }
     } else if(!strcmp(name, "getlist")){
-      rv = tclistnew2(argc);
+      rv = tclistnew2(argc * 2);
       bool err = false;
       for(int i = 0; i < argc; i++){
         const char *kbuf;
@@ -2181,6 +2201,13 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         }
       }
       if(err){
+        tclistdel(rv);
+        rv = NULL;
+      }
+    } else if(!strcmp(name, "defrag")){
+      rv = tclistnew2(1);
+      int64_t step = argc > 0 ? tcatoi(TCLISTVALPTR(args, 0)) : -1;
+      if(!tctdbdefrag(adb->tdb, step)){
         tclistdel(rv);
         rv = NULL;
       }

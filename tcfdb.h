@@ -795,7 +795,9 @@ char *tcfdbopaque(TCFDB *fdb);
    not modified.  If it is `(void *)-1', the record is removed.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
-   If successful, the return value is true, else, it is false. */
+   If successful, the return value is true, else, it is false.
+   Note that the callback function can not perform any database operation because the function
+   is called in the critical section guarded by the same locks of database operations. */
 bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC proc, void *op);
 
 
@@ -809,7 +811,9 @@ bool tcfdbputproc(TCFDB *fdb, int64_t id, const void *vbuf, int vsiz, TCPDPROC p
    or false to stop iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
-   If successful, the return value is true, else, it is false. */
+   If successful, the return value is true, else, it is false.
+   Note that the callback function can not perform any database operation because the function
+   is called in the critical section guarded by the same locks of database operations. */
 bool tcfdbforeach(TCFDB *fdb, TCITER iter, void *op);
 
 

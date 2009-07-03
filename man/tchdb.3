@@ -164,6 +164,25 @@ Note that the mapping parameters should be set before the database is opened.
 .RE
 .RE
 .PP
+The function `tchdbsetdfunit' is used in order to set the unit step number of auto defragmentation of a hash database object.
+.PP
+.RS
+.br
+\fBbool tchdbsetdfunit(TCHDB *\fIhdb\fB, int32_t \fIdfunit\fB);\fR
+.RS
+`\fIhdb\fR' specifies the hash database object which is not opened.
+.RE
+.RS
+`\fIdfunit\fR' specifie the unit step number.  If it is not more than 0, the auto defragmentation is disabled.  It is disabled by default.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+Note that the defragmentation parameters should be set before the database is opened.
+.RE
+.RE
+.PP
 The function `tchdbopen' is used in order to open a database file and connect a hash database object.
 .PP
 .RS

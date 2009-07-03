@@ -242,6 +242,15 @@ bool tctdbsetcache(TCTDB *tdb, int32_t rcnum, int32_t lcnum, int32_t ncnum);
 bool tctdbsetxmsiz(TCTDB *tdb, int64_t xmsiz);
 
 
+/* Set the unit step number of auto defragmentation of a table database object.
+   `tdb' specifies the table database object which is not opened.
+   `dfunit' specifie the unit step number.  If it is not more than 0, the auto defragmentation
+   is disabled.  It is disabled by default.
+   If successful, the return value is true, else, it is false.
+   Note that the defragmentation parameters should be set before the database is opened. */
+bool tctdbsetdfunit(TCTDB *tdb, int32_t dfunit);
+
+
 /* Open a database file and connect a table database object.
    `tdb' specifies the table database object which is not opened.
    `path' specifies the path of the database file.
@@ -849,6 +858,20 @@ bool tctdbsetuidseed(TCTDB *tdb, int64_t seed);
 bool tctdbsetcodecfunc(TCTDB *tdb, TCCODEC enc, void *encop, TCCODEC dec, void *decop);
 
 
+/* Get the unit step number of auto defragmentation of a table database object.
+   `tdb' specifies the table database object.
+   The return value is the unit step number of auto defragmentation. */
+uint32_t tctdbdfunit(TCTDB *tdb);
+
+
+/* Perform dynamic defragmentation of a table database object.
+   `tdb' specifies the table database object connected as a writer.
+   `step' specifie the number of steps.  If it is not more than 0, the whole file is defragmented
+   gradually without keeping a continuous lock.
+   If successful, the return value is true, else, it is false. */
+bool tctdbdefrag(TCTDB *tdb, int64_t step);
+
+
 /* Store a record into a table database object with a duplication handler.
    `tdb' specifies the table database object connected as a writer.
    `pkbuf' specifies the pointer to the region of the primary key.
@@ -866,7 +889,9 @@ bool tctdbsetcodecfunc(TCTDB *tdb, TCCODEC enc, void *encop, TCCODEC dec, void *
    not modified.  If it is `(void *)-1', the record is removed.
    `op' specifies an arbitrary pointer to be given as a parameter of the callback function.  If
    it is not needed, `NULL' can be specified.
-   If successful, the return value is true, else, it is false. */
+   If successful, the return value is true, else, it is false.
+   Note that the callback function can not perform any database operation because the function
+   is called in the critical section guarded by the same locks of database operations. */
 bool tctdbputproc(TCTDB *tdb, const void *pkbuf, int pksiz, const void *cbuf, int csiz,
                   TCPDPROC proc, void *op);
 
@@ -881,7 +906,9 @@ bool tctdbputproc(TCTDB *tdb, const void *pkbuf, int pksiz, const void *cbuf, in
    or false to stop iteration.
    `op' specifies an arbitrary pointer to be given as a parameter of the iterator function.  If
    it is not needed, `NULL' can be specified.
-   If successful, the return value is true, else, it is false. */
+   If successful, the return value is true, else, it is false.
+   Note that the callback function can not perform any database operation because the function
+   is called in the critical section guarded by the same locks of database operations. */
 bool tctdbforeach(TCTDB *tdb, TCITER iter, void *op);
 
 

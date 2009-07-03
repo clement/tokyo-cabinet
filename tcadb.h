@@ -92,10 +92,11 @@ void tcadbdel(TCADB *adb);
    fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of
    the name and the value, separated by "=".  On-memory hash database supports "bnum", "capnum",
    and "capsiz".  On-memory tree database supports "capnum" and "capsiz".  Hash database supports
-   "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports
-   "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".
-   Fixed-length database supports "mode", "width", and "limsiz".  Table database supports "mode",
-   "bnum", "apow", "fpow", "opts", "rcnum", "lcnum", "ncnum", "xmsiz", and "idx".
+   "mode", "bnum", "apow", "fpow", "opts", "rcnum", "xmsiz", and "dfunit".  B+ tree database
+   supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", "xmsiz",
+   and "dfunit".  Fixed-length database supports "mode", "width", and "limsiz".  Table database
+   supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", "lcnum", "ncnum", "xmsiz", "dfunit",
+   and "idx".
    If successful, the return value is true, else, it is false.
    The tuning parameter "capnum" specifies the capacity number of records.  "capsiz" specifies
    the capacity size of using memory.  Records spilled the capacity are removed by the storing

@@ -195,6 +195,25 @@ Note that the mapping parameters should be set before the database is opened.
 .RE
 .RE
 .PP
+The function `tcbdbsetdfunit' is used in order to set the unit step number of auto defragmentation of a B+ tree database object.
+.PP
+.RS
+.br
+\fBbool tcbdbsetdfunit(TCBDB *\fIbdb\fB, int32_t \fIdfunit\fB);\fR
+.RS
+`\fIbdb\fR' specifies the B+ tree database object which is not opened.
+.RE
+.RS
+`\fIdfunit\fR' specifie the unit step number.  If it is not more than 0, the auto defragmentation is disabled.  It is disabled by default.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+Note that the defragmentation parameter should be set before the database is opened.
+.RE
+.RE
+.PP
 The function `tcbdbopen' is used in order to open a database file and connect a B+ tree database object.
 .PP
 .RS

@@ -90,15 +90,17 @@ static int runwicked(int argc, char **argv);
 static int runtypical(int argc, char **argv);
 static int runrace(int argc, char **argv);
 static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
-                     int opts, int rcnum, int xmsiz, int omode, bool as, bool rnd);
-static int procread(const char *path, int tnum, int rcnum, int xmsiz, int omode,
+                     int opts, int rcnum, int xmsiz, int dfunit, int omode, bool as, bool rnd);
+static int procread(const char *path, int tnum, int rcnum, int xmsiz, int dfunit, int omode,
                     bool wb, bool rnd);
-static int procremove(const char *path, int tnum, int rcnum, int xmsiz, int omode, bool rnd);
+static int procremove(const char *path, int tnum, int rcnum, int xmsiz, int dfunit, int omode,
+                      bool rnd);
 static int procwicked(const char *path, int tnum, int rnum, int opts, int omode, bool nc);
 static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
-                       int opts, int rcnum, int xmsiz, int omode, bool nc, int rratio);
+                       int opts, int rcnum, int xmsiz, int dfunit, int omode,
+                       bool nc, int rratio);
 static int procrace(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
-                    int opts, int xmsiz, int omode);
+                    int opts, int xmsiz, int dfunit, int omode);
 static void *threadwrite(void *targ);
 static void *threadread(void *targ);
 static void *threadremove(void *targ);
@@ -148,16 +150,17 @@ static void usage(void){
   fprintf(stderr, "%s: test cases of the hash database API of Tokyo Cabinet\n", g_progname);
   fprintf(stderr, "\n");
   fprintf(stderr, "usage:\n");
-  fprintf(stderr, "  %s write [-tl] [-td|-tb|-tt|-tx] [-rc num] [-xm num] [-nl|-nb] [-as] [-rnd]"
-          " path tnum rnum [bnum [apow [fpow]]]\n", g_progname);
-  fprintf(stderr, "  %s read [-rc num] [-xm num] [-nl|-nb] [-wb] [-rnd] path tnum\n",
+  fprintf(stderr, "  %s write [-tl] [-td|-tb|-tt|-tx] [-rc num] [-xm num] [-df num]"
+          " [-nl|-nb] [-as] [-rnd] path tnum rnum [bnum [apow [fpow]]]\n", g_progname);
+  fprintf(stderr, "  %s read [-rc num] [-xm num] [-df num] [-nl|-nb] [-wb] [-rnd] path tnum\n",
           g_progname);
-  fprintf(stderr, "  %s remove [-rc num] [-xm num] [-nl|-nb] [-rnd] path tnum\n", g_progname);
+  fprintf(stderr, "  %s remove [-rc num] [-xm num] [-df num] [-nl|-nb] [-rnd] path tnum\n",
+          g_progname);
   fprintf(stderr, "  %s wicked [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc]"
           " path tnum rnum\n", g_progname);
-  fprintf(stderr, "  %s typical [-tl] [-td|-tb|-tt|-tx] [-rc num] [-xm num] [-nl|-nb] [-nc]"
-          " [-rr num] path tnum rnum [bnum [apow [fpow]]]\n", g_progname);
-  fprintf(stderr, "  %s race [-tl] [-td|-tb|-tt|-tx] [-xm num] [-nl|-nb]"
+  fprintf(stderr, "  %s typical [-tl] [-td|-tb|-tt|-tx] [-rc num] [-xm num] [-df num]"
+          " [-nl|-nb] [-nc] [-rr num] path tnum rnum [bnum [apow [fpow]]]\n", g_progname);
+  fprintf(stderr, "  %s race [-tl] [-td|-tb|-tt|-tx] [-xm num] [-df num] [-nl|-nb]"
           " path tnum rnum [bnum [apow [fpow]]]\n", g_progname);
   fprintf(stderr, "\n");
   exit(1);
@@ -209,6 +212,9 @@ static void mprint(TCHDB *hdb){
   iprintf("cnt_deferdrp: %lld\n", (long long)hdb->cnt_deferdrp);
   iprintf("cnt_flushdrp: %lld\n", (long long)hdb->cnt_flushdrp);
   iprintf("cnt_adjrecc: %lld\n", (long long)hdb->cnt_adjrecc);
+  iprintf("cnt_defrag: %lld\n", (long long)hdb->cnt_defrag);
+  iprintf("cnt_shiftrec: %lld\n", (long long)hdb->cnt_shiftrec);
+  iprintf("cnt_trunc: %lld\n", (long long)hdb->cnt_trunc);
 }
 
 
@@ -267,6 +273,7 @@ static int runwrite(int argc, char **argv){
   int opts = 0;
   int rcnum = 0;
   int xmsiz = -1;
+  int dfunit = 0;
   int omode = 0;
   bool as = false;
   bool rnd = false;
@@ -288,6 +295,9 @@ static int runwrite(int argc, char **argv){
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-df")){
+        if(++i >= argc) usage();
+        dfunit = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -322,7 +332,8 @@ static int runwrite(int argc, char **argv){
   int bnum = bstr ? tcatoix(bstr) : -1;
   int apow = astr ? tcatoix(astr) : -1;
   int fpow = fstr ? tcatoix(fstr) : -1;
-  int rv = procwrite(path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, omode, as, rnd);
+  int rv = procwrite(path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, dfunit, omode,
+                     as, rnd);
   return rv;
 }
 
@@ -333,6 +344,7 @@ static int runread(int argc, char **argv){
   char *tstr = NULL;
   int rcnum = 0;
   int xmsiz = -1;
+  int dfunit = 0;
   int omode = 0;
   bool wb = false;
   bool rnd = false;
@@ -344,6 +356,9 @@ static int runread(int argc, char **argv){
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-df")){
+        if(++i >= argc) usage();
+        dfunit = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -366,7 +381,7 @@ static int runread(int argc, char **argv){
   if(!path || !tstr) usage();
   int tnum = tcatoix(tstr);
   if(tnum < 1) usage();
-  int rv = procread(path, tnum, rcnum, xmsiz, omode, wb, rnd);
+  int rv = procread(path, tnum, rcnum, xmsiz, dfunit, omode, wb, rnd);
   return rv;
 }
 
@@ -377,6 +392,7 @@ static int runremove(int argc, char **argv){
   char *tstr = NULL;
   int rcnum = 0;
   int xmsiz = -1;
+  int dfunit = 0;
   int omode = 0;
   bool rnd = false;
   for(int i = 2; i < argc; i++){
@@ -387,6 +403,9 @@ static int runremove(int argc, char **argv){
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-df")){
+        if(++i >= argc) usage();
+        dfunit = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -407,7 +426,7 @@ static int runremove(int argc, char **argv){
   if(!path || !tstr) usage();
   int tnum = tcatoix(tstr);
   if(tnum < 1) usage();
-  int rv = procremove(path, tnum, rcnum, xmsiz, omode, rnd);
+  int rv = procremove(path, tnum, rcnum, xmsiz, dfunit, omode, rnd);
   return rv;
 }
 
@@ -471,6 +490,7 @@ static int runtypical(int argc, char **argv){
   int opts = 0;
   int rcnum = 0;
   int xmsiz = -1;
+  int dfunit = 0;
   int omode = 0;
   int rratio = -1;
   bool nc = false;
@@ -492,6 +512,9 @@ static int runtypical(int argc, char **argv){
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-df")){
+        if(++i >= argc) usage();
+        dfunit = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -527,7 +550,8 @@ static int runtypical(int argc, char **argv){
   int bnum = bstr ? tcatoix(bstr) : -1;
   int apow = astr ? tcatoix(astr) : -1;
   int fpow = fstr ? tcatoix(fstr) : -1;
-  int rv = proctypical(path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, omode, nc, rratio);
+  int rv = proctypical(path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, dfunit, omode,
+                       nc, rratio);
   return rv;
 }
 
@@ -542,6 +566,7 @@ static int runrace(int argc, char **argv){
   char *fstr = NULL;
   int opts = 0;
   int xmsiz = -1;
+  int dfunit = 0;
   int omode = 0;
   for(int i = 2; i < argc; i++){
     if(!path && argv[i][0] == '-'){
@@ -558,6 +583,9 @@ static int runrace(int argc, char **argv){
       } else if(!strcmp(argv[i], "-xm")){
         if(++i >= argc) usage();
         xmsiz = tcatoix(argv[i]);
+      } else if(!strcmp(argv[i], "-df")){
+        if(++i >= argc) usage();
+        dfunit = tcatoix(argv[i]);
       } else if(!strcmp(argv[i], "-nl")){
         omode |= HDBONOLCK;
       } else if(!strcmp(argv[i], "-nb")){
@@ -588,17 +616,18 @@ static int runrace(int argc, char **argv){
   int bnum = bstr ? tcatoix(bstr) : -1;
   int apow = astr ? tcatoix(astr) : -1;
   int fpow = fstr ? tcatoix(fstr) : -1;
-  int rv = procrace(path, tnum, rnum, bnum, apow, fpow, opts, xmsiz, omode);
+  int rv = procrace(path, tnum, rnum, bnum, apow, fpow, opts, xmsiz, dfunit, omode);
   return rv;
 }
 
 
 /* perform write command */
 static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
-                     int opts, int rcnum, int xmsiz, int omode, bool as, bool rnd){
+                     int opts, int rcnum, int xmsiz, int dfunit, int omode, bool as, bool rnd){
   iprintf("<Writing Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  bnum=%d  apow=%d  fpow=%d"
-          "  opts=%d  rcnum=%d  xmsiz=%d  omode=%d  as=%d  rnd=%d\n\n",
-          g_randseed, path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, omode, as, rnd);
+          "  opts=%d  rcnum=%d  xmsiz=%d  dfunit=%d  omode=%d  as=%d  rnd=%d\n\n",
+          g_randseed, path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, dfunit, omode,
+          as, rnd);
   bool err = false;
   double stime = tctime();
   TCHDB *hdb = tchdbnew();
@@ -621,6 +650,10 @@ static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, i
   }
   if(xmsiz >= 0 && !tchdbsetxmsiz(hdb, xmsiz)){
     eprint(hdb, "tchdbsetxmsiz");
+    err = true;
+  }
+  if(dfunit >= 0 && !tchdbsetdfunit(hdb, dfunit)){
+    eprint(hdb, "tchdbsetdfunit");
     err = true;
   }
   if(!tchdbopen(hdb, path, HDBOWRITER | HDBOCREAT | HDBOTRUNC | omode)){
@@ -676,10 +709,10 @@ static int procwrite(const char *path, int tnum, int rnum, int bnum, int apow, i
 
 
 /* perform read command */
-static int procread(const char *path, int tnum, int rcnum, int xmsiz, int omode,
+static int procread(const char *path, int tnum, int rcnum, int xmsiz, int dfunit, int omode,
                     bool wb, bool rnd){
-  iprintf("<Reading Test>\n  seed=%u  path=%s  tnum=%d  rcnum=%d  xmsiz=%d  omode=%d"
-          "  wb=%d  rnd=%d\n\n", g_randseed, path, tnum, rcnum, xmsiz, omode, wb, rnd);
+  iprintf("<Reading Test>\n  seed=%u  path=%s  tnum=%d  rcnum=%d  xmsiz=%d  dfunit=%d  omode=%d"
+          "  wb=%d  rnd=%d\n\n", g_randseed, path, tnum, rcnum, xmsiz, dfunit, omode, wb, rnd);
   bool err = false;
   double stime = tctime();
   TCHDB *hdb = tchdbnew();
@@ -698,6 +731,10 @@ static int procread(const char *path, int tnum, int rcnum, int xmsiz, int omode,
   }
   if(xmsiz >= 0 && !tchdbsetxmsiz(hdb, xmsiz)){
     eprint(hdb, "tchdbsetxmsiz");
+    err = true;
+  }
+  if(dfunit >= 0 && !tchdbsetdfunit(hdb, dfunit)){
+    eprint(hdb, "tchdbsetdfunit");
     err = true;
   }
   if(!tchdbopen(hdb, path, HDBOREADER | omode)){
@@ -754,9 +791,10 @@ static int procread(const char *path, int tnum, int rcnum, int xmsiz, int omode,
 
 
 /* perform remove command */
-static int procremove(const char *path, int tnum, int rcnum, int xmsiz, int omode, bool rnd){
-  iprintf("<Removing Test>\n  seed=%u  path=%s  tnum=%d  rcnum=%d  xmsiz=%d  omode=%d"
-          "  rnd=%d\n\n", g_randseed, path, tnum, rcnum, xmsiz, omode, rnd);
+static int procremove(const char *path, int tnum, int rcnum, int xmsiz, int dfunit, int omode,
+                      bool rnd){
+  iprintf("<Removing Test>\n  seed=%u  path=%s  tnum=%d  rcnum=%d  xmsiz=%d  dfunit=%d  omode=%d"
+          "  rnd=%d\n\n", g_randseed, path, tnum, rcnum, xmsiz, dfunit, omode, rnd);
   bool err = false;
   double stime = tctime();
   TCHDB *hdb = tchdbnew();
@@ -775,6 +813,10 @@ static int procremove(const char *path, int tnum, int rcnum, int xmsiz, int omod
   }
   if(xmsiz >= 0 && !tchdbsetxmsiz(hdb, xmsiz)){
     eprint(hdb, "tchdbsetxmsiz");
+    err = true;
+  }
+  if(dfunit >= 0 && !tchdbsetdfunit(hdb, dfunit)){
+    eprint(hdb, "tchdbsetdfunit");
     err = true;
   }
   if(!tchdbopen(hdb, path, HDBOWRITER | omode)){
@@ -854,6 +896,10 @@ static int procwicked(const char *path, int tnum, int rnum, int opts, int omode,
   }
   if(!tchdbsetxmsiz(hdb, rnum * sizeof(int))){
     eprint(hdb, "tchdbsetxmsiz");
+    err = true;
+  }
+  if(!tchdbsetdfunit(hdb, 8)){
+    eprint(hdb, "tchdbsetdfunit");
     err = true;
   }
   if(!tchdbopen(hdb, path, HDBOWRITER | HDBOCREAT | HDBOTRUNC | omode)){
@@ -954,10 +1000,12 @@ static int procwicked(const char *path, int tnum, int rnum, int opts, int omode,
 
 /* perform typical command */
 static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
-                       int opts, int rcnum, int xmsiz, int omode, bool nc, int rratio){
+                       int opts, int rcnum, int xmsiz, int dfunit, int omode,
+                       bool nc, int rratio){
   iprintf("<Typical Access Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  bnum=%d  apow=%d"
-          "  fpow=%d  opts=%d  rcnum=%d  xmsiz=%d  omode=%d  nc=%d  rratio=%d\n\n",
-          g_randseed, path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, omode, nc, rratio);
+          "  fpow=%d  opts=%d  rcnum=%d  xmsiz=%d  dfunit=%d  omode=%d  nc=%d  rratio=%d\n\n",
+          g_randseed, path, tnum, rnum, bnum, apow, fpow, opts, rcnum, xmsiz, dfunit, omode,
+          nc, rratio);
   bool err = false;
   double stime = tctime();
   TCHDB *hdb = tchdbnew();
@@ -980,6 +1028,10 @@ static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow,
   }
   if(xmsiz >= 0 && !tchdbsetxmsiz(hdb, xmsiz)){
     eprint(hdb, "tchdbsetxmsiz");
+    err = true;
+  }
+  if(dfunit >= 0 && !tchdbsetdfunit(hdb, dfunit)){
+    eprint(hdb, "tchdbsetdfunit");
     err = true;
   }
   if(!tchdbopen(hdb, path, HDBOWRITER | HDBOCREAT | HDBOTRUNC | omode)){
@@ -1036,10 +1088,10 @@ static int proctypical(const char *path, int tnum, int rnum, int bnum, int apow,
 
 /* perform race command */
 static int procrace(const char *path, int tnum, int rnum, int bnum, int apow, int fpow,
-                    int opts, int xmsiz, int omode){
+                    int opts, int xmsiz, int dfunit, int omode){
   iprintf("<Race Condition Test>\n  seed=%u  path=%s  tnum=%d  rnum=%d  bnum=%d  apow=%d"
-          "  fpow=%d  opts=%d  xmsiz=%d  omode=%d\n\n",
-          g_randseed, path, tnum, rnum, bnum, apow, fpow, opts, xmsiz, omode);
+          "  fpow=%d  opts=%d  xmsiz=%d  dfunit=%d  omode=%d\n\n",
+          g_randseed, path, tnum, rnum, bnum, apow, fpow, opts, xmsiz, dfunit, omode);
   bool err = false;
   double stime = tctime();
   TCHDB *hdb = tchdbnew();
@@ -1058,6 +1110,10 @@ static int procrace(const char *path, int tnum, int rnum, int bnum, int apow, in
   }
   if(xmsiz >= 0 && !tchdbsetxmsiz(hdb, xmsiz)){
     eprint(hdb, "tchdbsetxmsiz");
+    err = true;
+  }
+  if(dfunit >= 0 && !tchdbsetdfunit(hdb, dfunit)){
+    eprint(hdb, "tchdbsetdfunit");
     err = true;
   }
   if(!tchdbopen(hdb, path, HDBOWRITER | HDBOCREAT | HDBOTRUNC | omode)){
@@ -1653,6 +1709,13 @@ static void *threadrace(void *targ){
         iprintf("[o]");
         if(!tchdboptimize(hdb, myrand(rnum) + 1, myrand(10), myrand(10), 0)){
           eprint(hdb, "tchdboptimize");
+          err = true;
+        }
+      }
+      if(myrand(mid) == 0){
+        iprintf("[d]");
+        if(!tchdbdefrag(hdb, -1)){
+          eprint(hdb, "tchdbdefrag");
           err = true;
         }
       }

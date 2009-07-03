@@ -168,6 +168,25 @@ Note that the mapping parameters should be set before the database is opened.
 .RE
 .RE
 .PP
+The function `tctdbsetdfunit' is used in order to set the unit step number of auto defragmentation of a table database object.
+.PP
+.RS
+.br
+\fBbool tctdbsetdfunit(TCTDB *\fItdb\fB, int32_t \fIdfunit\fB);\fR
+.RS
+`\fItdb\fR' specifies the table database object which is not opened.
+.RE
+.RS
+`\fIdfunit\fR' specifie the unit step number.  If it is not more than 0, the auto defragmentation is disabled.  It is disabled by default.
+.RE
+.RS
+If successful, the return value is true, else, it is false.
+.RE
+.RS
+Note that the defragmentation parameters should be set before the database is opened.
+.RE
+.RE
+.PP
 The function `tctdbopen' is used in order to open a database file and connect a table database object.
 .PP
 .RS

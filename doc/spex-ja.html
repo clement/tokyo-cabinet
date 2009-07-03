@@ -96,7 +96,9 @@
 
 <p>伝統的なDBMにはレコードの追加操作に関して「挿入」モードと「置換」モードがあります。前者では、キーが既存のレコードと重複する際に既存の値を残します。後者では、キーが既存のレコードと重複した際に新しい値に置き換えます。Tokyo Cabinetはその２つに加えて「連結」モードがあります。既存の値の末尾に指定された値を連結して格納する操作です。レコードの値を配列として扱う場合、要素を追加するには連結モードが役に立ちます。</p>
 
-<p>一般的に、データベースの更新処理を続けるとファイル内の利用可能領域の断片化が起き、ファイルのサイズが肥大化してしまいます。Tokyo Cabinetは隣接する不要領域を連結して再利用し、またデータベースの最適化機能を備えることによってこの問題に対処します。既存のレコードの値をより大きなサイズの値に上書きする場合、そのレコードの領域をファイル中の別の位置に移動させる必要があります。この処理の時間計算量はレコードのサイズに依存するので、値を拡張していく場合には効率が悪くなります。しかし、Tokyo Cabinetはアラインメントによってこの問題に対処します。増分がパディングに収まれば領域を移動させる必要はありません。</p>
+<p>一般的に、データベースの更新処理を続けるとファイル内の利用可能領域の断片化（フラグメンテーション）が起き、ファイルのサイズが肥大化してしまいます。Tokyo Cabinetは隣接する不要領域を連結して再利用することによってこの問題に対処します。既存のレコードの値をより大きなサイズの値に上書きする場合、そのレコードの領域をファイル中の別の位置に移動させる必要があります。この処理の時間計算量はレコードのサイズに依存するので、値を拡張していく場合には効率が悪くなります。しかし、Tokyo Cabinetはアラインメントによってこの問題に対処します。増分がパディングに収まれば領域を移動させる必要はありません。</p>
+
+<p>不要領域を効率的に再利用するための「フリーブロックプール」も実装されています。これは不要になった領域をリストに記憶しておき、新しい領域が要求された際ににリストの中から最も小さい不要領域（ベストフィット）を選択して再利用するものです。それでも断片化は避けられないので、レコードの領域を詰め直して最適化（デフラグ）する二種類の機能も実装されています。一つめは静的な最適化で、全てのレコードを別ファイルに配置しなおしてから一気に書き戻すものです。二つめは動的な最適化で、レコードと不要領域の位置を入れ替える操作を少しずつ行って不要領域を集結させていくものです。</p>
 
 <h3 id="features_tcbdb">便利なB+木データベースの実装</h3>
 
@@ -3062,6 +3064,16 @@ int main(int argc, char **argv){
 <dd>Note that the mapping parameters should be set before the database is opened.</dd>
 </dl>
 
+<p>The function `tchdbsetdfunit' is used in order to set the unit step number of auto defragmentation of a hash database object.</p>
+
+<dl class="api">
+<dt><code>bool tchdbsetdfunit(TCHDB *<var>hdb</var>, int32_t <var>dfunit</var>);</code></dt>
+<dd>`<var>hdb</var>' specifies the hash database object which is not opened.</dd>
+<dd>`<var>dfunit</var>' specifie the unit step number.  If it is not more than 0, the auto defragmentation is disabled.  It is disabled by default.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Note that the defragmentation parameters should be set before the database is opened.</dd>
+</dl>
+
 <p>The function `tchdbopen' is used in order to open a database file and connect a hash database object.</p>
 
 <dl class="api">
@@ -3499,13 +3511,13 @@ int main(int argc, char **argv){
 <p>コマンド `<code>tchtest</code>' は、ハッシュデータベースAPIの機能テストや性能テストに用いるツールです。以下の書式で用います。`<var>path</var>' はデータベースファイルのパスを指定し、`<var>rnum</var>' は試行回数を指定し、`<var>bnum</var>' はバケット数を指定し、`<var>apow</var>' はアラインメント力を指定し、`<var>fpow</var>' はフリーブロックプール力を指定します。</p>
 
 <dl class="api">
-<dt><code>tchtest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-as] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tchtest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-as] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>`00000001'、`00000002' のように変化する8バイトのキーと値を連続してデータベースに追加する。</dd>
-<dt><code>tchtest read [-mt] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-wb] [-rnd] <var>path</var></code></dt>
+<dt><code>tchtest read [-mt] [-rc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-wb] [-rnd] <var>path</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを検索する。</dd>
-<dt><code>tchtest remove [-mt] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
+<dt><code>tchtest remove [-mt] [-rc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを削除する。</dd>
-<dt><code>tchtest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tchtest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>キーがある程度重複するようにレコードの追加を行い、連結モードで処理する。</dd>
 <dt><code>tchtest misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
 <dd>各種操作の組み合わせテストを行う。</dd>
@@ -3524,6 +3536,7 @@ int main(int argc, char **argv){
 <li><code>-tx</code> : オプション `HDBTEXCODEC' を有効にする。</li>
 <li><code>-rc <var>num</var></code> : レコード用キャッシュの最大数を指定する。</li>
 <li><code>-xm <var>num</var></code> : 拡張マップメモリのサイズを指定する。</li>
+<li><code>-df <var>num</var></code> : 自動デフラグの単位ステップ数を指定する。</li>
 <li><code>-nl</code> : オプション `HDBNOLCK' を有効にする。</li>
 <li><code>-nb</code> : オプション `HDBLCKNB' を有効にする。</li>
 <li><code>-as</code> : 関数 `tchdbput' の代わりに関数 `tchdbputasync' を用いる。</li>
@@ -3541,17 +3554,17 @@ int main(int argc, char **argv){
 <p>コマンド `<code>tchmttest</code>' は、ハッシュデータベースAPIの機能テストをマルチスレッドで行うツールです。以下の書式で用います。`<var>path</var>' はデータベースファイルのパスを指定し、`<var>tnum</var>' はスレッド数を指定し、`<var>rnum</var>' は試行回数を指定し、`<var>bnum</var>' はバケット数を指定し、`<var>apow</var>' はアラインメント力を指定し、`<var>fpow</var>' はフリーブロックプール力を指定します。</p>
 
 <dl class="api">
-<dt><code>tchmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-as] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tchmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-as] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>`00000001'、`00000002' のように変化する8バイトのキーと値を連続してデータベースに追加する。</dd>
-<dt><code>tchmttest read [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-wb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dt><code>tchmttest read [-rc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-wb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを検索する。</dd>
-<dt><code>tchmttest remove [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dt><code>tchmttest remove [-rc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを削除する。</dd>
 <dt><code>tchmttest wicked [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc] <var>path</var> <var>tnum</var> <var>rnum</var></code></dt>
 <dd>各種更新操作を無作為に選択して実行する。</dd>
-<dt><code>tchmttest typical [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-nc] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
+<dt><code>tchmttest typical [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-nc] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
 <dd>典型的な操作を無作為に選択して実行する。</dd>
-<dt><code>tchmttest race [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
+<dt><code>tchmttest race [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
 <dd>レースコンディション検出のテストを行う。</dd>
 </dl>
 
@@ -3565,6 +3578,7 @@ int main(int argc, char **argv){
 <li><code>-tx</code> : オプション `HDBTEXCODEC' を有効にする。</li>
 <li><code>-rc <var>num</var></code> : レコード用キャッシュの最大数を指定する。</li>
 <li><code>-xm <var>num</var></code> : 拡張マップメモリのサイズを指定する。</li>
+<li><code>-df <var>num</var></code> : 自動デフラグの単位ステップ数を指定する。</li>
 <li><code>-nl</code> : オプション `HDBNOLCK' を有効にする。</li>
 <li><code>-nb</code> : オプション `HDBLCKNB' を有効にする。</li>
 <li><code>-as</code> : 関数 `tchdbput' の代わりに関数 `tchdbputasync' を用いる。</li>
@@ -3591,7 +3605,7 @@ int main(int argc, char **argv){
 <dd>レコードの値を取得して標準出力する。</dd>
 <dt><code>tchmgr list [-nl|-nb] [-m <var>num</var>] [-pv] [-px] [-fm <var>str</var>] <var>path</var></code></dt>
 <dd>全てのレコードのキーを改行で区切って標準出力する。</dd>
-<dt><code>tchmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tchmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] [-df] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>データベースを最適化する。</dd>
 <dt><code>tchmgr importtsv [-nl|-nb] [-sc] <var>path</var> [<var>file</var>]</code></dt>
 <dd>TSVファイルの各行をキーと値とみなしてレコードを登録する。</dd>
@@ -3620,6 +3634,7 @@ int main(int argc, char **argv){
 <li><code>-pv</code> : レコードの値も出力する。</li>
 <li><code>-fm <var>str</var></code> : キーの接頭辞を指定する。</li>
 <li><code>-tz</code> : オプション `UINT8_MAX' を有効にする。</li>
+<li><code>-df</code> : デフラグのみを行う。</li>
 <li><code>-sc</code> : キーを小文字に正規化する。</li>
 </ul>
 
@@ -3735,6 +3750,16 @@ int main(int argc, char **argv){
 <dd>`<var>xmsiz</var>' specifies the size of the extra mapped memory.  If it is not more than 0, the extra mapped memory is disabled.  It is disabled by default.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>Note that the mapping parameters should be set before the database is opened.</dd>
+</dl>
+
+<p>The function `tcbdbsetdfunit' is used in order to set the unit step number of auto defragmentation of a B+ tree database object.</p>
+
+<dl class="api">
+<dt><code>bool tcbdbsetdfunit(TCBDB *<var>bdb</var>, int32_t <var>dfunit</var>);</code></dt>
+<dd>`<var>bdb</var>' specifies the B+ tree database object which is not opened.</dd>
+<dd>`<var>dfunit</var>' specifie the unit step number.  If it is not more than 0, the auto defragmentation is disabled.  It is disabled by default.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Note that the defragmentation parameter should be set before the database is opened.</dd>
 </dl>
 
 <p>The function `tcbdbopen' is used in order to open a database file and connect a B+ tree database object.</p>
@@ -4397,15 +4422,15 @@ int main(int argc, char **argv){
 <p>コマンド `<code>tcbtest</code>' は、B+木データベースAPIの機能テストや性能テストに用いるツールです。以下の書式で用います。`<var>path</var>' はデータベースファイルのパスを指定し、`<var>rnum</var>' は試行回数を指定し、`<var>lmemb</var>' はリーフ内メンバ数を指定し、`<var>nmemb</var>' は非リーフ内メンバ数を指定し、`<var>bnum</var>' はバケット数を指定し、`<var>apow</var>' はアラインメント力を指定し、`<var>fpow</var>' はフリーブロックプール力を指定します。</p>
 
 <dl class="api">
-<dt><code>tcbtest write [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dt><code>tcbtest write [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>`00000001'、`00000002' のように変化する8バイトのキーと値を連続してデータベースに追加する。</dd>
-<dt><code>tcbtest read [-mt] [-cd|-ci|-cj] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-wb] [-rnd] <var>path</var></code></dt>
+<dt><code>tcbtest read [-mt] [-cd|-ci|-cj] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-wb] [-rnd] <var>path</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを検索する。</dd>
-<dt><code>tcbtest remove [-mt] [-cd|-ci|-cj] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
+<dt><code>tcbtest remove [-mt] [-cd|-ci|-cj] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを削除する。</dd>
-<dt><code>tcbtest rcat [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dt><code>tcbtest rcat [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>キーがある程度重複するようにレコードの追加を行い、連結モードで処理する。</dd>
-<dt><code>tcbtest queue [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dt><code>tcbtest queue [-mt] [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ls <var>num</var>] [-ca <var>num</var>] [-nl|-nb] <var>path</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>キューの出し入れを行う。</dd>
 <dt><code>tcbtest misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
 <dd>各種操作の組み合わせテストを行う。</dd>
@@ -4428,6 +4453,7 @@ int main(int argc, char **argv){
 <li><code>-lc <var>num</var></code> : リーフノード用キャッシュの最大数を指定する。</li>
 <li><code>-nc <var>num</var></code> : 非リーフノード用キャッシュの最大数を指定する。</li>
 <li><code>-xm <var>num</var></code> : 拡張マップメモリのサイズを指定する。</li>
+<li><code>-df <var>num</var></code> : 自動デフラグの単位ステップ数を指定する。</li>
 <li><code>-ls <var>num</var></code> : リーフノードの最大サイズを指定する。</li>
 <li><code>-ca <var>num</var></code> : レコードの最大収容数を指定する。</li>
 <li><code>-nl</code> : オプション `BDBNOLCK' を有効にする。</li>
@@ -4446,17 +4472,17 @@ int main(int argc, char **argv){
 <p>コマンド `<code>tcbmttest</code>' は、B+木データベースAPIの機能テストをマルチスレッドで行うツールです。以下の書式で用います。`<var>path</var>' はデータベースファイルのパスを指定し、`<var>tnum</var>' はスレッド数を指定し、`<var>rnum</var>' は試行回数を指定し、`<var>lmemb</var>' はリーフ内メンバ数を指定し、`<var>nmemb</var>' は非リーフ内メンバ数を指定し、`<var>bnum</var>' はバケット数を指定し、`<var>apow</var>' はアラインメント力を指定し、`<var>fpow</var>' はフリーブロックプール力を指定します。</p>
 
 <dl class="api">
-<dt><code>tcbmttest write [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dt><code>tcbmttest write [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>`00000001'、`00000002' のように変化する8バイトのキーと値を連続してデータベースに追加する。</dd>
-<dt><code>tcbmttest read [-nl|-nb] [-wb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dt><code>tcbmttest read [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-wb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを検索する。</dd>
-<dt><code>tcbmttest remove [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dt><code>tcbmttest remove [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを削除する。</dd>
 <dt><code>tcbmttest wicked [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc] <var>path</var> <var>tnum</var> <var>rnum</var></code></dt>
 <dd>各種更新操作を無作為に選択して実行する。</dd>
-<dt><code>tcbmttest typical [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] [-nc] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dt><code>tcbmttest typical [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-nc] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>典型的な操作を無作為に選択して実行する。</dd>
-<dt><code>tcbmttest race [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dt><code>tcbmttest race [-tl] [-td|-tb|-tt|-tx] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>レースコンディション検出のテストを行う。</dd>
 </dl>
 
@@ -4468,6 +4494,8 @@ int main(int argc, char **argv){
 <li><code>-tb</code> : オプション `BDBTBZIP' を有効にする。</li>
 <li><code>-tt</code> : オプション `BDBTTCBS' を有効にする。</li>
 <li><code>-tx</code> : オプション `BDBTEXCODEC' を有効にする。</li>
+<li><code>-xm <var>num</var></code> : 拡張マップメモリのサイズを指定する。</li>
+<li><code>-df <var>num</var></code> : 自動デフラグの単位ステップ数を指定する。</li>
 <li><code>-nl</code> : オプション `BDBNOLCK' を有効にする。</li>
 <li><code>-nb</code> : オプション `BDBLCKNB' を有効にする。</li>
 <li><code>-rnd</code> : キーを無作為に選択する。</li>
@@ -4493,7 +4521,7 @@ int main(int argc, char **argv){
 <dd>レコードの値を取得して標準出力する。</dd>
 <dt><code>tcbmgr list [-cd|-ci|-cj] [-nl|-nb] [-m <var>num</var>] [-bk] [-pv] [-px] [-j <var>str</var>] [-rb <var>bkey</var> <var>ekey</var>] [-fm <var>str</var>] <var>path</var></code></dt>
 <dd>全てのレコードのキーを改行で区切って標準出力する。</dd>
-<dt><code>tcbmgr optimize [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] <var>path</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
+<dt><code>tcbmgr optimize [-cd|-ci|-cj] [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] [-df] <var>path</var> [<var>lmemb</var> [<var>nmemb</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]]]</code></dt>
 <dd>データベースを最適化する。</dd>
 <dt><code>tcbmgr importtsv [-nl|-nb] [-sc] <var>path</var> [<var>file</var>]</code></dt>
 <dd>TSVファイルの各行をキーと値とみなしてレコードを登録する。</dd>
@@ -4530,6 +4558,7 @@ int main(int argc, char **argv){
 <li><code>-rb <var>bkey</var> <var>ekey</var></code> : 処理対象を範囲指定する。</li>
 <li><code>-fm <var>str</var></code> : キーの接頭辞を指定する。</li>
 <li><code>-tz</code> : オプション `UINT8_MAX' を有効にする。</li>
+<li><code>-df</code> : デフラグのみを行う。</li>
 <li><code>-sc</code> : キーを小文字に正規化する。</li>
 </ul>
 
@@ -5323,6 +5352,16 @@ int main(int argc, char **argv){
 <dd>Note that the mapping parameters should be set before the database is opened.</dd>
 </dl>
 
+<p>The function `tctdbsetdfunit' is used in order to set the unit step number of auto defragmentation of a table database object.</p>
+
+<dl class="api">
+<dt><code>bool tctdbsetdfunit(TCTDB *<var>tdb</var>, int32_t <var>dfunit</var>);</code></dt>
+<dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
+<dd>`<var>dfunit</var>' specifie the unit step number.  If it is not more than 0, the auto defragmentation is disabled.  It is disabled by default.</dd>
+<dd>If successful, the return value is true, else, it is false.</dd>
+<dd>Note that the defragmentation parameters should be set before the database is opened.</dd>
+</dl>
+
 <p>The function `tctdbopen' is used in order to open a database file and connect a table database object.</p>
 
 <dl class="api">
@@ -5882,13 +5921,13 @@ int main(int argc, char **argv){
 <p>コマンド `<code>tcttest</code>' は、テーブルデータベースAPIの機能テストや性能テストに用いるツールです。以下の書式で用います。`<var>path</var>' はデータベースファイルのパスを指定し、`<var>rnum</var>' は試行回数を指定し、`<var>bnum</var>' はバケット数を指定し、`<var>apow</var>' はアラインメント力を指定し、`<var>fpow</var>' はフリーブロックプール力を指定します。</p>
 
 <dl class="api">
-<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tcttest write [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>"str" と "num" と "type" と "flag" をコラムに持つレコード群を連続してデータベースに追加する。</dd>
-<dt><code>tcttest read [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
+<dt><code>tcttest read [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを検索する。</dd>
-<dt><code>tcttest remove [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
+<dt><code>tcttest remove [-mt] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを削除する。</dd>
-<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tcttest rcat [-mt] [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-pn <var>num</var>] [-dai|-dad|-rl|-ru] <var>path</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>キーがある程度重複するようにレコードの追加を行い、連結モードで処理する。</dd>
 <dt><code>tcttest misc [-mt] [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>rnum</var></code></dt>
 <dd>各種操作の組み合わせテストを行う。</dd>
@@ -5909,6 +5948,7 @@ int main(int argc, char **argv){
 <li><code>-lc <var>num</var></code> : リーフノード用キャッシュの最大数を指定する。</li>
 <li><code>-nc <var>num</var></code> : 非リーフノード用キャッシュの最大数を指定する。</li>
 <li><code>-xm <var>num</var></code> : 拡張マップメモリのサイズを指定する。</li>
+<li><code>-df <var>num</var></code> : 自動デフラグの単位ステップ数を指定する。</li>
 <li><code>-ip</code> : 主キーに数値型のインデックスを張る。</li>
 <li><code>-is</code> : "str" コラムに文字列型のインデックスを張る。</li>
 <li><code>-in</code> : "num" コラムに数値型のインデックスを張る。</li>
@@ -5929,15 +5969,15 @@ int main(int argc, char **argv){
 <p>コマンド `<code>tctmttest</code>' は、テーブルデータベースAPIの機能テストをマルチスレッドで行うツールです。以下の書式で用います。`<var>path</var>' はデータベースファイルのパスを指定し、`<var>tnum</var>' はスレッド数を指定し、`<var>rnum</var>' は試行回数を指定し、`<var>bnum</var>' はバケット数を指定し、`<var>apow</var>' はアラインメント力を指定し、`<var>fpow</var>' はフリーブロックプール力を指定します。</p>
 
 <dl class="api">
-<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tctmttest write [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-ip] [-is] [-in] [-it] [-if] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>"str" と "num" と "type" と "flag" をコラムに持つレコード群を連続してデータベースに追加する。</dd>
-<dt><code>tctmttest read [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dt><code>tctmttest read [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを検索する。</dd>
-<dt><code>tctmttest remove [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
+<dt><code>tctmttest remove [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rnd] <var>path</var> <var>tnum</var></code></dt>
 <dd>上記で生成したデータベースの全レコードを削除する。</dd>
 <dt><code>tctmttest wicked [-tl] [-td|-tb|-tt|-tx] [-nl|-nb] <var>path</var> <var>tnum</var> <var>rnum</var></code></dt>
 <dd>各種更新操作を無作為に選択して実行する。</dd>
-<dt><code>tctmttest typical [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-nl|-nb] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
+<dt><code>tctmttest typical [-tl] [-td|-tb|-tt|-tx] [-rc <var>num</var>] [-lc <var>num</var>] [-nc <var>num</var>] [-xm <var>num</var>] [-df <var>num</var>] [-nl|-nb] [-rr <var>num</var>] <var>path</var> <var>tnum</var> <var>rnum</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]</code></dt>
 <dd>典型的な操作を無作為に選択して実行する。</dd>
 </dl>
 
@@ -5953,6 +5993,7 @@ int main(int argc, char **argv){
 <li><code>-lc <var>num</var></code> : リーフノード用キャッシュの最大数を指定する。</li>
 <li><code>-nc <var>num</var></code> : 非リーフノード用キャッシュの最大数を指定する。</li>
 <li><code>-xm <var>num</var></code> : 拡張マップメモリのサイズを指定する。</li>
+<li><code>-df <var>num</var></code> : 自動デフラグの単位ステップ数を指定する。</li>
 <li><code>-ip</code> : 主キーに数値型のインデックスを張る。</li>
 <li><code>-is</code> : "str" コラムに文字列型のインデックスを張る。</li>
 <li><code>-in</code> : "num" コラムに数値型のインデックスを張る。</li>
@@ -5983,7 +6024,7 @@ int main(int argc, char **argv){
 <dd>全てのレコードの主キーを改行で区切って標準出力する。</dd>
 <dt><code>tctmgr search [-nl|-nb] [-ord <var>name</var> <var>type</var>] [-m <var>num</var>] [-sk <var>num</var>] [-pv] [-px] [-ph] [-bt <var>num</var>] [-rm] <var>path</var> [<var>name</var> <var>op</var> <var>expr</var> ...]</code></dt>
 <dd>検索条件に合致するレコードを改行で区切って標準出力する。</dd>
-<dt><code>tctmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
+<dt><code>tctmgr optimize [-tl] [-td|-tb|-tt|-tx] [-tz] [-nl|-nb] [-df] <var>path</var> [<var>bnum</var> [<var>apow</var> [<var>fpow</var>]]]</code></dt>
 <dd>データベースを最適化する。</dd>
 <dt><code>tctmgr setindex [-nl|-nb] [-it <var>type</var>] <var>path</var> <var>name</var></code></dt>
 <dd>インデックスを設定する。</dd>
@@ -6019,6 +6060,7 @@ int main(int argc, char **argv){
 <li><code>-bt</code> : ベンチマークテストの回数を指定する。</li>
 <li><code>-rm</code> : 結果のレコードを全て削除する。</li>
 <li><code>-tz</code> : オプション `UINT8_MAX' を有効にする。</li>
+<li><code>-df</code> : デフラグのみを行う。</li>
 <li><code>-it</code> : インデックスの型を "lexical" か "decimal" か "void" で指定する。</li>
 <li><code>-cv</code> : 既存のインデックスを削除する。</li>
 <li><code>-sc</code> : キーを小文字に正規化する。</li>
@@ -6069,7 +6111,7 @@ int main(int argc, char **argv){
 <dl class="api">
 <dt><code>bool tcadbopen(TCADB *<var>adb</var>, const char *<var>name</var>);</code></dt>
 <dd>`<var>adb</var>' specifies the abstract database object.</dd>
-<dd>`<var>name</var>' specifies the name of the database.  If it is "*", the database will be an on-memory hash database.  If it is "+", the database will be an on-memory tree database.  If its suffix is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed-length database.  If its suffix is ".tct", the database will be a table database.  Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of the name and the value, separated by "=".  On-memory hash database supports "bnum", "capnum", and "capsiz".  On-memory tree database supports "capnum" and "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", and "xmsiz".  B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", and "xmsiz".  Fixed-length database supports "mode", "width", and "limsiz".  Table database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", "lcnum", "ncnum", "xmsiz", and "idx".</dd>
+<dd>`<var>name</var>' specifies the name of the database.  If it is "*", the database will be an on-memory hash database.  If it is "+", the database will be an on-memory tree database.  If its suffix is ".tch", the database will be a hash database.  If its suffix is ".tcb", the database will be a B+ tree database.  If its suffix is ".tcf", the database will be a fixed-length database.  If its suffix is ".tct", the database will be a table database.  Otherwise, this function fails.  Tuning parameters can trail the name, separated by "#".  Each parameter is composed of the name and the value, separated by "=".  On-memory hash database supports "bnum", "capnum", and "capsiz".  On-memory tree database supports "capnum" and "capsiz".  Hash database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", "xmsiz", and "dfunit".  B+ tree database supports "mode", "lmemb", "nmemb", "bnum", "apow", "fpow", "opts", "lcnum", "ncnum", "xmsiz", and "dfunit".  Fixed-length database supports "mode", "width", and "limsiz".  Table database supports "mode", "bnum", "apow", "fpow", "opts", "rcnum", "lcnum", "ncnum", "xmsiz", "dfunit", and "idx".</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
 <dd>The tuning parameter "capnum" specifies the capacity number of records.  "capsiz" specifies the capacity size of using memory.  Records spilled the capacity are removed by the storing order.  "mode" can contain "w" of writer, "r" of reader, "c" of creating, "t" of truncating, "e" of no locking, and "f" of non-blocking lock.  The default mode is relevant to "wc".  "opts" can contains "l" of large option, "d" of Deflate option, "b" of BZIP2 option, and "t" of TCBS option.  "idx" specifies the column name of an index and its type separated by ":".  For example, "casket.tch#bnum=1000000#opts=ld" means that the name of the database file is "casket.tch", and the bucket number is 1000000, and the options are large and Deflate.</dd>
 </dl>
@@ -6583,11 +6625,13 @@ tchdbopen(hdb, "casket.tch", HDBOWRITER | HDBOCREAT);
 
 <p>ハッシュデータベースはmmapを介してファイル入出力を行うための拡張マップメモリという機構を備えます。これは、デフォルトでmmapによってマップされるバケット配列とは別に、レコード用の領域をmmapでメモリにマップしたものです。mmapを介したファイル入出力はpreadやpwriteを使った入出力よりも高速で、並列処理性能も高いという利点もあります。その反面、データベースを開いた瞬間に拡張マップメモリとして指定したサイズの領域が仮想メモリ空間に確保され、そのサイズが実メモリの利用可能量を上回った場合にはスワップが発生してしまいます。デフォルトでは64MBの拡張マップメモリが利用されますが、想定されるデータベースファイルがそれより大きくて実メモリ容量よりも小さいような場合は、データベースサイズよりも少し大きいくらいの拡張マップメモリを指定するとよいでしょう。拡張マップメモリのサイズは関数 `<code>tchdbsetxmsiz</code>' で指定してください。拡張マップメモリのパラメータの設定はデータベースに接続する前に行う必要があり、また接続する度に毎回行う必要があります。</p>
 
+<p>レコードの削除を頻繁に行ったり、値の長さを変えるような更新を頻繁に行ったりする場合は、フリーブロックプールを使ったとしても少しずつ断片化が起こってしまいます。断片化が進むとデータベースファイルのサイズが肥大化してきますが、それを解消してファイルサイズを小さくするためにはデフラグと呼ばれる操作を行うことになります。デフラグの最も簡単な方法は、関数 `<code>tchdboptimize</code>' によってデータベースに最適化をかけることです。これはデータベース全体を一気に作り直すことで断片化を解消します。もう一つの方法は、関数 `<code>tchdbsetdfunit</code>' で自動デフラグ設定をしてから更新を行うことです。そうすると、断片化が発生する度に動的に少しずつ最適化処理を行うようになるので、性能が少し犠牲になりますが、見掛け上は肥大化がほとんど発生しないようになります。この関数のパラメータとして指定する単位ステップ数とは、何個の領域の断片化を検出したらデフラグ操作を行うかを指定するものです。この数を増やした方が処理効率は上がりますが、デフラグ操作を行っている間のロックの粒度が上がるので増やしすぎるのも考え物です。通常は8くらいにしておくとよいでしょう。自動デフラグのパラメータの設定はデータベースに接続する前に行う必要があり、また接続する度に毎回行う必要があります。</p>
+
 <h3 id="tips_btreetune">B+木データベースのチューニング</h3>
 
 <p>チューニングをするかしないかで性能が劇的に変わるのはB+木データベースについても同じです。まじめなユースケースではちゃんとチューニングしましょう。チューニングは関数 `<code>tcbdbtune</code>' で行います。この関数では「リーフ内メンバ数」「非リーフ内メンバ数」「バケット数」と「アラインメント力」と「フリーブロックプール力」と「オプション」が指定されます。</p>
 
-<p>リーフまたはリーフページとは、B+木の末端のノードのことで、複数のレコードのキーと値のリストが格納される記憶単位のことです。リーフ内メンバ数とは、ひとつのリーフの中にいくつのレコードを格納するかの設定です。デフォルトは128です。比較関数の順序通りにレコードを格納または探索することが多い場合はこの値を大きくした方が性能がよくなり、逆に比較関数の順序とは無関係にレコードを格納または探索することが多い場合は小さくした方がよくなります。非リーフまたは非リーフページとはB+木の末端以外のノードのことで、複数のレコードのキーのみが格納される記憶単位のことです。非リーフの数はリーフに比べて少なく、性能に与える影響はあまり大きくありません。非リーフ内メンバ数をデフォルトから変える必要はほとんどないでしょう。</p>
+<p>リーフまたはリーフページとは、B+木の末端のノードのことで、複数のレコードのキーと値のリストが格納される記憶単位のことです。リーフ内メンバ数とは、一つのリーフの中にいくつのレコードを格納するかの設定です。デフォルトは128です。比較関数の順序通りにレコードを格納または探索することが多い場合はこの値を大きくした方が性能がよくなり、逆に比較関数の順序とは無関係にレコードを格納または探索することが多い場合は小さくした方がよくなります。非リーフまたは非リーフページとはB+木の末端以外のノードのことで、複数のレコードのキーのみが格納される記憶単位のことです。非リーフの数はリーフに比べて少なく、性能に与える影響はあまり大きくありません。非リーフ内メンバ数をデフォルトから変える必要はほとんどないでしょう。</p>
 
 <p>バケット数やその他のパラメータ、B+木データベースの下層にあるハッシュデータベースにそのまま渡されます。B+木の各ページはハッシュデータベースのレコードとして記録されるので、バケット数などのパラメータはその際に意味を持ちます。したがって、ここで指定するバケット数は、B+木データベースにおける最終的なレコード数をリーフ内メンバ数で割った値の数倍に設定するのが最善です。とはいえB+木データベースにおいてはバケット数などのパラメータを変更する必要はあまりないでしょう。</p>
 
@@ -6604,9 +6648,11 @@ tcbdbopen(hdb, "casket.tcb", BDBOWRITER | BDBOCREAT);
 
 <p>B+木データベースでも拡張マップメモリを利用することができます。しかし、B+木のキャッシュ機構がファイル入出力のバッファリングの役目を果たしているので、デフォルトでは無効になっています。メモリ利用効率は無視してとにかくスループットを追求したい場合のみ、関数 `<code>tcbdbsetxmsiz</code>' で拡張マップメモリを有効化してください。拡張マップメモリのパラメータの設定はデータベースに接続する前に行う必要があり、また接続する度に毎回行う必要があります。</p>
 
+<p>B+木データベースでも断片化は起きうるので、デフラグをかけるのはよい考えです。静的な最適化は関数 `<code>tcbdboptimize</code>' で行い、自動デフラグの設定は関数 `<code>tcbdbsetdfunit</code>' で行います。B+木データベースではハッシュデータベースよりもI/Oの粒度が大きいので、自動デフラグを行う際の単位ステップ数は2くらいにしておくとよいでしょう。自動デフラグのパラメータの設定はデータベースに接続する前に行う必要があり、また接続する度に毎回行う必要があります。</p>
+
 <h3 id="tips_multithread">マルチスレッド対応</h3>
 
-<p>Tokyo CabinetのAPIにおける各関数はリエントラントなので、引数として与えるデータが各スレッドで別々のものであれば完全に並列に操作を実行することができます。しかし、データベースオブジェクトは内部状態を持つので、ひとつのデータベースオブジェクトを複数のスレッドで共有する場合には、更新操作に関連して排他制御を行う必要があります。とはいえ、特に難しいことはありません。複数のスレッドで共有するデータベースオブジェクトに対して、作成した直後に関数 `<code>tchdbsetmutex</code>' や `<code>tcbdbsetmutex</code>' を呼び出すだけでOKです。そうすると以後の操作の内部で適切にロックを用いて排他制御が行われるようになります。複数のスレッドを使うが各々が別個のデータベースオブジェクトにアクセスする場合には排他制御は必要ありませんし、排他制御をしない方が高速に動作します。</p>
+<p>Tokyo CabinetのAPIにおける各関数はリエントラントなので、引数として与えるデータが各スレッドで別々のものであれば完全に並列に操作を実行することができます。しかし、データベースオブジェクトは内部状態を持つので、一つのデータベースオブジェクトを複数のスレッドで共有する場合には、更新操作に関連して排他制御を行う必要があります。とはいえ、特に難しいことはありません。複数のスレッドで共有するデータベースオブジェクトに対して、作成した直後に関数 `<code>tchdbsetmutex</code>' や `<code>tcbdbsetmutex</code>' を呼び出すだけでOKです。そうすると以後の操作の内部で適切にロックを用いて排他制御が行われるようになります。複数のスレッドを使うが各々が別個のデータベースオブジェクトにアクセスする場合には排他制御は必要ありませんし、排他制御をしない方が高速に動作します。</p>
 
 <p>スレッド間の排他制御はリードライトロックで行われます。`open'、`close'、`put'、`out' などの操作にはライトロック（排他ロック）がかけられ、`get'、`curkey'、`curval' などの操作にはリードロック（共有ロック）がかけられます。ロックの単位は、ハッシュデータベースではレコード単位で、B+木データベースではデータベース単位になります。同一のロックに対する読み込みは激しく同時に行えますが、書き込みをしている間は他のスレッドはブロックされます。排他制御の設定はデータベースに接続する前に行う必要があり、また接続する度に毎回行う必要があります。以下のようなコードになります。</p>
 
@@ -6638,7 +6684,7 @@ if(is_all_ok){
 
 <h3 id="tips_cursor">カーソル</h3>
 
-<p>B+木データベースにはカーソル機構があります。カーソルは指定したキーの場所にジャンプさせることができ、そこから前後にひとつずつずらしながらレコードを参照したり更新したりすることができます。例えば文字列の前方一致検索を行う場合、接頭辞をキーとして指定してカーソルをジャンプさせて、そこから前に進みながらキーを一つ一つ参照していって、前方一致しなかった時点で止めるという処理になります。例えば "tokyo" で始まるキーのレコードを取り出すには以下のようなコードになるでしょう。</p>
+<p>B+木データベースにはカーソル機構があります。カーソルは指定したキーの場所にジャンプさせることができ、そこから前後に一つずつずらしながらレコードを参照したり更新したりすることができます。例えば文字列の前方一致検索を行う場合、接頭辞をキーとして指定してカーソルをジャンプさせて、そこから前に進みながらキーを一つ一つ参照していって、前方一致しなかった時点で止めるという処理になります。例えば "tokyo" で始まるキーのレコードを取り出すには以下のようなコードになるでしょう。</p>
 
 <pre>cur = tcbdbcurnew();
 tcbdbcurjump2(cur, "tokyo");
@@ -6657,7 +6703,7 @@ while((key = tcbdbcurkey2(cur)) != NULL){
 tcbdbcurdel(cur);
 </pre>
 
-<p>カーソルをジャンプさせてから、他のスレッドが同一のデータベースに対して更新を行った場合、そのカーソルの位置はずれる可能性があります。具体的には、カーソルのあるリーフ上でカーソルより前にレコード挿入された場合、カーソルは小さい方向にひとつずれます。また、カーソルのあるリーフ上でカーソルより前にあるレコードが削除された場合、カーソルは大きい方向にひとつずれます。したがって、検索などの非クリティカルな操作では特別な配慮は必要ありませんが、更新にカーソルを使う場合には、処理中にカーソルの位置がずれないようにトランザクションを使うか、アプリケーション側の責任で排他制御をすることになるでしょう。なお、典型的な検索操作である範囲検索をアトミックに行うために関数 `<code>tcbdbrange</code>' および関数 `<code>tcbdbfwmkeys</code>' が提供されています。</p>
+<p>カーソルをジャンプさせてから、他のスレッドが同一のデータベースに対して更新を行った場合、そのカーソルの位置はずれる可能性があります。具体的には、カーソルのあるリーフ上でカーソルより前にレコード挿入された場合、カーソルは小さい方向に一つずれます。また、カーソルのあるリーフ上でカーソルより前にあるレコードが削除された場合、カーソルは大きい方向に一つずれます。したがって、検索などの非クリティカルな操作では特別な配慮は必要ありませんが、更新にカーソルを使う場合には、処理中にカーソルの位置がずれないようにトランザクションを使うか、アプリケーション側の責任で排他制御をすることになるでしょう。なお、典型的な検索操作である範囲検索をアトミックに行うために関数 `<code>tcbdbrange</code>' および関数 `<code>tcbdbfwmkeys</code>' が提供されています。</p>
 
 <h3 id="tips_backup">バックアップ</h3>
 
@@ -6749,6 +6795,24 @@ cp -f "$srcpath" "$destpath"
 <p>抽象データベースの接尾辞に ".tct" をつけるとテーブルデータベースになります。テーブルデータベースでは単一の文字列を値とする代わりにコラムの名前と値のマップが用いられます。抽象データベースでテーブルデータベースを扱う場合、単一の文字列とマップを同一のインターフェイスで扱うために、ゼロ文字（'\0'）を区切り文字としてコラムの名前と値を交互に並べて直列化した文字列を用います。レコードを格納する際（`<code>tcadbput</code>'）の引数やレコードを取得する際（`<code>tcadbget</code>'）の戻り値にはそのゼロ区切り文字列が使われます。</p>
 
 <p>レコードの検索は関数 `<code>tcadbmisc</code>' のサブ関数 "search" で行います。引数に "addcond" か "setorder" か "setlimit" か "get" か "out" を接頭させてゼロ文字区切りで演算式を記述した文字列を与えることでクエリを組み立てます。例えば "addcond\0name\0STRBW\0john" と "setorder\0age\0NUMASC" を指定すると、「コラム "name" の値が "john" で始まるレコードをコラム "age" の数値の昇順で取り出す」というクエリになります。戻り値は該当するレコードの主キーのリストです。ただし、"get" が指定されると、コラム名と値のマップをゼロ区切り文字列で返します。"get\0name\0age" などとして特定のコラムに絞り込むこともできます。"out" が指定されると、該当のコラムを削除します。"get" と "out" を組み合わせるとキューとして利用することができます。サブ関数 "genuid" は、ユニークなID番号を採番して返します。</p>
+
+<h3 id="tips_hiddenapi">隠しAPI</h3>
+
+<p>この文書に書いてあるAPIは、全体の70%くらいです。つまり、この文書に書いていない隠しAPIが30%くらいあります。興味のある人はヘッダファイル（`<code>tcutil.h</code>'、`<code>tchdb.h</code>'、`<code>tcbdb.h</code>'、`<code>tcfdb.h</code>'、`<code>tctdb.h</code>'、`<code>tcadb.h</code>'）の中身を覗いてみてください。上級者用でちょっと癖が強いけれども、使いこなすと機能や性能の面でにかなり有利になるAPIが揃っています。その中でも特に便利なのは、"putproc" 系の関数です。これはputと同様にレコードの挿入を試みるのですが、既存のレコードがあった場合にそれを引数にしてコールバック関数を呼ぶので、任意の更新操作をアトミックに行うことができます。また、"foreach" 系の関数も便利です。これはデータベース内の全てのレコードをアトミックに走査しながら、各々のレコードを引数にしてコールバック関数を呼び出します。</p>
+
+<p>抽象データベースAPIの隠しAPI関数 `<code>tcadbsetskel</code>' は激アツです。拡張データベーススケルトンと呼ばれる構造体によって関数ポインタの集合を指定することで、抽象データベースの全てのメソッドの振る舞いをオーバーライドすることができるようになります。そうすると、DBM風のインターフェイスを持つ全てのライブラリをTokyo Cabinetと同じインターフェイスで使えるようになります。典型的には以下のような実装になります。</p>
+
+<pre>ADBSKEL skel;
+memset(0, &amp;skel, sizeof(skel));
+skel.opq = mydbnew();    // レシーバオブジェクトを生成して設定
+skel.del = mydbdel;      // デストラクタをオーバーライド
+skel.open = mydbopen;    // openメソッドをオーバーライド
+skel.close = mydbclose;  // closeメソッドをオーバーライド
+...                      // その他、好きなメソッドをオーバーライド
+TCADB *adb = tcadbnew();
+tcadbsetskel(adb, &amp;skel);
+...
+</pre>
 
 <h3 id="tips_tcrdb">リモートインターフェイス</h3>
 
