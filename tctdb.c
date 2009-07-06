@@ -5235,14 +5235,18 @@ static void tctdbidxgetbyftsunion(TDBIDX *idx, const TCLIST *tokens, bool sign,
       TCMALLOC(socrs, TDBFTSOCRUNIT * sizeof(*socrs));
       int sonum = 0;
       int soanum = TDBFTSOCRUNIT;
+      int sobase = 0;
       TDBFTSNUMOCR *nocrs;
       TCMALLOC(nocrs, TDBFTSOCRUNIT * sizeof(*nocrs));
       int nonum = 0;
       int noanum = TDBFTSOCRUNIT;
+      int nobase = 0;
       TCBITMAP *pkmap = TCBITMAPNEW(TDBFTSBMNUM);
       char token[TDBIDXQGUNIT*3+1];
       uint16_t seq = 0;
       for(int j = 0; j < anum; j += TDBIDXQGUNIT){
+        sobase = sonum;
+        nobase = nonum;
         int diff = anum - j - TDBIDXQGUNIT;
         if(diff < 0){
           j += diff;
@@ -5388,29 +5392,31 @@ static void tctdbidxgetbyftsunion(TDBIDX *idx, const TCLIST *tokens, bool sign,
           }
         }
         seq++;
+        if(sonum <= sobase && nonum <= nobase){
+          sonum = 0;
+          nonum = 0;
+          break;
+        }
       }
       TCBITMAPDEL(pkmap);
       if(seq > 1){
         if(sonum > UINT16_MAX){
           int flnum = sonum * 16 + 1;
           TCBITMAP *flmap = TCBITMAPNEW(flnum);
-          int tseq = seq - 1;
-          for(int j = 0; j < sonum; j++){
+          for(int j = sobase; j < sonum; j++){
             TDBFTSSTROCR *ocr = socrs + j;
-            if(ocr->seq < tseq) continue;
-            uint32_t hash = (((uint32_t)socrs[j].off << 16) | socrs[j].hash) % flnum;
+            uint32_t hash = (((uint32_t)ocr->off << 16) | ocr->hash) % flnum;
             TCBITMAPON(flmap, hash);
           }
           int wi = 0;
-          for(int j = 0; j < sonum; j++){
+          for(int j = 0; j < sobase; j++){
             TDBFTSSTROCR *ocr = socrs + j;
-            if(ocr->seq < tseq){
-              int rem = (seq - ocr->seq - 1) * TDBIDXQGUNIT;
-              uint32_t hash = (((uint32_t)(socrs[j].off + rem) << 16) | socrs[j].hash) % flnum;
-              if(TCBITMAPCHECK(flmap, hash)) socrs[wi++] = *ocr;
-            } else {
-              socrs[wi++] = *ocr;
-            }
+            int rem = (seq - ocr->seq - 1) * TDBIDXQGUNIT;
+            uint32_t hash = (((uint32_t)(ocr->off + rem) << 16) | ocr->hash) % flnum;
+            if(TCBITMAPCHECK(flmap, hash)) socrs[wi++] = *ocr;
+          }
+          for(int j = sobase; j < sonum; j++){
+            socrs[wi++] = socrs[j];
           }
           sonum = wi;
           TCBITMAPDEL(flmap);
@@ -5418,8 +5424,8 @@ static void tctdbidxgetbyftsunion(TDBIDX *idx, const TCLIST *tokens, bool sign,
         if(sonum > UINT16_MAX * 2){
           TDBFTSSTROCR *rocrs;
           TCMALLOC(rocrs, sizeof(*rocrs) * sonum);
-          uint32_t counts[UINT16_MAX+1];
-          memset(counts, 0, sizeof(counts));
+          uint32_t *counts;
+          TCCALLOC(counts, sizeof(*counts), (UINT16_MAX + 1));
           for(int j = 0; j < sonum; j++){
             counts[socrs[j].hash]++;
           }
@@ -5437,6 +5443,7 @@ static void tctdbidxgetbyftsunion(TDBIDX *idx, const TCLIST *tokens, bool sign,
           int num = sonum - counts[UINT16_MAX];
           if(num > 1) qsort(rocrs + counts[UINT16_MAX], num, sizeof(*rocrs),
                             (int (*)(const void *, const void *))tctdbidxftscmpstrocr);
+          TCFREE(counts);
           TCFREE(socrs);
           socrs = rocrs;
         } else if(sonum > 1){
@@ -5446,23 +5453,20 @@ static void tctdbidxgetbyftsunion(TDBIDX *idx, const TCLIST *tokens, bool sign,
         if(nonum > UINT16_MAX){
           int flnum = nonum * 16 + 1;
           TCBITMAP *flmap = TCBITMAPNEW(flnum);
-          int tseq = seq - 1;
-          for(int j = 0; j < nonum; j++){
+          for(int j = nobase; j < nonum; j++){
             TDBFTSNUMOCR *ocr = nocrs + j;
-            if(ocr->seq < tseq) continue;
-            uint32_t hash = (((uint32_t)nocrs[j].off << 16) | nocrs[j].hash) % flnum;
+            uint32_t hash = (((uint32_t)ocr->off << 16) | ocr->hash) % flnum;
             TCBITMAPON(flmap, hash);
           }
           int wi = 0;
-          for(int j = 0; j < nonum; j++){
+          for(int j = 0; j < nobase; j++){
             TDBFTSNUMOCR *ocr = nocrs + j;
-            if(ocr->seq < tseq){
-              int rem = (seq - ocr->seq - 1) * TDBIDXQGUNIT;
-              uint32_t hash = (((uint32_t)(nocrs[j].off + rem) << 16) | nocrs[j].hash) % flnum;
-              if(TCBITMAPCHECK(flmap, hash)) nocrs[wi++] = *ocr;
-            } else {
-              nocrs[wi++] = *ocr;
-            }
+            int rem = (seq - ocr->seq - 1) * TDBIDXQGUNIT;
+            uint32_t hash = (((uint32_t)(ocr->off + rem) << 16) | ocr->hash) % flnum;
+            if(TCBITMAPCHECK(flmap, hash)) nocrs[wi++] = *ocr;
+          }
+          for(int j = nobase; j < nonum; j++){
+            nocrs[wi++] = nocrs[j];
           }
           nonum = wi;
           TCBITMAPDEL(flmap);
@@ -5470,8 +5474,8 @@ static void tctdbidxgetbyftsunion(TDBIDX *idx, const TCLIST *tokens, bool sign,
         if(nonum > UINT16_MAX * 2){
           TDBFTSNUMOCR *rocrs;
           TCMALLOC(rocrs, sizeof(*rocrs) * nonum);
-          uint32_t counts[UINT16_MAX+1];
-          memset(counts, 0, sizeof(counts));
+          uint32_t *counts;
+          TCCALLOC(counts, sizeof(*counts), (UINT16_MAX + 1));
           for(int j = 0; j < nonum; j++){
             counts[nocrs[j].hash]++;
           }
@@ -5489,6 +5493,7 @@ static void tctdbidxgetbyftsunion(TDBIDX *idx, const TCLIST *tokens, bool sign,
           int num = nonum - counts[UINT16_MAX];
           if(num > 1) qsort(rocrs + counts[UINT16_MAX], num, sizeof(*rocrs),
                             (int (*)(const void *, const void *))tctdbidxftscmpnumocr);
+          TCFREE(counts);
           TCFREE(nocrs);
           nocrs = rocrs;
         } else if(nonum > 1){
