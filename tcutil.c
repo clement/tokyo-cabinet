@@ -10146,7 +10146,8 @@ static void tcmtfdecode(char *ptr, int size){
 /* Encode a region with Elias gamma encoding.
    `ptr' specifies the pointer to the region.
    `size' specifies the size of the region.
-   `ptr' specifies the pointer to the output buffer. */
+   `obuf' specifies the pointer to the output buffer.
+   The return value is the size of the output buffer. */
 static int tcgammaencode(const char *ptr, int size, char *obuf){
   assert(ptr && size >= 0 && obuf);
   TCBITSTRM strm;
@@ -10182,7 +10183,8 @@ static int tcgammaencode(const char *ptr, int size, char *obuf){
 /* Decode a region compressed with Elias gamma encoding.
    `ptr' specifies the pointer to the region.
    `size' specifies the size of the region.
-   `ptr' specifies the pointer to the output buffer. */
+   `obuf' specifies the pointer to the output buffer.
+   The return value is the size of the output buffer. */
 static int tcgammadecode(const char *ptr, int size, char *obuf){
   assert(ptr && size >= 0 && obuf);
   char *wp = obuf;

@@ -288,9 +288,6 @@ module TokyoCabinet {
     const long QOSTRDESC = 1;
     const long QONUMASC = 2;
     const long QONUMDESC = 3;
-    const long QPPUT = 1 << 0;
-    const long QPOUT = 1 << 1;
-    const long QPSTOP = 1 << 24;
     const long MSUNION = 0;
     const long MSISECT = 1;
     const long MSDIFF = 2;

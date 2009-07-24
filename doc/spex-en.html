@@ -4547,7 +4547,7 @@ int main(int argc, char **argv){
 <dt><code>bool tcfdbsetmutex(TCFDB *<var>fdb</var>);</code></dt>
 <dd>`<var>fdb</var>' specifies the fixed-length database object which is not opened.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>Note that the mutual exclusion control is needed if the object is shared by plural threads and this function should should be called before the database is opened.</dd>
+<dd>Note that the mutual exclusion control is needed if the object is shared by plural threads and this function should be called before the database is opened.</dd>
 </dl>
 
 <p>The function `tcfdbtune' is used in order to set the tuning parameters of a fixed-length database object.</p>
@@ -5235,7 +5235,7 @@ int main(int argc, char **argv){
 <dt><code>bool tctdbsetmutex(TCTDB *<var>tdb</var>);</code></dt>
 <dd>`<var>tdb</var>' specifies the table database object which is not opened.</dd>
 <dd>If successful, the return value is true, else, it is false.</dd>
-<dd>Note that the mutual exclusion control is needed if the object is shared by plural threads and this function should should be called before the database is opened.</dd>
+<dd>Note that the mutual exclusion control is needed if the object is shared by plural threads and this function should be called before the database is opened.</dd>
 </dl>
 
 <p>The function `tctdbtune' is used in order to set the tuning parameters of a table database object.</p>
@@ -5745,7 +5745,7 @@ int main(int argc, char **argv){
 <dd>If successful, the return value is true, else, it is false.</dd>
 </dl>
 
-<p>The function `tctdbqryhint' is used in order to get the hint of a query object.</p>
+<p>The function `tctdbqryhint' is used in order to get the hint string of a query object.</p>
 
 <dl class="api">
 <dt><code>const char *tctdbqryhint(TDBQRY *<var>qry</var>);</code></dt>

@@ -2525,10 +2525,14 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         tclistdel(rv);
         rv = NULL;
       }
-    } else if(!strcmp(name, "search")){
+    } else if(!strcmp(name, "search") || !strcmp(name, "metasearch")){
       bool toout = false;
       bool tocnt = false;
+      bool tohint = false;
       TDBQRY *qry = tctdbqrynew(adb->tdb);
+      TDBQRY **qrys = NULL;
+      int qnum = 0;
+      int mstype = TDBMSUNION;
       TCLIST *cnames = NULL;
       for(int i = 0; i < argc; i++){
         const char *arg;
@@ -2567,10 +2571,26 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
               TCLISTVAL(token, tokens, j, tsiz);
               TCLISTPUSH(cnames, token, tsiz);
             }
+          } else if(!strcmp(cmd, "next")){
+            if(qrys){
+              TCREALLOC(qrys, qrys, sizeof(*qrys) * (qnum + 1));
+            } else {
+              TCMALLOC(qrys, sizeof(*qrys) * 2);
+              qrys[0] = qry;
+              qnum = 1;
+            }
+            qry = tctdbqrynew(adb->tdb);
+            qrys[qnum++] = qry;
+          } else if(!strcmp(cmd, "mstype") && tnum > 1){
+            const char *typestr = TCLISTVALPTR(tokens, 1);
+            mstype = tctdbstrtometasearcytype(typestr);
+            if(mstype < 0) mstype = TDBMSUNION;
           } else if(!strcmp(cmd, "out") || !strcmp(cmd, "remove")){
             toout = true;
           } else if(!strcmp(cmd, "count")){
             tocnt = true;
+          } else if(!strcmp(cmd, "hint")){
+            tohint = true;
           }
         }
         tclistdel(tokens);
@@ -2593,7 +2613,11 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
           }
         }
       } else {
-        rv = tctdbqrysearch(qry);
+        if(qrys){
+          rv = tctdbmetasearch(qrys, qnum, mstype);
+        } else {
+          rv = tctdbqrysearch(qry);
+        }
         if(cnames){
           int cnnum = TCLISTNUM(cnames);
           int rnum = TCLISTNUM(rv);
@@ -2635,8 +2659,25 @@ TCLIST *tcadbmisc(TCADB *adb, const char *name, const TCLIST *args){
         int len = sprintf(numbuf, "%d", tctdbqrycount(qry));
         tclistpush(rv, numbuf, len);
       }
+      if(tohint && rv){
+        TCXSTR *hbuf = tcxstrnew();
+        TCXSTRCAT(hbuf, "", 1);
+        TCXSTRCAT(hbuf, "", 1);
+        TCXSTRCAT(hbuf, "[[HINT]]\n", 9);
+        const char *hint = tctdbqryhint(qrys ? qrys[0] : qry);
+        TCXSTRCAT(hbuf, hint, strlen(hint));
+        TCLISTPUSH(rv, TCXSTRPTR(hbuf), TCXSTRSIZE(hbuf));
+        tcxstrdel(hbuf);
+      }
       if(cnames) tclistdel(cnames);
-      tctdbqrydel(qry);
+      if(qrys){
+        for(int i = 0; i < qnum; i++){
+          tctdbqrydel(qrys[i]);
+        }
+        TCFREE(qrys);
+      } else {
+        tctdbqrydel(qry);
+      }
     } else if(!strcmp(name, "genuid")){
       rv = tclistnew2(1);
       char numbuf[TCNUMBUFSIZ];

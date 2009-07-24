@@ -48,7 +48,7 @@ static void proc(TCTMPL *tmpl, TCMPOOL *mpool){
       tctdbqrysetorder(qrys[i], "title", TDBQOSTRASC);
     }
     tctdbqryaddcond(qrys[0], "title", TDBQCFTSEX, expr);
-    tctdbqryaddcond(qrys[1], "text", TDBQCFTSEX, expr);
+    tctdbqryaddcond(qrys[1], "body", TDBQCFTSEX, expr);
     double stime = tctime();
     TCLIST *res = tcmpoolpushlist(mpool, tctdbmetasearch(qrys, 2, TDBMSUNION));
     int rnum = tclistnum(res);
@@ -71,7 +71,8 @@ static void proc(TCTMPL *tmpl, TCMPOOL *mpool){
         tcxstrcat2(snip, " ...");
         char *hlstr = tcregexreplace(tcxstrptr(snip), "\t([^\t]*)\t", "<strong>\\1</strong>");
         tcmapput2(cols, "snippet", tcmpoolpushptr(mpool, hlstr));
-        const char *url = tcmapget4(cols, "path", "/");
+        const char *url = tcmapget4(cols, "url", "/");
+        url = tcmpoolpushptr(mpool, tcregexreplace(url, "*^[a-z]+://", ""));
         if(rbef) url = tcmpoolpushptr(mpool, tcregexreplace(url, rbef, raft ? raft : ""));
         if(url) tcmapprintf(cols, "url", "%s", url);
         tclistpushmap(docs, cols);

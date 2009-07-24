@@ -1302,6 +1302,9 @@ static int procmisc(const char *path, int rnum, bool mt, int opts, int omode){
             TCLIST *texts = tctdbqrykwic(qrys[0], cols, NULL, myrand(10), TCKWNOOVER);
             tclistdel(texts);
             tcmapdel(cols);
+          } else {
+            eprint(tdb, __LINE__, "tctdbget");
+            err = true;
           }
         }
       }

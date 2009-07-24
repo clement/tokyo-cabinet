@@ -140,7 +140,7 @@ int tcfdbecode(TCFDB *fdb);
    `fdb' specifies the fixed-length database object which is not opened.
    If successful, the return value is true, else, it is false.
    Note that the mutual exclusion control is needed if the object is shared by plural threads and
-   this function should should be called before the database is opened. */
+   this function should be called before the database is opened. */
 bool tcfdbsetmutex(TCFDB *fdb);
 
 

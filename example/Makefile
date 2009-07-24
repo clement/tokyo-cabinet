@@ -1,4 +1,4 @@
-# Makefile for sample programs of Hyper Estraier
+# Makefile for sample programs of Tokyo Cabinet
 
 
 

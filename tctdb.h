@@ -215,7 +215,7 @@ int tctdbecode(TCTDB *tdb);
    `tdb' specifies the table database object which is not opened.
    If successful, the return value is true, else, it is false.
    Note that the mutual exclusion control is needed if the object is shared by plural threads and
-   this function should should be called before the database is opened. */
+   this function should be called before the database is opened. */
 bool tctdbsetmutex(TCTDB *tdb);
 
 
@@ -747,7 +747,7 @@ bool tctdbqrysearchout(TDBQRY *qry);
 bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op);
 
 
-/* Get the hint of a query object.
+/* Get the hint string of a query object.
    `qry' specifies the query object.
    The return value is the hint string.
    This function should be called after the query execution by `tctdbqrysearch' and so on.  The
@@ -1031,13 +1031,19 @@ bool tctdbqrysearchout2(TDBQRY *qry);
 int tctdbstrtoindextype(const char *str);
 
 
+/* Convert a string into the meta search type number.
+   `str' specifies a string.
+   The return value is the meta search type number or -1 on failure. */
+int tctdbstrtometasearcytype(const char *str);
+
+
 /* Get the count of corresponding records of a query object.
    `qry' specifies the query object.
    The return value is the count of corresponding records. */
 int tctdbqrycount(TDBQRY *qry);
 
 
-/* Generate a keyword-in-context string from a query object.
+/* Generate keyword-in-context strings from a query object.
    `qry' specifies the query object.
    `cols' specifies a map object containing columns.
    `name' specifies the name of a column.  If it is `NULL', the first column of the query is

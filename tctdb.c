@@ -1020,7 +1020,7 @@ bool tctdbqryproc(TDBQRY *qry, TDBQRYPROC proc, void *op){
 }
 
 
-/* Get the hint of a query object. */
+/* Get the hint string of a query object. */
 const char *tctdbqryhint(TDBQRY *qry){
   assert(qry);
   return tcxstrptr(qry->hint);
@@ -1665,6 +1665,25 @@ int tctdbstrtoindextype(const char *str){
 }
 
 
+/* Convert a string into the meta search type number. */
+int tctdbstrtometasearcytype(const char *str){
+  assert(str);
+  int type = -1;
+  if(!tcstricmp(str, "UNION") || !tcstricmp(str, "OR")){
+    type = TDBMSUNION;
+  } else if(!tcstricmp(str, "ISECT") || !tcstricmp(str, "INTERSECTION") ||
+            !tcstricmp(str, "AND")){
+    type = TDBMSISECT;
+  } else if(!tcstricmp(str, "DIFF") || !tcstricmp(str, "DIFFERENCE") ||
+            !tcstricmp(str, "ANDNOT") || !tcstricmp(str, "NOT")){
+    type = TDBMSDIFF;
+  } else if(tcstrisnum(str)){
+    type = tcatoi(str);
+  }
+  return type;
+}
+
+
 /* Get the count of corresponding records of a query object. */
 int tctdbqrycount(TDBQRY *qry){
   assert(qry);
@@ -1672,7 +1691,7 @@ int tctdbqrycount(TDBQRY *qry){
 }
 
 
-/* Generate a keyword-in-context string from a query object. */
+/* Generate keyword-in-context strings from a query object. */
 TCLIST *tctdbqrykwic(TDBQRY *qry, TCMAP *cols, const char *name, int width, int opts){
   assert(qry && cols && width >= 0);
   TDBCOND *conds = qry->conds;
